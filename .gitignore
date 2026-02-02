@@ -1,0 +1,58 @@
+# Environment & Configuration
+.env
+.env.local
+.env.*.local
+
+# Composer
+/vendor/
+composer.lock
+
+# Logs
+/storage/logs/*.log
+/storage/logs/*.txt
+*.log
+
+# CSV Files (dados sensíveis)
+/storage/csv/*
+!/storage/csv/.gitkeep
+
+# Cache & Temp
+/storage/cache/*
+!/storage/cache/.gitkeep
+/storage/temp/*
+!/storage/temp/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# PHP
+*.phar
+
+# Backups
+*.bak
+*.backup
+*.sql.backup
+
+# PID files
+php_server_pid.txt
+*.pid
+
+# Node (se houver no futuro)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Test & Debug
+/tests/
+phpunit.xml
+.phpunit.result.cache

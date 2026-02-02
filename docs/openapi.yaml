@@ -1,0 +1,843 @@
+openapi: 3.0.3
+info:
+  title: DMC DataLoad API
+  description: |
+    API REST para orquestração de processos ETL (Extract, Transform, Load).
+    
+    ## Autenticação
+    A API utiliza autenticação via sessão PHP. Faça login via `/login` para obter uma sessão válida.
+    
+    ## Fluxo Básico
+    1. Autentique-se via POST `/login`
+    2. Crie uma conexão de banco via POST `/conexoes/salvar`
+    3. Crie uma rotina ETL via POST `/rotinas/salvar`
+    4. Execute a rotina via POST `/rotinas/run/{id}`
+    5. Acompanhe o histórico via GET `/api/historico`
+    
+  version: 2.0.0
+  contact:
+    name: DMC Support
+    email: suporte@dmc.com.br
+  license:
+    name: Proprietary
+    
+servers:
+  - url: http://localhost:8080
+    description: Servidor de Desenvolvimento
+  - url: https://api.dmc.com.br
+    description: Servidor de Produção
+
+tags:
+  - name: Autenticação
+    description: Endpoints de autenticação e sessão
+  - name: Dashboard
+    description: Métricas e visão geral
+  - name: Conexões
+    description: Gerenciamento de perfis de conexão de banco
+  - name: Rotinas
+    description: Gerenciamento de rotinas ETL
+  - name: Histórico
+    description: Logs de execução
+
+paths:
+  /api/health:
+    get:
+      tags:
+        - Sistema
+      summary: Health Check
+      description: Verifica se a API está funcionando
+      responses:
+        '200':
+          description: API operacional
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: integer
+                    example: 1770042526
+
+  /login:
+    post:
+      tags:
+        - Autenticação
+      summary: Realizar login
+      description: Autentica usuário via LDAP ou banco local
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - usuario
+                - senha
+              properties:
+                usuario:
+                  type: string
+                  description: Nome de usuário
+                  example: admin
+                senha:
+                  type: string
+                  format: password
+                  description: Senha do usuário
+                  example: admin123
+      responses:
+        '200':
+          description: Login bem sucedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: PHPSESSID=abc123; Path=/; HttpOnly
+
+  /logout:
+    post:
+      tags:
+        - Autenticação
+      summary: Realizar logout
+      description: Encerra a sessão do usuário
+      responses:
+        '200':
+          description: Logout realizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/sessao:
+    get:
+      tags:
+        - Autenticação
+      summary: Verificar sessão
+      description: Retorna informações da sessão atual
+      responses:
+        '200':
+          description: Dados da sessão
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessaoResponse'
+
+  /api/dashboard/metricas:
+    get:
+      tags:
+        - Dashboard
+      summary: Métricas do dashboard
+      description: Retorna métricas gerais do sistema
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Métricas obtidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricasResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /conexoes/list:
+    get:
+      tags:
+        - Conexões
+      summary: Listar conexões
+      description: Retorna todas as conexões cadastradas
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Lista de conexões
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conexao'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /conexoes/salvar:
+    post:
+      tags:
+        - Conexões
+      summary: Salvar conexão
+      description: Cria ou atualiza uma conexão de banco
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConexaoInput'
+      responses:
+        '200':
+          description: Conexão salva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /conexoes/test:
+    post:
+      tags:
+        - Conexões
+      summary: Testar conexão
+      description: Testa se os parâmetros de conexão são válidos
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConexaoInput'
+      responses:
+        '200':
+          description: Resultado do teste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  mensagem:
+                    type: string
+
+  /conexoes/get/{id}:
+    get:
+      tags:
+        - Conexões
+      summary: Buscar conexão
+      description: Retorna dados de uma conexão específica
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Conexão encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conexao'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /conexoes/delete/{id}:
+    post:
+      tags:
+        - Conexões
+      summary: Excluir conexão
+      description: Remove uma conexão do sistema
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Conexão excluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /rotinas/list:
+    get:
+      tags:
+        - Rotinas
+      summary: Listar rotinas
+      description: Retorna todas as rotinas ETL cadastradas
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Lista de rotinas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  dados:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Rotina'
+
+  /rotinas/salvar:
+    post:
+      tags:
+        - Rotinas
+      summary: Salvar rotina
+      description: Cria ou atualiza uma rotina ETL
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RotinaInput'
+      responses:
+        '200':
+          description: Rotina salva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /rotinas/get/{id}:
+    get:
+      tags:
+        - Rotinas
+      summary: Buscar rotina
+      description: Retorna dados de uma rotina específica com seus blocos
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rotina encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rotina:
+                    $ref: '#/components/schemas/Rotina'
+                  blocos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BlocoRotina'
+
+  /rotinas/run/{id}:
+    post:
+      tags:
+        - Rotinas
+      summary: Executar rotina
+      description: Inicia a execução de uma rotina ETL
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Execução iniciada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoResponse'
+
+  /rotinas/toggle/{id}:
+    post:
+      tags:
+        - Rotinas
+      summary: Ativar/Desativar rotina
+      description: Alterna o status de agendamento de uma rotina
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Status alterado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  ativa:
+                    type: boolean
+
+  /rotinas/delete/{id}:
+    post:
+      tags:
+        - Rotinas
+      summary: Excluir rotina
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rotina excluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/historico:
+    get:
+      tags:
+        - Histórico
+      summary: Listar execuções
+      description: Retorna histórico de execuções com filtros
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: rotina
+          in: query
+          schema:
+            type: integer
+          description: Filtrar por ID da rotina
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [sucesso, falha, executando, pendente]
+          description: Filtrar por status
+        - name: data_inicio
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Data inicial (YYYY-MM-DD)
+        - name: data_fim
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Data final (YYYY-MM-DD)
+      responses:
+        '200':
+          description: Lista de execuções
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoResponse'
+
+  /api/historico/{id}:
+    get:
+      tags:
+        - Histórico
+      summary: Detalhes de execução
+      description: Retorna detalhes de uma execução específica
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da execução
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoDetalhes'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/historico/exportar:
+    get:
+      tags:
+        - Histórico
+      summary: Exportar histórico
+      description: Exporta histórico em formato CSV
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: rotina
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Arquivo CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /api/cron/presets:
+    get:
+      tags:
+        - Sistema
+      summary: Presets de cron
+      description: Retorna expressões cron pré-definidas
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Lista de presets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    valor:
+                      type: string
+                      example: "*/5 * * * *"
+                    label:
+                      type: string
+                      example: "A cada 5 minutos"
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: PHPSESSID
+      description: Cookie de sessão PHP
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+          example: true
+        mensagem:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        erro:
+          type: string
+
+    SessaoResponse:
+      type: object
+      properties:
+        autenticado:
+          type: boolean
+        usuario:
+          type: object
+          properties:
+            id:
+              type: integer
+            nome_usuario:
+              type: string
+            nivel_acesso:
+              type: string
+              enum: [user, editor, admin]
+
+    MetricasResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        total_rotinas:
+          type: integer
+        execucoes_hoje:
+          type: integer
+        falhas_hoje:
+          type: integer
+        em_execucao:
+          type: integer
+        rotinas_ativas:
+          type: integer
+        proximas_execucoes:
+          type: array
+          items:
+            type: object
+        ultimas_execucoes:
+          type: array
+          items:
+            type: object
+        grafico_7dias:
+          type: array
+          items:
+            type: object
+            properties:
+              data:
+                type: string
+                format: date
+              sucesso:
+                type: integer
+              falha:
+                type: integer
+
+    Conexao:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome_conexao:
+          type: string
+        tipo_banco:
+          type: string
+          enum: [postgresql, mysql, sqlserver, oracle]
+        host:
+          type: string
+        porta:
+          type: integer
+        banco:
+          type: string
+        usuario:
+          type: string
+
+    ConexaoInput:
+      type: object
+      required:
+        - nome_conexao
+        - tipo_banco
+        - host
+        - porta
+        - banco
+        - usuario
+        - senha
+      properties:
+        id:
+          type: integer
+          description: ID para atualização (opcional)
+        nome_conexao:
+          type: string
+        tipo_banco:
+          type: string
+          enum: [postgresql, mysql, sqlserver, oracle]
+        host:
+          type: string
+        porta:
+          type: integer
+        banco:
+          type: string
+        usuario:
+          type: string
+        senha:
+          type: string
+          format: password
+
+    Rotina:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        descricao:
+          type: string
+        id_conexao:
+          type: integer
+        esta_executando:
+          type: boolean
+        ativa:
+          type: boolean
+        agendamento_cron:
+          type: string
+          nullable: true
+        proxima_execucao:
+          type: string
+          format: date-time
+          nullable: true
+        ultima_execucao:
+          type: string
+          format: date-time
+          nullable: true
+        tentativas_falha:
+          type: integer
+        nome_conexao:
+          type: string
+
+    RotinaInput:
+      type: object
+      required:
+        - nome
+        - id_conexao
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        descricao:
+          type: string
+        id_conexao:
+          type: integer
+        ativa:
+          type: boolean
+        agendamento_cron:
+          type: string
+          example: "*/5 * * * *"
+        max_tentativas:
+          type: integer
+          default: 3
+        webhook_sucesso:
+          type: string
+          format: uri
+        webhook_falha:
+          type: string
+          format: uri
+        bloco_codigo:
+          type: array
+          items:
+            type: string
+        tipo_bloco:
+          type: array
+          items:
+            type: string
+            enum: [SELECT, INSERT, UPDATE, DELETE, CALL]
+        script_sql:
+          type: array
+          items:
+            type: string
+
+    BlocoRotina:
+      type: object
+      properties:
+        codigo_bloco:
+          type: string
+        ordem:
+          type: integer
+        tipo_bloco:
+          type: string
+        script_sql:
+          type: string
+
+    ExecucaoResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        logs:
+          type: array
+          items:
+            type: object
+        erro:
+          type: string
+
+    HistoricoResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        dados:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecucaoLog'
+        estatisticas:
+          type: object
+          properties:
+            sucesso_24h:
+              type: integer
+            falhas_24h:
+              type: integer
+            executando:
+              type: integer
+            tempo_medio_ms:
+              type: number
+
+    ExecucaoLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        id_rotina:
+          type: integer
+        nome_rotina:
+          type: string
+        status:
+          type: string
+          enum: [pendente, executando, sucesso, falha, erro]
+        data_inicio:
+          type: string
+          format: date-time
+        data_fim:
+          type: string
+          format: date-time
+          nullable: true
+        duracao_ms:
+          type: integer
+          nullable: true
+        mensagem_erro:
+          type: string
+          nullable: true
+
+    ExecucaoDetalhes:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/ExecucaoLog'
+        - type: object
+          properties:
+            blocos_executados:
+              type: integer
+            blocos_sucesso:
+              type: integer
+            blocos_falha:
+              type: integer
+            caminho_csv:
+              type: string
+              nullable: true
+            logs:
+              type: array
+              items:
+                type: object
+
+  responses:
+    Unauthorized:
+      description: Não autenticado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              erro:
+                type: string
+                example: Não autenticado
+
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              sucesso:
+                type: boolean
+                example: false
+              erro:
+                type: string
+                example: Recurso não encontrado

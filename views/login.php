@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Login - DMC DataLoad</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .alert {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">🔐 DMC DataLoad</div>
+    <h4 class="text-center mb-4">Autenticação</h4>
+    
+    <div class="alert alert-danger" id="alertErro"></div>
+    
+    <form id="formLogin">
+      <div class="mb-3">
+        <label class="form-label">Usuário</label>
+        <input type="text" class="form-control" name="usuario" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Senha</label>
+        <input type="password" class="form-control" name="senha" required>
+      </div>
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="lembrar">
+        <label class="form-check-label" for="lembrar">Lembrar-me</label>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Entrar</button>
+    </form>
+    
+    <div class="text-center mt-3">
+      <small class="text-muted">v2.0 - Autenticação LDAP + Local</small>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    const baseUrl = '<?= defined("BASE_URL") ? BASE_URL : "" ?>';
+    
+    $('#formLogin').on('submit', function(e){
+      e.preventDefault();
+      $('#alertErro').hide();
+      
+      $.ajax({
+        url: baseUrl + '/login',
+        method: 'POST',
+        data: $(this).serialize(),
+        dataType: 'json',
+        success: function(res){
+          if (res.sucesso) {
+            window.location.href = baseUrl + '/dashboard';
+          } else {
+            $('#alertErro').text(res.erro || 'Erro ao autenticar').show();
+          }
+        },
+        error: function(){
+          $('#alertErro').text('Erro de comunicação com servidor').show();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
