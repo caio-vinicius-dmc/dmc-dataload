@@ -18,9 +18,14 @@ ob_start();
         <h1 class="page-title-modern">Conexões</h1>
         <p class="page-subtitle-modern">Gerencie as conexões com bancos de dados externos</p>
     </div>
-    <button class="btn-modern-primary ms-auto" data-bs-toggle="modal" data-bs-target="#modalConexao" onclick="novaConexao()">
-        <i class="bi bi-plus-lg me-2"></i>Nova Conexão
-    </button>
+    <div class="ms-auto d-flex gap-2">
+        <a href="<?= $baseUrl ?>/drivers-status" class="btn btn-outline-secondary" target="_blank">
+            <i class="bi bi-plugin me-2"></i>Status dos Drivers
+        </a>
+        <button class="btn-modern-primary" data-bs-toggle="modal" data-bs-target="#modalConexao" onclick="novaConexao()">
+            <i class="bi bi-plus-lg me-2"></i>Nova Conexão
+        </button>
+    </div>
 </div>
 
 <!-- Stat Cards -->
@@ -122,6 +127,7 @@ ob_start();
                             <select class="form-select-modern" name="tipo_banco" id="tipo_banco" required>
                                 <option value="postgres">PostgreSQL</option>
                                 <option value="mysql">MySQL</option>
+                                <option value="mariadb">MariaDB</option>
                                 <option value="sqlserver">SQL Server</option>
                                 <option value="oracle">Oracle</option>
                             </select>
@@ -134,10 +140,34 @@ ob_start();
                             <label class="form-label-modern">Porta *</label>
                             <input type="number" class="form-control-modern" name="porta" id="porta" placeholder="5432" required>
                         </div>
-                        <div class="col-md-6">
+                        
+                        <!-- Campo para PostgreSQL, MySQL, MariaDB, SQL Server -->
+                        <div class="col-md-6" id="campo_nome_banco">
                             <label class="form-label-modern">Nome do Banco *</label>
-                            <input type="text" class="form-control-modern" name="nome_banco" id="nome_banco" required>
+                            <input type="text" class="form-control-modern" name="nome_banco" id="nome_banco">
                         </div>
+                        
+                        <!-- Campos específicos para Oracle -->
+                        <div class="col-md-6" id="campo_tipo_conexao_oracle" style="display: none;">
+                            <label class="form-label-modern">Tipo de Conexão *</label>
+                            <select class="form-select-modern" name="tipo_conexao_oracle" id="tipo_conexao_oracle">
+                                <option value="sid">SID</option>
+                                <option value="service_name">Service Name</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6" id="campo_sid" style="display: none;">
+                            <label class="form-label-modern"><span id="label_sid_service">SID</span> *</label>
+                            <input type="text" class="form-control-modern" name="sid" id="sid" placeholder="Ex: ORCL ou SADRHPRO">
+                        </div>
+                        
+                        <!-- Campo para SQL Server Instance (opcional) -->
+                        <div class="col-md-6" id="campo_instance" style="display: none;">
+                            <label class="form-label-modern">Instance Name (Opcional)</label>
+                            <input type="text" class="form-control-modern" name="instance_name" id="instance_name" placeholder="Ex: SQLEXPRESS">
+                            <small class="text-muted">Deixe vazio se não houver instância específica</small>
+                        </div>
+                        
                         <div class="col-md-6">
                             <label class="form-label-modern">Usuário *</label>
                             <input type="text" class="form-control-modern" name="usuario" id="usuario" required>
@@ -189,17 +219,20 @@ $extraStyles = <<<'STYLES'
 }
 
 .page-header-modern {
+    background: white;
+    padding: 1.75rem 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 2px solid #f1f5f9;
+    flex-wrap: wrap;
 }
 
 .page-icon-modern {
-    width: 64px;
-    height: 64px;
+    width: 70px;
+    height: 70px;
     border-radius: var(--radius-lg);
     background: var(--gradient-primary);
     display: flex;
@@ -207,13 +240,14 @@ $extraStyles = <<<'STYLES'
     justify-content: center;
     font-size: 2rem;
     color: white;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    flex-shrink: 0;
 }
 
 .page-title-modern {
     font-size: 2rem;
     font-weight: 700;
-    margin: 0;
+    margin: 0 0 0.25rem 0;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -223,7 +257,7 @@ $extraStyles = <<<'STYLES'
 .page-subtitle-modern {
     color: #64748b;
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 .stat-card-modern {
@@ -534,6 +568,7 @@ const tipoIcons = {
 const portasPadrao = {
     postgres: 5432,
     mysql: 3306,
+    mariadb: 3306,
     sqlserver: 1433,
     oracle: 1521
 };
@@ -616,6 +651,11 @@ function novaConexao() {
     document.getElementById("conexaoId").value = "";
     document.getElementById("modalTitle").textContent = "Nova Conexão";
     document.getElementById("resultadoTeste").style.display = "none";
+    
+    // Disparar evento change para mostrar campos corretos do PostgreSQL (padrão)
+    document.getElementById("tipo_banco").dispatchEvent(new Event('change'));
+    
+    new bootstrap.Modal("#modalConexao").show();
 }
 
 function editarConexao(id) {
@@ -625,11 +665,19 @@ function editarConexao(id) {
         document.getElementById("tipo_banco").value = r.tipo_banco;
         document.getElementById("host").value = r.host;
         document.getElementById("porta").value = r.porta;
-        document.getElementById("nome_banco").value = r.nome_banco;
+        document.getElementById("nome_banco").value = r.nome_banco || "";
+        document.getElementById("sid").value = r.sid || "";
+        document.getElementById("tipo_conexao_oracle").value = r.tipo_conexao_oracle || "sid";
+        document.getElementById("instance_name").value = r.instance_name || "";
         document.getElementById("usuario").value = r.usuario;
         document.getElementById("senha").value = "";
         document.getElementById("modalTitle").textContent = "Editar Conexão";
         document.getElementById("resultadoTeste").style.display = "none";
+        
+        // Disparar evento change para mostrar campos corretos
+        document.getElementById("tipo_banco").dispatchEvent(new Event('change'));
+        document.getElementById("tipo_conexao_oracle").dispatchEvent(new Event('change'));
+        
         new bootstrap.Modal("#modalConexao").show();
     });
 }
@@ -666,8 +714,38 @@ function testarConexao() {
             resultado.className = "alert alert-success";
             resultado.innerHTML = `<i class="bi bi-check-circle me-2"></i>${res.mensagem}`;
         } else {
-            resultado.className = "alert alert-danger";
-            resultado.innerHTML = `<i class="bi bi-x-circle me-2"></i>${res.mensagem || res.erro}`;
+            // Verificar se é um erro de driver faltante
+            if (res.driver_faltante) {
+                const tipoBanco = res.tipo_banco;
+                const podeInstalarAuto = (tipoBanco === 'oracle' || tipoBanco === 'sqlserver');
+                
+                resultado.className = "alert alert-danger";
+                resultado.innerHTML = `
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                        <div class="flex-fill">
+                            <strong>Driver não disponível!</strong>
+                            <p class="mb-2">${res.mensagem}</p>
+                            <div class="btn-group btn-group-sm">
+                                ${podeInstalarAuto ? `
+                                <button type="button" class="btn btn-success" onclick="instalarDriverModal('${tipoBanco}')">
+                                    <i class="bi bi-download me-1"></i>
+                                    Instalar Automaticamente
+                                </button>
+                                ` : ''}
+                                <button type="button" class="btn btn-outline-light" 
+                                        onclick="window.open('${baseUrl}/drivers-status', '_blank')">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Ver Instruções
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultado.className = "alert alert-danger";
+                resultado.innerHTML = `<i class="bi bi-x-circle me-2"></i>${res.mensagem || res.erro}`;
+            }
         }
     }, "json").always(function() {
         btn.disabled = false;
@@ -705,9 +783,157 @@ function toggleSenha() {
     }
 }
 
-// Alterar porta padrão ao mudar tipo de banco
+function instalarDriverModal(tipoBanco) {
+    const nomes = {
+        'oracle': 'Oracle OCI8',
+        'sqlserver': 'SQL Server'
+    };
+    const nomeBanco = nomes[tipoBanco] || tipoBanco.toUpperCase();
+
+    // Primeira verificação sem download
+    Swal.fire({
+        title: 'Verificando...',
+        text: 'Analisando requisitos do sistema',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    $.ajax({
+        url: baseUrl + "/conexoes/install-driver/" + tipoBanco,
+        method: 'POST',
+        data: { auto_download: 'false' },
+        dataType: 'json'
+    }).then(response => {
+        Swal.close();
+        
+        if (response.sucesso || response.requer_restart_manual) {
+            mostrarResultado(response);
+        } else if (response.requer_download) {
+            confirmarDownload(response, tipoBanco);
+        } else {
+            mostrarErro(response);
+        }
+    }).catch(error => {
+        Swal.fire('Erro!', error.statusText, 'error');
+    });
+}
+
+function confirmarDownload(info, tipoBanco) {
+    const downloadInfo = info.download_info || {};
+    
+    Swal.fire({
+        title: 'Download Necessário',
+        html: `
+            <div class="text-start">
+                <p>${info.mensagem}</p>
+                <div class="alert alert-info mt-3">
+                    <strong>Download:</strong> ~${downloadInfo.tamanho_estimado}<br>
+                    <strong>Versão PHP:</strong> ${downloadInfo.php_version} (${downloadInfo.arch}-bit)
+                </div>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        confirmButtonText: '<i class="bi bi-download me-2"></i>Baixar e Instalar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            executarDownload(tipoBanco);
+        }
+    });
+}
+
+function executarDownload(tipoBanco) {
+    Swal.fire({
+        title: 'Instalando...',
+        html: '<div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div></div>',
+        allowOutsideClick: false,
+        showConfirmButton: false
+    });
+
+    $.ajax({
+        url: baseUrl + "/conexoes/install-driver/" + tipoBanco,
+        method: 'POST',
+        data: { auto_download: 'true' },
+        dataType: 'json'
+    }).then(response => {
+        mostrarResultado(response);
+    }).catch(error => {
+        Swal.fire('Erro!', error.statusText, 'error');
+    });
+}
+
+function mostrarResultado(res) {
+    if (res.sucesso || res.requer_restart_manual) {
+        let html = `<p>${res.mensagem}</p>`;
+        
+        if (res.steps) {
+            html += `<div class="alert alert-info mt-3"><small>`;
+            res.steps.forEach(step => html += `${step}<br>`);
+            html += `</small></div>`;
+        }
+        
+        if (res.requer_restart_manual) {
+            html += `<div class="alert alert-warning mt-3">Reinicie o XAMPP manualmente.</div>`;
+        }
+        
+        Swal.fire('Sucesso!', html, 'success');
+    } else {
+        mostrarErro(res);
+    }
+}
+
+function mostrarErro(res) {
+    let html = `<p class="text-danger">${res.mensagem}</p>`;
+    
+    if (res.requer_instant_client) {
+        html += `<div class="alert alert-warning mt-3">`;
+        html += `Oracle Instant Client necessário.<br>`;
+        html += `<a href="${res.instant_client_url}" target="_blank" class="btn btn-sm btn-primary mt-2">Baixar</a>`;
+        html += `</div>`;
+    }
+    
+    Swal.fire('Atenção', html, res.requer_instant_client ? 'warning' : 'error');
+}
+
+// Alterar porta padrão e campos específicos ao mudar tipo de banco
 document.getElementById("tipo_banco").addEventListener("change", function() {
-    document.getElementById("porta").value = portasPadrao[this.value] || "";
+    const tipoBanco = this.value;
+    document.getElementById("porta").value = portasPadrao[tipoBanco] || "";
+    
+    // Ocultar todos os campos específicos
+    document.getElementById("campo_nome_banco").style.display = "none";
+    document.getElementById("campo_tipo_conexao_oracle").style.display = "none";
+    document.getElementById("campo_sid").style.display = "none";
+    document.getElementById("campo_instance").style.display = "none";
+    
+    // Remover required de todos os campos específicos
+    document.getElementById("nome_banco").removeAttribute("required");
+    document.getElementById("sid").removeAttribute("required");
+    
+    // Mostrar campos específicos conforme o tipo de banco
+    if (tipoBanco === "oracle") {
+        // Oracle: mostrar tipo de conexão e SID/Service Name
+        document.getElementById("campo_tipo_conexao_oracle").style.display = "block";
+        document.getElementById("campo_sid").style.display = "block";
+        document.getElementById("sid").setAttribute("required", "required");
+    } else if (tipoBanco === "sqlserver") {
+        // SQL Server: nome do banco + instance (opcional)
+        document.getElementById("campo_nome_banco").style.display = "block";
+        document.getElementById("campo_instance").style.display = "block";
+        document.getElementById("nome_banco").setAttribute("required", "required");
+    } else {
+        // PostgreSQL, MySQL, MariaDB: apenas nome do banco
+        document.getElementById("campo_nome_banco").style.display = "block";
+        document.getElementById("nome_banco").setAttribute("required", "required");
+    }
+});
+
+// Alterar label do campo SID/Service Name conforme seleção
+document.getElementById("tipo_conexao_oracle").addEventListener("change", function() {
+    const label = document.getElementById("label_sid_service");
+    label.textContent = this.value === "sid" ? "SID" : "Service Name";
 });
 
 // Submit form

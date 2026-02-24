@@ -115,17 +115,20 @@ $extraStyles = <<<'STYLES'
 }
 
 .page-header-modern {
+    background: white;
+    padding: 1.75rem 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 2px solid #f1f5f9;
+    flex-wrap: wrap;
 }
 
 .page-icon-modern {
-    width: 64px;
-    height: 64px;
+    width: 70px;
+    height: 70px;
     border-radius: var(--radius-lg);
     background: var(--gradient-primary);
     display: flex;
@@ -133,13 +136,14 @@ $extraStyles = <<<'STYLES'
     justify-content: center;
     font-size: 2rem;
     color: white;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    flex-shrink: 0;
 }
 
 .page-title-modern {
     font-size: 2rem;
     font-weight: 700;
-    margin: 0;
+    margin: 0 0 0.25rem 0;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -149,7 +153,7 @@ $extraStyles = <<<'STYLES'
 .page-subtitle-modern {
     color: #64748b;
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 .card-modern {

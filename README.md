@@ -62,7 +62,13 @@
 - Syntax highlighting para SQL
 - Múltiplas abas e sessões
 - Explorador de objetos do banco
+- **Autocomplete Inteligente**: Sugestões dinâmicas de schemas, tabelas, views, colunas e keywords SQL baseadas no banco conectado
 - Modo fullscreen para máxima produtividade
+- **Layout configurável**: Vertical (editor acima, resultados abaixo) ou Horizontal (3 colunas: Database Explorer | Editor | Resultados)
+- Painéis redimensionáveis (sidebar, editor e resultados)
+- **Atalhos de teclado**: Comentar/descomentar, identar, autocomplete, zoom com Ctrl+Scroll e mais
+- Autocomplete SQL com Ctrl+Space (carrega tabelas, colunas e keywords do banco atual)
+- Zoom dinâmico (Ctrl + Scroll do mouse)
 - Histórico de queries
 - Execução de múltiplas queries
 
@@ -260,10 +266,14 @@ Abra o navegador em: `http://localhost:8080` ou `http://dataload.local`
 
 1. Acesse **SQL Editor**
 2. Selecione uma conexão
-3. Escreva suas queries
-4. Execute com **F5** ou botão
+3. Escreva suas queries no editor
+4. Execute com **F5** ou botão Executar
 5. Visualize resultados em tabela
-6. Exporte para CSV
+6. **Alterar layout**: Clique no botão de layout para alternar entre:
+   - **Vertical**: Editor acima, resultados abaixo
+   - **Horizontal**: 3 colunas lado a lado (Database Explorer | Editor | Resultados)
+7. Redimensione os painéis arrastando as bordas
+8. Exporte resultados para CSV
 
 ---
 

@@ -3,6 +3,8 @@ namespace App\Controladores;
 
 use App\Core\Database;
 use App\Utils\Crypto;
+use App\Utils\DriverChecker;
+use App\Utils\DriverInstaller;
 use PDO;
 
 class ConexoesController
@@ -16,6 +18,18 @@ class ConexoesController
         $user = $data['usuario'] ?? '';
         $senha = $data['senha'] ?? '';
 
+        // Verificar se o driver está disponível
+        if (!DriverChecker::isDriverAvailable($tipo)) {
+            $driverInfo = DriverChecker::getDriverInstallInfo($tipo);
+            return [
+                'sucesso' => false, 
+                'mensagem' => "Driver '{$driverInfo['driver']}' não está disponível para {$tipo}",
+                'driver_faltante' => true,
+                'tipo_banco' => $tipo,
+                'driver_info' => $driverInfo
+            ];
+        }
+
         try {
             switch ($tipo) {
                 case 'postgres':
@@ -23,25 +37,49 @@ class ConexoesController
                     $dsn = "pgsql:host={$host};port={$port};dbname={$db}";
                     $pdo = new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                     break;
+                    
                 case 'mysql':
+                case 'mariadb':
                     $port = $porta ?: 3306;
                     $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
                     $pdo = new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                     break;
+                    
                 case 'sqlserver':
                     $port = $porta ?: 1433;
-                    $dsn = "sqlsrv:Server={$host},{$port};Database={$db}";
+                    $instance = $data['instance_name'] ?? '';
+                    if (!empty($instance)) {
+                        $dsn = "sqlsrv:Server={$host}\\{$instance},{$port};Database={$db}";
+                    } else {
+                        $dsn = "sqlsrv:Server={$host},{$port};Database={$db}";
+                    }
                     $pdo = new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                     break;
+                    
                 case 'oracle':
                     $port = $porta ?: 1521;
-                    $dsn = "oci:dbname=//{$host}:{$port}/{$db}";
+                    $tipoConexao = $data['tipo_conexao_oracle'] ?? 'sid';
+                    $sidOrService = $data['sid'] ?? '';
+                    
+                    if (empty($sidOrService)) {
+                        return ['sucesso' => false, 'mensagem' => 'SID ou Service Name é obrigatório para Oracle'];
+                    }
+                    
+                    if ($tipoConexao === 'service_name') {
+                        // Service Name
+                        $dsn = "oci:dbname=//{$host}:{$port}/{$sidOrService}";
+                    } else {
+                        // SID
+                        $dsn = "oci:dbname=//{$host}:{$port}/{$sidOrService}";
+                    }
                     $pdo = new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                     break;
+                    
                 case 'odbc':
                     $dsn = $db;
                     $pdo = new PDO("odbc:{$dsn}", $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                     break;
+                    
                 default:
                     return ['sucesso' => false, 'mensagem' => 'Tipo de banco desconhecido'];
             }
@@ -57,6 +95,11 @@ class ConexoesController
     public function salvar(array $data): array
     {
         $db = Database::getConexao();
+        
+        // Normalizar tipo_banco: mariadb usa o mesmo driver que mysql
+        if (isset($data['tipo_banco']) && strtolower($data['tipo_banco']) === 'mariadb') {
+            $data['tipo_banco'] = 'mysql';
+        }
         
         // Verificar se conexão já existe
         $s = $db->prepare('SELECT id, senha_encriptada FROM tb_perfis_conexao WHERE nome_conexao = ?');
@@ -77,9 +120,20 @@ class ConexoesController
             }
         }
         
-        // Validar se tem senha
-        if (empty($data['senha'])) {
-            return ['sucesso' => false, 'mensagem' => 'Senha é obrigatória'];
+        // Permitir senha vazia (alguns bancos como MySQL/MariaDB podem ter usuário sem senha)
+        // A validação real será feita no teste de conexão
+        if (!isset($data['senha'])) {
+            $data['senha'] = '';
+        }
+        
+        // Preparar parâmetros extras para tipos específicos de banco
+        $parametrosExtras = [];
+        
+        if ($data['tipo_banco'] === 'oracle') {
+            $parametrosExtras['tipo_conexao_oracle'] = $data['tipo_conexao_oracle'] ?? 'sid';
+            $parametrosExtras['sid'] = $data['sid'] ?? '';
+        } elseif ($data['tipo_banco'] === 'sqlserver') {
+            $parametrosExtras['instance_name'] = $data['instance_name'] ?? '';
         }
         
         // Regras: testar conexão antes de salvar
@@ -99,12 +153,12 @@ class ConexoesController
         // Se já existe, atualizar; senão, inserir
         if ($isEdit) {
             $u = $db->prepare('UPDATE tb_perfis_conexao SET tipo_banco=?, host=?, porta=?, nome_banco=?, usuario=?, senha_encriptada=?, parametros_extras=?::jsonb WHERE id=?');
-            $u->execute([$data['tipo_banco'], $data['host'], $data['porta'] ?: null, $data['nome_banco'] ?: null, $data['usuario'] ?: null, $senhaEnc, json_encode($data['parametros_extras'] ?? new \stdClass()), $exists['id']]);
+            $u->execute([$data['tipo_banco'], $data['host'], $data['porta'] ?: null, $data['nome_banco'] ?: null, $data['usuario'] ?: null, $senhaEnc, json_encode($parametrosExtras), $exists['id']]);
             return ['sucesso' => true, 'mensagem' => 'Atualizado', 'id' => $exists['id']];
         }
 
         $ins = $db->prepare('INSERT INTO tb_perfis_conexao (nome_conexao, tipo_banco, host, porta, nome_banco, usuario, senha_encriptada, parametros_extras) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb) RETURNING id');
-        $ins->execute([$data['nome_conexao'], $data['tipo_banco'], $data['host'], $data['porta'] ?: null, $data['nome_banco'] ?: null, $data['usuario'] ?: null, $senhaEnc, json_encode($data['parametros_extras'] ?? new \stdClass())]);
+        $ins->execute([$data['nome_conexao'], $data['tipo_banco'], $data['host'], $data['porta'] ?: null, $data['nome_banco'] ?: null, $data['usuario'] ?: null, $senhaEnc, json_encode($parametrosExtras)]);
         $id = $ins->fetchColumn();
         return ['sucesso' => true, 'mensagem' => 'Criado', 'id' => $id];
     }
@@ -123,7 +177,20 @@ class ConexoesController
         $s = $db->prepare('SELECT id, nome_conexao, tipo_banco, host, porta, nome_banco, usuario, senha_encriptada, parametros_extras FROM tb_perfis_conexao WHERE id = ?');
         $s->execute([$id]);
         $r = $s->fetch(PDO::FETCH_ASSOC);
-        return $r ?: [];
+        
+        if (!$r) {
+            return [];
+        }
+        
+        // Decodificar parametros_extras e mesclar com o resultado
+        if (!empty($r['parametros_extras'])) {
+            $extras = json_decode($r['parametros_extras'], true);
+            if (is_array($extras)) {
+                $r = array_merge($r, $extras);
+            }
+        }
+        
+        return $r;
     }
 
     public function deletar(int $id): array
@@ -132,5 +199,48 @@ class ConexoesController
         $d = $db->prepare('DELETE FROM tb_perfis_conexao WHERE id = ?');
         $d->execute([$id]);
         return ['sucesso' => true];
+    }
+
+    /**
+     * Retorna status de todos os drivers PDO
+     */
+    public function driversStatus(): array
+    {
+        return [
+            'sucesso' => true,
+            'php_info' => DriverChecker::getPhpInfo(),
+            'drivers' => DriverChecker::getAllDriversStatus()
+        ];
+    }
+
+    /**
+     * Retorna informações de instalação de um driver específico
+     */
+    public function driverInstallInfo(string $tipoBanco): array
+    {
+        $info = DriverChecker::getDriverInstallInfo($tipoBanco);
+        return [
+            'sucesso' => true,
+            'driver_info' => $info
+        ];
+    }
+
+    /**
+     * Instala automaticamente um driver
+     */
+    public function installDriver(string $tipoBanco): array
+    {
+        try {
+            // Verificar se usuário aprovou download
+            $autoDownload = isset($_POST['auto_download']) && $_POST['auto_download'] === 'true';
+            
+            $result = DriverInstaller::install($tipoBanco, $autoDownload);
+            return $result;
+        } catch (\Exception $e) {
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Erro ao instalar driver: ' . $e->getMessage()
+            ];
+        }
     }
 }

@@ -482,7 +482,7 @@
                         </div>
                         <div class="feature-item">
                             <h5><i class="bi bi-terminal me-2"></i>SQL Editor</h5>
-                            <p>Editor SQL profissional com syntax highlighting, explorador de objetos e execução de queries.</p>
+                            <p>Editor SQL profissional com syntax highlighting, explorador de objetos, <strong>autocomplete inteligente e dinâmico</strong> (schemas, tabelas, views, colunas baseados no banco conectado), zoom dinâmico e múltiplos atalhos de teclado. Layout configurável em 2 modos: vertical (editor acima, resultados abaixo) ou horizontal (3 colunas: Database Explorer | Editor | Resultados).</p>
                         </div>
                         <div class="feature-item">
                             <h5><i class="bi bi-file-earmark-arrow-down me-2"></i>Exportação CSV</h5>
@@ -561,7 +561,7 @@
                                 <tr>
                                     <td><i class="bi bi-terminal text-info me-2"></i>SQL Editor</td>
                                     <td><code>/sql-editor</code></td>
-                                    <td>Editor SQL profissional com múltiplas abas e modo fullscreen</td>
+                                    <td>Editor SQL profissional com múltiplas abas, modo fullscreen e 2 layouts: vertical ou horizontal (3 colunas lado a lado)</td>
                                 </tr>
                                 <tr>
                                     <td><i class="bi bi-journal-text text-warning me-2"></i>Logs</td>
@@ -680,6 +680,7 @@
                             <tbody>
                                 <tr><td><span class="badge bg-primary">GET</span></td><td><code>/sql-editor/connect/{id}</code></td><td>Conectar ao banco</td></tr>
                                 <tr><td><span class="badge bg-primary">GET</span></td><td><code>/sql-editor/objects/{id}</code></td><td>Listar objetos do banco</td></tr>
+                                <tr><td><span class="badge bg-primary">GET</span></td><td><code>/sql-editor/metadata/{id}</code></td><td>Buscar metadados (tabelas + colunas) para autocomplete</td></tr>
                                 <tr><td><span class="badge bg-success">POST</span></td><td><code>/sql-editor/execute</code></td><td>Executar query SQL</td></tr>
                             </tbody>
                         </table>

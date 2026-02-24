@@ -8,6 +8,8 @@ use App\Core\Logger;
 use App\Controladores\ConexoesController;
 use App\Controladores\RotinasController2 as RotinasController;
 use App\Controladores\ApiController;
+use App\Controladores\ApiExternaController;
+use App\Controladores\WorkflowController;
 use App\Servicos\ServicoAutenticacao;
 
 // Carregar .env
@@ -137,7 +139,7 @@ if ($requerAutenticacao && !AuthMiddleware::verificarAutenticacao()) {
 
 // Dashboard
 if ($path === '/' || $path === '/dashboard') {
-    include __DIR__ . '/../views/dashboard_new.php';
+    include __DIR__ . '/../views/dashboard.php';
     exit;
 }
 
@@ -243,6 +245,29 @@ if (preg_match('#^/conexoes/delete/(\d+)$#', $path, $m) && $method === 'POST') {
     exit;
 }
 
+if ($path === '/conexoes/drivers-status' && $method === 'GET') {
+    $c = new ConexoesController();
+    header('Content-Type: application/json');
+    echo json_encode($c->driversStatus());
+    exit;
+}
+
+if (preg_match('#^/conexoes/driver-install-info/(\w+)$#', $path, $m) && $method === 'GET') {
+    $tipoBanco = $m[1];
+    $c = new ConexoesController();
+    header('Content-Type: application/json');
+    echo json_encode($c->driverInstallInfo($tipoBanco));
+    exit;
+}
+
+if (preg_match('#^/conexoes/install-driver/(\w+)$#', $path, $m) && $method === 'POST') {
+    $tipoBanco = $m[1];
+    $c = new ConexoesController();
+    header('Content-Type: application/json');
+    echo json_encode($c->installDriver($tipoBanco));
+    exit;
+}
+
 if (preg_match('#^/rotinas/run/(\d+)$#', $path, $m) && $method === 'POST') {
     $id = intval($m[1]);
     $r = new RotinasController();
@@ -302,12 +327,17 @@ if (preg_match('#^/rotinas/stats/(\d+)$#', $path, $m) && $method === 'GET') {
 
 // fallback - homepage mínima
 if ($path === '/conexoes') {
-    include __DIR__ . '/../views/conexoes_new.php';
+    include __DIR__ . '/../views/conexoes.php';
+    exit;
+}
+
+if ($path === '/drivers-status') {
+    include __DIR__ . '/../views/drivers_status.php';
     exit;
 }
 
 if ($path === '/rotinas') {
-    include __DIR__ . '/../views/rotinas_new.php';
+    include __DIR__ . '/../views/rotinas.php';
     exit;
 }
 
@@ -323,7 +353,7 @@ if ($path === '/rotinas/cadastro') {
 
 // Histórico de execuções
 if ($path === '/historico') {
-    include __DIR__ . '/../views/historico_new.php';
+    include __DIR__ . '/../views/historico.php';
     exit;
 }
 
@@ -362,6 +392,12 @@ if ($path === '/admin/usuarios') {
 // SQL Editor
 if ($path === '/sql-editor') {
     include __DIR__ . '/../views/sql_editor.php';
+    exit;
+}
+
+// Diagrama de Banco de Dados
+if ($path === '/diagrama') {
+    include __DIR__ . '/../views/diagrama.php';
     exit;
 }
 
@@ -465,11 +501,110 @@ if (preg_match('#^/sql-editor/objects/(\d+)$#', $path, $m) && $method === 'GET')
     exit;
 }
 
+if (preg_match('#^/sql-editor/metadata/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controladores\SqlEditorController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getMetadata($id));
+    exit;
+}
+
+// SQL Editor - Lazy Loading APIs
+if (preg_match('#^/sql-editor/tables/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $schema = urldecode($m[2]);
+    $c = new \App\Controladores\SqlEditorController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getTables($id, $schema));
+    exit;
+}
+
+if (preg_match('#^/sql-editor/views/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $schema = urldecode($m[2]);
+    $c = new \App\Controladores\SqlEditorController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getViews($id, $schema));
+    exit;
+}
+
+if (preg_match('#^/sql-editor/functions/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $schema = urldecode($m[2]);
+    $c = new \App\Controladores\SqlEditorController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getFunctions($id, $schema));
+    exit;
+}
+
+if (preg_match('#^/sql-editor/procedures/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $schema = urldecode($m[2]);
+    $c = new \App\Controladores\SqlEditorController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getProcedures($id, $schema));
+    exit;
+}
+
+if (preg_match('#^/sql-editor/packages/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $schema = urldecode($m[2]);
+    $c = new \App\Controladores\SqlEditorController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getPackages($id, $schema));
+    exit;
+}
+
 if ($path === '/sql-editor/execute' && $method === 'POST') {
     $data = $_POST;
     $c = new \App\Controladores\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->execute($data));
+    exit;
+}
+
+// ========== API DIAGRAMA ==========
+
+if (preg_match('#^/diagrama/estrutura/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controladores\DiagramaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getEstrutura($id));
+    exit;
+}
+
+if (preg_match('#^/diagrama/estrutura-tabela/(\d+)/([^/]+)/([^/]+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $schema = urldecode($m[2]);
+    $tabela = urldecode($m[3]);
+    $c = new \App\Controladores\DiagramaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->getEstruturaTabela($id, $schema, $tabela));
+    exit;
+}
+
+if (preg_match('#^/diagrama/tabelas/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controladores\DiagramaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarTabelas($id));
+    exit;
+}
+
+if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controladores\DiagramaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->carregarPosicoes($id));
+    exit;
+}
+
+if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'POST') {
+    $id = intval($m[1]);
+    $posicoes = json_decode(file_get_contents('php://input'), true) ?? [];
+    $c = new \App\Controladores\DiagramaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->salvarPosicoes($id, $posicoes));
     exit;
 }
 
@@ -630,18 +765,68 @@ if (preg_match('#^/api/historico/(\d+)$#', $path, $m) && $method === 'GET') {
         
         // Carregar logs detalhados do campo meta (JSONB)
         $log['logs'] = [];
+        $metaData = null;
+        
+        // Tentar carregar de meta primeiro
         if (!empty($log['meta'])) {
-            // Se meta vier como string JSON, decodificar
             if (is_string($log['meta'])) {
-                $log['logs'] = json_decode($log['meta'], true) ?? [];
+                $metaData = json_decode($log['meta'], true);
             } else {
-                // Se meta já for array (PDO pode retornar JSONB como array)
-                $log['logs'] = $log['meta'];
+                $metaData = $log['meta'];
             }
         }
-        // Fallback para detalhes_json (compatibilidade)
+        // Fallback para detalhes_json
         elseif (!empty($log['detalhes_json'])) {
-            $log['logs'] = json_decode($log['detalhes_json'], true) ?? [];
+            if (is_string($log['detalhes_json'])) {
+                $metaData = json_decode($log['detalhes_json'], true);
+            } else {
+                $metaData = $log['detalhes_json'];
+            }
+        }
+        
+        // Normalizar formato dos logs para o frontend
+        if (!empty($metaData) && is_array($metaData)) {
+            foreach ($metaData as $item) {
+                $logItem = [
+                    'bloco' => $item['bloco'] ?? 'Bloco',
+                    'tipo' => $item['tipo'] ?? 'SQL',
+                    'ordem' => $item['ordem'] ?? null,
+                    'status' => 'sucesso',
+                    'duracao_ms' => $item['duracao_ms'] ?? null,
+                    'registros' => null,
+                    'resultado' => null,
+                    'erro' => null,
+                    'sql' => $item['sql'] ?? null,
+                    'arquivo_csv' => null
+                ];
+                
+                // Processar res (formato antigo)
+                if (isset($item['res'])) {
+                    $res = $item['res'];
+                    $logItem['status'] = ($res['sucesso'] ?? true) ? 'sucesso' : 'erro';
+                    $logItem['resultado'] = $res['resultado'] ?? null;
+                    $logItem['erro'] = $res['erro'] ?? null;
+                    $logItem['registros'] = $res['linhas'] ?? $res['registros'] ?? null;
+                    $logItem['arquivo_csv'] = $res['arquivo'] ?? null;
+                }
+                
+                // Processar formato novo
+                if (isset($item['status'])) {
+                    $logItem['status'] = $item['status'];
+                }
+                if (isset($item['resultado'])) {
+                    $logItem['resultado'] = $item['resultado'];
+                }
+                if (isset($item['erro'])) {
+                    $logItem['erro'] = $item['erro'];
+                    $logItem['status'] = 'erro';
+                }
+                if (isset($item['registros'])) {
+                    $logItem['registros'] = $item['registros'];
+                }
+                
+                $log['logs'][] = $logItem;
+            }
         }
         
         header('Content-Type: application/json');
@@ -825,6 +1010,249 @@ if (preg_match('#^/rotinas/test_run/(\d+)$#', $path, $m) && $method === 'GET') {
     $r = new RotinasController();
     header('Content-Type: application/json');
     echo json_encode($r->executar($id));
+    exit;
+}
+
+// =====================================================
+// ROTAS: APIs EXTERNAS
+// =====================================================
+
+// View APIs Externas
+if ($path === '/apis-externas') {
+    include __DIR__ . '/../views/apis-externas.php';
+    exit;
+}
+
+// Listar APIs
+if ($path === '/api/apis-externas/list' && $method === 'GET') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarApis());
+    exit;
+}
+
+// Buscar API por ID
+if (preg_match('#^/api/apis-externas/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->buscarApi((int)$m[1]));
+    exit;
+}
+
+// Salvar API
+if ($path === '/api/apis-externas/salvar' && $method === 'POST') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->salvarApi($_POST));
+    exit;
+}
+
+// Deletar API
+if (preg_match('#^/api/apis-externas/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->deletarApi((int)$m[1]));
+    exit;
+}
+
+// Testar API
+if ($path === '/api/apis-externas/testar' && $method === 'POST') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->testarApi($_POST));
+    exit;
+}
+
+// =====================================================
+// ROTAS: EVENTOS DE API
+// =====================================================
+
+// View Eventos
+if ($path === '/eventos-api') {
+    include __DIR__ . '/../views/eventos-api.php';
+    exit;
+}
+
+// Listar Eventos
+if ($path === '/api/eventos-api/list' && $method === 'GET') {
+    $idApi = isset($_GET['id_api']) ? (int)$_GET['id_api'] : null;
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarEventos($idApi));
+    exit;
+}
+
+// Buscar Evento por ID
+if (preg_match('#^/api/eventos-api/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->buscarEvento((int)$m[1]));
+    exit;
+}
+
+// Salvar Evento
+if ($path === '/api/eventos-api/salvar' && $method === 'POST') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->salvarEvento($_POST));
+    exit;
+}
+
+// Deletar Evento
+if (preg_match('#^/api/eventos-api/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->deletarEvento((int)$m[1]));
+    exit;
+}
+
+// Testar JSONPath
+if ($path === '/api/eventos-api/testar-jsonpath' && $method === 'POST') {
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->testarJsonPath($_POST));
+    exit;
+}
+
+// Listar Valores Capturados
+if ($path === '/api/valores-capturados/list' && $method === 'GET') {
+    $idEvento = isset($_GET['id_evento']) ? (int)$_GET['id_evento'] : null;
+    $c = new ApiExternaController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarValoresCapturados($idEvento));
+    exit;
+}
+
+// =====================================================
+// ROTAS: WORKFLOWS
+// =====================================================
+
+// View Lista de Workflows
+if ($path === '/workflows') {
+    include __DIR__ . '/../views/workflows.php';
+    exit;
+}
+
+// View Workflow Builder
+if ($path === '/workflow-builder' || preg_match('#^/workflow-builder/(\d+)$#', $path, $matches)) {
+    $params = ['id' => $matches[1] ?? null];
+    include __DIR__ . '/../views/workflow-builder.php';
+    exit;
+}
+
+// View Execuções de Workflow
+if ($path === '/workflow-execucoes') {
+    include __DIR__ . '/../views/workflow-execucoes.php';
+    exit;
+}
+
+// Listar Workflows
+if ($path === '/api/workflows/list' && $method === 'GET') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listar());
+    exit;
+}
+
+// Buscar Workflow por ID
+if (preg_match('#^/api/workflows/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->buscar((int)$m[1]));
+    exit;
+}
+
+// Salvar Workflow
+if ($path === '/api/workflows/salvar' && $method === 'POST') {
+    $c = new WorkflowController();
+    $data = $_POST;
+    
+    // Se veio JSON no body
+    $input = file_get_contents('php://input');
+    if ($input && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+        $data = json_decode($input, true);
+    }
+    
+    header('Content-Type: application/json');
+    echo json_encode($c->salvar($data));
+    exit;
+}
+
+// Deletar Workflow
+if (preg_match('#^/api/workflows/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->deletar((int)$m[1]));
+    exit;
+}
+
+// Alternar ativo
+if (preg_match('#^/api/workflows/toggle/(\d+)$#', $path, $m) && $method === 'POST') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->alternarAtivo((int)$m[1]));
+    exit;
+}
+
+// Duplicar Workflow
+if (preg_match('#^/api/workflows/duplicar/(\d+)$#', $path, $m) && $method === 'POST') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->duplicar((int)$m[1]));
+    exit;
+}
+
+// Executar Workflow
+if (preg_match('#^/api/workflows/executar/(\d+)$#', $path, $m) && $method === 'POST') {
+    $c = new WorkflowController();
+    $contexto = [];
+    $input = file_get_contents('php://input');
+    if ($input) {
+        $contexto = json_decode($input, true) ?? [];
+    }
+    header('Content-Type: application/json');
+    echo json_encode($c->executar((int)$m[1], $contexto));
+    exit;
+}
+
+// Listar Execuções
+if ($path === '/api/workflow-execucoes/list' && $method === 'GET') {
+    $idWorkflow = isset($_GET['id_workflow']) ? (int)$_GET['id_workflow'] : null;
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarExecucoes($idWorkflow));
+    exit;
+}
+
+// Buscar Execução
+if (preg_match('#^/api/workflow-execucoes/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->buscarExecucao((int)$m[1]));
+    exit;
+}
+
+// Listar Rotinas Disponíveis (para uso no builder)
+if ($path === '/api/workflows/rotinas-disponiveis' && $method === 'GET') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarRotinasDisponiveis());
+    exit;
+}
+
+// Obter estatísticas dos workflows
+if ($path === '/api/workflows/stats' && $method === 'GET') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->obterEstatisticas());
+    exit;
+}
+
+// Cancelar execução
+if (preg_match('#^/api/workflow-execucoes/cancelar/(\d+)$#', $path, $m) && $method === 'POST') {
+    $c = new WorkflowController();
+    header('Content-Type: application/json');
+    echo json_encode($c->cancelarExecucao((int)$m[1]));
     exit;
 }
 

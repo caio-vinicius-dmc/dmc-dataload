@@ -113,266 +113,380 @@ ob_start();
     </div>
     <div class="card-modern-body p-0">
         <div id="schedulerLog" class="bg-dark text-white p-3" style="height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;">
-            <div class="text-muted">[Aguardando atividade do scheduler...]</div>
+            <div class="text-muted fst-italic text-white-50">[Aguardando atividade do scheduler...]</div>
         </div>
     </div>
 </div>
 
 <!-- Modal de Configuração de Agendamento -->
-<div class="modal fade modal-modern" id="modalAgendamento" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header-modern">
-                <h5 class="modal-title" id="modalAgendamentoTitle"><i class="bi bi-calendar-event me-2"></i>Configurar Agendamento</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="modalAgendamento" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <!-- Header com gradiente -->
+            <div class="modal-header border-0 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem 2rem;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-calendar-event fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0 fw-bold" id="modalAgendamentoTitle">Configurar Agendamento</h5>
+                        <small class="opacity-75">Defina quando a rotina deve executar</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body-modern">
+            
+            <div class="modal-body p-0">
                 <form id="formAgendamento">
                     <input type="hidden" id="agendamento_id_rotina">
                     
-                    <!-- Seleção de Rotina -->
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <i class="bi bi-box-seam me-2"></i>Rotina
+                    <!-- Tabs de navegação -->
+                    <ul class="nav nav-pills nav-fill p-3 bg-light border-bottom" id="agendamentoTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill" id="tab-rotina" data-bs-toggle="pill" data-bs-target="#pane-rotina" type="button">
+                                <i class="bi bi-box-seam me-2"></i>1. Rotina
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill" id="tab-frequencia" data-bs-toggle="pill" data-bs-target="#pane-frequencia" type="button">
+                                <i class="bi bi-clock me-2"></i>2. Frequência
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill" id="tab-periodo" data-bs-toggle="pill" data-bs-target="#pane-periodo" type="button">
+                                <i class="bi bi-calendar-range me-2"></i>3. Período
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill" id="tab-avancado" data-bs-toggle="pill" data-bs-target="#pane-avancado" type="button">
+                                <i class="bi bi-gear me-2"></i>4. Avançado
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content p-4">
+                        <!-- Tab 1: Seleção de Rotina -->
+                        <div class="tab-pane fade show active" id="pane-rotina" role="tabpanel">
+                            <div class="text-center mb-4">
+                                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-box-seam text-primary" style="font-size: 2.5rem;"></i>
+                                </div>
+                                <h4 class="fw-bold">Selecione a Rotina</h4>
+                                <p class="text-muted">Escolha qual rotina deseja agendar para execução automática</p>
+                            </div>
+                            
+                            <div class="mx-auto" style="max-width: 500px;">
+                                <label class="form-label fw-semibold"><i class="bi bi-search me-2"></i>Rotina</label>
+                                <select class="form-select form-select-lg" id="agendamento_rotina" required style="border-radius: 12px; padding: 1rem;">
+                                    <option value="">Selecione uma rotina...</option>
+                                </select>
+                                <div class="form-text mt-2">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Apenas rotinas cadastradas e configuradas aparecem nesta lista
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <select class="form-select" id="agendamento_rotina" required>
-                                <option value="">Selecione uma rotina...</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Modo de Configuração -->
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <i class="bi bi-sliders me-2"></i>Modo de Configuração
-                        </div>
-                        <div class="card-body">
-                            <div class="btn-group w-100" role="group">
+                        
+                        <!-- Tab 2: Frequência -->
+                        <div class="tab-pane fade" id="pane-frequencia" role="tabpanel">
+                            <div class="text-center mb-4">
+                                <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-clock-history text-success" style="font-size: 2.5rem;"></i>
+                                </div>
+                                <h4 class="fw-bold">Defina a Frequência</h4>
+                                <p class="text-muted">Com que frequência a rotina deve ser executada?</p>
+                            </div>
+                            
+                            <!-- Modo de Configuração -->
+                            <div class="btn-group w-100 mb-4" role="group" style="max-width: 400px; margin: 0 auto; display: flex !important;">
                                 <input type="radio" class="btn-check" name="modo_config" id="modo_visual" value="visual" checked>
-                                <label class="btn btn-outline-primary" for="modo_visual">
-                                    <i class="bi bi-palette me-2"></i>Visual (Recomendado)
+                                <label class="btn btn-outline-primary rounded-start-pill" for="modo_visual">
+                                    <i class="bi bi-palette me-2"></i>Visual
                                 </label>
                                 <input type="radio" class="btn-check" name="modo_config" id="modo_cron" value="cron">
-                                <label class="btn btn-outline-primary" for="modo_cron">
+                                <label class="btn btn-outline-primary rounded-end-pill" for="modo_cron">
                                     <i class="bi bi-code-square me-2"></i>CRON Manual
                                 </label>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Configuração Visual -->
-                    <div id="config_visual">
-                        <!-- Frequência -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <i class="bi bi-arrow-repeat me-2"></i>Frequência de Execução
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label class="form-label">Tipo</label>
-                                        <select class="form-select" id="freq_tipo">
-                                            <option value="minutos">A cada X minutos</option>
-                                            <option value="horas">A cada X horas</option>
-                                            <option value="diario">Diariamente</option>
-                                            <option value="semanal">Semanalmente</option>
-                                            <option value="mensal">Mensalmente</option>
+                            
+                            <!-- Config Visual -->
+                            <div id="config_visual">
+                                <div class="row g-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Tipo de Frequência</label>
+                                        <select class="form-select" id="freq_tipo" style="border-radius: 10px;">
+                                            <option value="minutos">⏱️ A cada X minutos</option>
+                                            <option value="horas">🕐 A cada X horas</option>
+                                            <option value="diario">📅 Diariamente</option>
+                                            <option value="semanal">📆 Semanalmente</option>
+                                            <option value="mensal">🗓️ Mensalmente</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3" id="campo_intervalo">
-                                        <label class="form-label">Intervalo</label>
-                                        <input type="number" class="form-control" id="freq_intervalo" value="5" min="1">
+                                    <div class="col-md-4" id="campo_intervalo">
+                                        <label class="form-label fw-semibold">Intervalo</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="freq_intervalo" value="5" min="1" style="border-radius: 10px 0 0 10px;">
+                                            <span class="input-group-text" style="border-radius: 0 10px 10px 0;">minuto(s)</span>
+                                        </div>
                                     </div>
-                                    <div class="col-md-3" id="campo_hora" style="display:none;">
-                                        <label class="form-label">Hora</label>
-                                        <input type="time" class="form-control" id="freq_hora" value="08:00">
+                                    <div class="col-md-4" id="campo_hora" style="display:none;">
+                                        <label class="form-label fw-semibold">Horário</label>
+                                        <input type="time" class="form-control" id="freq_hora" value="08:00" style="border-radius: 10px;">
                                     </div>
-                                    <div class="col-md-3" id="campo_pular_dias" style="display:none;">
-                                        <label class="form-label">Pular Dias</label>
-                                        <input type="number" class="form-control" id="freq_pular_dias" value="0" min="0" max="30">
-                                        <small class="text-muted">0 = todos os dias, 1 = dia sim/dia não</small>
+                                    <div class="col-md-4" id="campo_minuto" style="display:none;">
+                                        <label class="form-label fw-semibold">No minuto</label>
+                                        <input type="number" class="form-control" id="freq_minuto" value="0" min="0" max="59" style="border-radius: 10px;">
                                     </div>
-                                    <div class="col-md-3" id="campo_minuto" style="display:none;">
-                                        <label class="form-label">Minuto</label>
-                                        <input type="number" class="form-control" id="freq_minuto" value="0" min="0" max="59">
+                                    <div class="col-md-4" id="campo_pular_dias" style="display:none;">
+                                        <label class="form-label fw-semibold">Pular Dias</label>
+                                        <input type="number" class="form-control" id="freq_pular_dias" value="0" min="0" max="30" style="border-radius: 10px;">
+                                        <small class="text-muted">0 = todos, 1 = dia sim/não</small>
                                     </div>
                                 </div>
                                 
                                 <!-- Dias da Semana -->
-                                <div class="mt-3" id="campo_dias_semana" style="display:none;">
-                                    <label class="form-label">Dias da Semana</label>
-                                    <div class="btn-group w-100" role="group">
+                                <div class="mt-4" id="campo_dias_semana" style="display:none;">
+                                    <label class="form-label fw-semibold">Dias da Semana</label>
+                                    <div class="d-flex flex-wrap gap-2">
                                         <input type="checkbox" class="btn-check" id="dia_0" value="0">
-                                        <label class="btn btn-outline-secondary" for="dia_0">Dom</label>
+                                        <label class="btn btn-outline-secondary rounded-pill px-3" for="dia_0">Dom</label>
                                         <input type="checkbox" class="btn-check" id="dia_1" value="1" checked>
-                                        <label class="btn btn-outline-secondary" for="dia_1">Seg</label>
+                                        <label class="btn btn-outline-secondary rounded-pill px-3" for="dia_1">Seg</label>
                                         <input type="checkbox" class="btn-check" id="dia_2" value="2" checked>
-                                        <label class="btn btn-outline-secondary" for="dia_2">Ter</label>
+                                        <label class="btn btn-outline-secondary rounded-pill px-3" for="dia_2">Ter</label>
                                         <input type="checkbox" class="btn-check" id="dia_3" value="3" checked>
-                                        <label class="btn btn-outline-secondary" for="dia_3">Qua</label>
+                                        <label class="btn btn-outline-secondary rounded-pill px-3" for="dia_3">Qua</label>
                                         <input type="checkbox" class="btn-check" id="dia_4" value="4" checked>
-                                        <label class="btn btn-outline-secondary" for="dia_4">Qui</label>
+                                        <label class="btn btn-outline-secondary rounded-pill px-3" for="dia_4">Qui</label>
                                         <input type="checkbox" class="btn-check" id="dia_5" value="5" checked>
-                                        <label class="btn btn-outline-secondary" for="dia_5">Sex</label>
+                                        <label class="btn btn-outline-secondary rounded-pill px-3" for="dia_5">Sex</label>
                                         <input type="checkbox" class="btn-check" id="dia_6" value="6">
-                                        <label class="btn btn-outline-secondary" for="dia_6">Sáb</label>
+                                        <label class="btn btn-outline-secondary rounded-pill px-3" for="dia_6">Sáb</label>
                                     </div>
                                 </div>
-
+                                
                                 <!-- Dia do Mês -->
-                                <div class="mt-3" id="campo_dia_mes" style="display:none;">
-                                    <label class="form-label">Dia do Mês</label>
-                                    <input type="number" class="form-control" id="freq_dia_mes" value="1" min="1" max="31">
+                                <div class="mt-4" id="campo_dia_mes" style="display:none;">
+                                    <label class="form-label fw-semibold">Dia do Mês</label>
+                                    <input type="number" class="form-control" id="freq_dia_mes" value="1" min="1" max="31" style="max-width: 200px; border-radius: 10px;">
                                 </div>
                                 
                                 <!-- Dias Intercalados -->
-                                <div class="mt-3" id="campo_dias_intercalados" style="display:none;">
-                                    <div class="alert alert-info">
+                                <div class="mt-4" id="campo_dias_intercalados" style="display:none;">
+                                    <div class="alert alert-info rounded-3 border-0">
                                         <i class="bi bi-info-circle me-2"></i>
-                                        <strong>Dias Intercalados:</strong> Executa a cada X dias, pulando dias no meio.
-                                        <br><small>Exemplo: "2" = executa 1 dia, pula 1 dia, executa 1 dia, pula 1 dia...</small>
+                                        <strong>Dias Intercalados:</strong> Executa a cada X dias.
                                     </div>
-                                    <label class="form-label">Executar a cada quantos dias?</label>
-                                    <input type="number" class="form-control" id="freq_dias_intervalo" value="2" min="1" max="365">
-                                    <small class="text-muted">1 = todos os dias (sem pular), 2 = dia sim/dia não, 3 = executa 1, pula 2...</small>
+                                    <label class="form-label fw-semibold">Executar a cada quantos dias?</label>
+                                    <input type="number" class="form-control" id="freq_dias_intervalo" value="2" min="1" max="365" style="max-width: 200px; border-radius: 10px;">
+                                </div>
+                            </div>
+                            
+                            <!-- Config CRON Manual -->
+                            <div id="config_cron" style="display:none;">
+                                <div class="mb-4">
+                                    <label class="form-label fw-semibold"><i class="bi bi-terminal me-2"></i>Expressão CRON</label>
+                                    <input type="text" class="form-control form-control-lg font-monospace text-center" id="cron_manual" placeholder="*/5 * * * *" style="border-radius: 12px; font-size: 1.25rem;">
+                                    <div class="form-text">Formato: minuto hora dia mês dia_da_semana</div>
+                                </div>
+                                
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Presets Rápidos:</label>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('*/5 * * * *')">5 min</button>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('*/15 * * * *')">15 min</button>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('0 * * * *')">1 hora</button>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('0 8 * * *')">08:00</button>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('0 8 * * 1-5')">Úteis 08h</button>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('0 0 * * *')">Meia-noite</button>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('0 0 1 * *')">Mensal</button>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100 rounded-pill" onclick="aplicarPreset('0 0 * * 0')">Semanal</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Período de Execução -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <i class="bi bi-calendar-range me-2"></i>Período de Execução
+                        
+                        <!-- Tab 3: Período -->
+                        <div class="tab-pane fade" id="pane-periodo" role="tabpanel">
+                            <div class="text-center mb-4">
+                                <div class="rounded-circle bg-info bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-calendar-range text-info" style="font-size: 2.5rem;"></i>
+                                </div>
+                                <h4 class="fw-bold">Defina o Período</h4>
+                                <p class="text-muted">Por quanto tempo a rotina deve ficar agendada?</p>
                             </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Data/Hora de Início</label>
-                                        <input type="datetime-local" class="form-control" id="data_inicio">
-                                        <small class="text-muted">Deixe vazio para iniciar imediatamente</small>
+                            
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                                        <div class="card-body p-4">
+                                            <div class="d-flex align-items-center gap-3 mb-3">
+                                                <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                                    <i class="bi bi-play-circle text-success fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">Data/Hora de Início</h6>
+                                                    <small class="text-muted">Quando começar?</small>
+                                                </div>
+                                            </div>
+                                            <input type="datetime-local" class="form-control" id="data_inicio" style="border-radius: 10px;">
+                                            <small class="text-muted mt-2 d-block">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Vazio = inicia imediatamente
+                                            </small>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Data/Hora de Término</label>
-                                        <input type="datetime-local" class="form-control" id="data_fim">
-                                        <small class="text-muted">Deixe vazio para executar indefinidamente</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                                        <div class="card-body p-4">
+                                            <div class="d-flex align-items-center gap-3 mb-3">
+                                                <div class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                                    <i class="bi bi-stop-circle text-danger fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">Data/Hora de Término</h6>
+                                                    <small class="text-muted">Quando parar?</small>
+                                                </div>
+                                            </div>
+                                            <input type="datetime-local" class="form-control" id="data_fim" style="border-radius: 10px;">
+                                            <small class="text-muted mt-2 d-block">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Vazio = executa indefinidamente
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                                    <div class="card-body p-4">
+                                        <h6 class="fw-bold mb-3">
+                                            <i class="bi bi-calendar-x me-2 text-warning"></i>Datas para Ignorar
+                                        </h6>
+                                        <textarea class="form-control" id="datas_ignorar" rows="3" placeholder="Datas que a rotina NÃO deve executar (uma por linha)&#10;Exemplo: 25/12/2025" style="border-radius: 10px;"></textarea>
+                                        <div class="form-check mt-3">
+                                            <input class="form-check-input" type="checkbox" id="ignorar_feriados">
+                                            <label class="form-check-label" for="ignorar_feriados">
+                                                🎉 Ignorar feriados nacionais automaticamente
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Dias para Ignorar -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <i class="bi bi-calendar-x me-2"></i>Exceções
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label">Feriados e Datas Especiais</label>
-                                    <textarea class="form-control" id="datas_ignorar" rows="3" placeholder="Digite datas para ignorar (uma por linha) no formato DD/MM/YYYY&#10;Exemplo:&#10;25/12/2025&#10;01/01/2026"></textarea>
-                                    <small class="text-muted">Uma data por linha no formato DD/MM/YYYY</small>
+                        
+                        <!-- Tab 4: Avançado -->
+                        <div class="tab-pane fade" id="pane-avancado" role="tabpanel">
+                            <div class="text-center mb-4">
+                                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-gear text-warning" style="font-size: 2.5rem;"></i>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="ignorar_feriados">
-                                    <label class="form-check-label" for="ignorar_feriados">
-                                        Ignorar feriados nacionais brasileiros automaticamente
-                                    </label>
-                                </div>
+                                <h4 class="fw-bold">Configurações Avançadas</h4>
+                                <p class="text-muted">Opções adicionais de comportamento</p>
                             </div>
-                        </div>
-
-                        <!-- Outras Opções -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <i class="bi bi-gear me-2"></i>Configurações Avançadas
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Tentativas em Caso de Falha</label>
-                                        <input type="number" class="form-control" id="max_tentativas" value="3" min="1" max="10">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Intervalo entre Tentativas (min)</label>
-                                        <input type="number" class="form-control" id="intervalo_tentativas" value="5" min="1">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Timeout (segundos)</label>
-                                        <input type="number" class="form-control" id="timeout" value="300" min="30">
+                            
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                                        <div class="card-body p-4 text-center">
+                                            <i class="bi bi-arrow-repeat text-primary fs-1 mb-3"></i>
+                                            <h6 class="fw-bold">Tentativas em Falha</h6>
+                                            <input type="number" class="form-control text-center mx-auto mt-3" id="max_tentativas" value="3" min="1" max="10" style="max-width: 120px; border-radius: 10px; font-size: 1.25rem;">
+                                            <small class="text-muted d-block mt-2">vezes</small>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="form-check mt-3">
-                                    <input class="form-check-input" type="checkbox" id="notificar_falha" checked>
-                                    <label class="form-check-label" for="notificar_falha">
-                                        Notificar por e-mail em caso de falha
+                                <div class="col-md-4">
+                                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                                        <div class="card-body p-4 text-center">
+                                            <i class="bi bi-hourglass-split text-info fs-1 mb-3"></i>
+                                            <h6 class="fw-bold">Intervalo entre Tentativas</h6>
+                                            <input type="number" class="form-control text-center mx-auto mt-3" id="intervalo_tentativas" value="5" min="1" style="max-width: 120px; border-radius: 10px; font-size: 1.25rem;">
+                                            <small class="text-muted d-block mt-2">minutos</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                                        <div class="card-body p-4 text-center">
+                                            <i class="bi bi-stopwatch text-danger fs-1 mb-3"></i>
+                                            <h6 class="fw-bold">Timeout Máximo</h6>
+                                            <input type="number" class="form-control text-center mx-auto mt-3" id="timeout" value="300" min="30" style="max-width: 120px; border-radius: 10px; font-size: 1.25rem;">
+                                            <small class="text-muted d-block mt-2">segundos</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="notificar_falha" checked style="width: 3rem; height: 1.5rem;">
+                                    <label class="form-check-label ms-2" for="notificar_falha">
+                                        <strong>📧 Notificar por e-mail em caso de falha</strong>
                                     </label>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Configuração Manual CRON -->
-                    <div id="config_cron" style="display:none;">
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <i class="bi bi-code-square me-2"></i>Expressão CRON
-                            </div>
-                            <div class="card-body">
-                                <input type="text" class="form-control font-monospace" id="cron_manual" placeholder="*/5 * * * *">
-                                <small class="text-muted mt-2 d-block">Formato: minuto hora dia mês dia_da_semana</small>
-                                <div class="mt-3">
-                                    <label class="form-label">Presets Rápidos:</label>
-                                    <select class="form-select" id="cron_presets" onchange="aplicarPreset(this.value)">
-                                        <option value="">Selecione um preset...</option>
-                                        <option value="* * * * *">A cada minuto</option>
-                                        <option value="*/5 * * * *">A cada 5 minutos</option>
-                                        <option value="*/15 * * * *">A cada 15 minutos</option>
-                                        <option value="*/30 * * * *">A cada 30 minutos</option>
-                                        <option value="0 * * * *">A cada hora</option>
-                                        <option value="0 */2 * * *">A cada 2 horas</option>
-                                        <option value="0 8 * * *">Diariamente às 8h</option>
-                                        <option value="0 8 * * 1-5">Dias úteis às 8h</option>
-                                        <option value="0 0 * * 0">Semanalmente (domingo)</option>
-                                        <option value="0 0 1 * *">Mensalmente (dia 1)</option>
-                                    </select>
-                                </div>
-                            </div>
+                    
+                    <!-- Preview fixo na parte inferior -->
+                    <div class="border-top bg-light p-4">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <i class="bi bi-eye text-primary fs-4"></i>
+                            <h6 class="mb-0 fw-bold">Preview do Agendamento</h6>
                         </div>
-                    </div>
-
-                    <!-- Preview da Configuração -->
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="mb-3"><i class="bi bi-eye me-2"></i>Preview do Agendamento</h6>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <strong>Expressão CRON:</strong><br>
-                                    <code id="preview_cron">-</code>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="bg-white rounded-3 p-3 shadow-sm">
+                                    <small class="text-muted d-block mb-1">Expressão CRON</small>
+                                    <code class="fs-5" id="preview_cron">-</code>
                                 </div>
-                                <div class="col-md-4">
-                                    <strong>Descrição:</strong><br>
-                                    <span id="preview_descricao">-</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-white rounded-3 p-3 shadow-sm">
+                                    <small class="text-muted d-block mb-1">Descrição</small>
+                                    <span class="fw-semibold" id="preview_descricao">-</span>
                                 </div>
-                                <div class="col-md-4">
-                                    <strong>Próxima Execução:</strong><br>
-                                    <span id="preview_proxima">-</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-white rounded-3 p-3 shadow-sm">
+                                    <small class="text-muted d-block mb-1">Próxima Execução</small>
+                                    <span class="fw-semibold text-success" id="preview_proxima">-</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="salvarAgendamento()">
-                    <i class="bi bi-check-circle me-2"></i>Salvar Agendamento
+            
+            <!-- Footer -->
+            <div class="modal-footer border-0 bg-white px-4 py-3">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="salvarAgendamento()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                    <i class="bi bi-check-lg me-2"></i>Salvar Agendamento
                 </button>
             </div>
-        </div>
-    </div>
-</div>
-
-<?php
+        <?php
 $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
@@ -391,17 +505,20 @@ $extraStyles = <<<'STYLES'
 }
 
 .page-header-modern {
+    background: white;
+    padding: 1.75rem 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 2px solid #f1f5f9;
+    flex-wrap: wrap;
 }
 
 .page-icon-modern {
-    width: 64px;
-    height: 64px;
+    width: 70px;
+    height: 70px;
     border-radius: var(--radius-lg);
     background: var(--gradient-primary);
     display: flex;
@@ -409,13 +526,14 @@ $extraStyles = <<<'STYLES'
     justify-content: center;
     font-size: 2rem;
     color: white;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    flex-shrink: 0;
 }
 
 .page-title-modern {
     font-size: 2rem;
     font-weight: 700;
-    margin: 0;
+    margin: 0 0 0.25rem 0;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -425,7 +543,7 @@ $extraStyles = <<<'STYLES'
 .page-subtitle-modern {
     color: #64748b;
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 .card-modern {
@@ -575,6 +693,9 @@ $extraScripts = <<<'SCRIPTS'
 <script>
 let workerRunning = false;
 let logInterval = null;
+let isEditingMode = false;
+let editingRotinaId = null;
+let editingOriginalAtiva = true;
 
 // Presets CRON
 const cronPresets = {
@@ -871,6 +992,11 @@ function carregarRotinasSelect() {
 
 // Abrir modal de novo agendamento
 function novoAgendamento() {
+    // Resetar modo de edição
+    isEditingMode = false;
+    editingRotinaId = null;
+    editingOriginalAtiva = true;
+    
     $("#formAgendamento")[0].reset();
     $("#agendamento_id_rotina").val("");
     $("#modo_visual").prop("checked", true).trigger("change");
@@ -888,6 +1014,16 @@ function editarAgendamento(id) {
             Swal.fire("Erro!", "Rotina não encontrada.", "error");
             return;
         }
+        
+        // Configurar modo de edição
+        isEditingMode = true;
+        editingRotinaId = id;
+        editingOriginalAtiva = rotina.ativa;
+        
+        // Configurar modo de edição
+        isEditingMode = true;
+        editingRotinaId = id;
+        editingOriginalAtiva = rotina.ativa;
         
         // Atualizar título do modal
         $("#modalAgendamentoTitle").html('<i class="bi bi-pencil-fill me-2"></i>Editar Agendamento');
@@ -1115,6 +1251,12 @@ function salvarAgendamento() {
         return;
     }
     
+    // Determinar status ativo: preservar original ao editar, ativar ao criar novo
+    let ativaStatus = 1;
+    if (isEditingMode && editingRotinaId == rotinaId) {
+        ativaStatus = editingOriginalAtiva ? 1 : 0;
+    }
+    
     const dados = {
         id_rotina: rotinaId,
         agendamento_cron: cron,
@@ -1125,7 +1267,7 @@ function salvarAgendamento() {
         max_tentativas: $("#max_tentativas").val() || 3,
         timeout: $("#timeout").val() || 300,
         notificar_falha: $("#notificar_falha").is(":checked") ? 1 : 0,
-        ativa: 1
+        ativa: ativaStatus
     };
     
     $.post(baseUrl + "/api/scheduler/salvar", dados, function(res) {

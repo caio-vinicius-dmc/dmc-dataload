@@ -10,23 +10,21 @@ ob_start();
 ?>
 
 <!-- Header Section -->
-<div class="page-header-modern mb-4">
-    <div class="row align-items-center">
-        <div class="col-lg-8">
-            <h1 class="page-title-modern">
-                <i class="bi bi-journal-text me-3"></i>
-                Logs do Sistema
-            </h1>
-            <p class="page-subtitle-modern">Monitore eventos, erros e atividades do sistema</p>
-        </div>
-        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-            <button class="btn btn-modern-primary" onclick="carregarLogs()">
-                <i class="bi bi-arrow-clockwise me-2"></i>Atualizar
-            </button>
-            <button class="btn btn-modern-success" onclick="exportarLogs()">
-                <i class="bi bi-download me-2"></i>Exportar
-            </button>
-        </div>
+<div class="page-header-modern">
+    <div class="page-icon-modern">
+        <i class="bi bi-journal-text"></i>
+    </div>
+    <div>
+        <h1 class="page-title-modern">Logs do Sistema</h1>
+        <p class="page-subtitle-modern">Monitore eventos, erros e atividades do sistema</p>
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <button class="btn-modern-outline" onclick="carregarLogs()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Atualizar
+        </button>
+        <button class="btn-modern-primary" onclick="exportarLogs()">
+            <i class="bi bi-download me-2"></i>Exportar
+        </button>
     </div>
 </div>
 
@@ -282,19 +280,35 @@ $extraStyles = <<<'STYLES'
 
 /* ==== PAGE HEADER ==== */
 .page-header-modern {
-    padding: 2rem 0;
+    background: white;
+    padding: 1.75rem 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.page-icon-modern {
+    width: 70px;
+    height: 70px;
+    border-radius: var(--radius-lg);
+    background: var(--gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    flex-shrink: 0;
 }
 
 .page-title-modern {
     font-size: 2rem;
-    font-weight: 800;
-    color: #1a202c;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-}
-
-.page-title-modern i {
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -302,9 +316,9 @@ $extraStyles = <<<'STYLES'
 }
 
 .page-subtitle-modern {
-    color: #6b7280;
-    font-size: 1.05rem;
-    margin-bottom: 0;
+    color: #64748b;
+    margin: 0;
+    font-size: 1rem;
 }
 
 /* ==== MODERN CARDS ==== */

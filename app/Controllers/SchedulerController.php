@@ -6,6 +6,9 @@
 
 namespace App\Controllers;
 
+// Configurar timezone consistente
+date_default_timezone_set('America/Sao_Paulo');
+
 class SchedulerController
 {
     private $db;
@@ -24,7 +27,7 @@ class SchedulerController
         
         try {
             $sql = "SELECT r.id, r.nome, r.agendamento_cron, r.ativa, 
-                           r.ultima_execucao, r.proxima_execucao,
+                           r.ultima_execucao, r.proxima_execucao, r.data_inicio, r.data_fim,
                            c.nome_conexao as conexao
                     FROM tb_rotinas r
                     LEFT JOIN tb_perfis_conexao c ON r.id_conexao = c.id
@@ -35,10 +38,21 @@ class SchedulerController
             $stmt = $this->db->query($sql);
             $rotinas = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             
-            // Calcular próxima execução para cada rotina
+            // Calcular próxima execução e status para cada rotina
             foreach ($rotinas as &$rotina) {
                 if ($rotina['agendamento_cron']) {
-                    $rotina['proxima_execucao'] = $this->calcularProximaExecucao($rotina['agendamento_cron']);
+                    $status = $this->calcularStatusRotina($rotina);
+                    $rotina['status_calculado'] = $status;
+                    
+                    if ($status === 'concluida') {
+                        $rotina['proxima_execucao'] = null;
+                    } else {
+                        $rotina['proxima_execucao'] = $this->calcularProximaExecucao(
+                            $rotina['agendamento_cron'], 
+                            $rotina['data_inicio'], 
+                            $rotina['data_fim']
+                        );
+                    }
                 }
             }
             
@@ -267,7 +281,35 @@ class SchedulerController
     /**
      * Calcular próxima execução baseado no CRON
      */
-    private function calcularProximaExecucao(string $cron): ?string
+    public function calcularProximaExecucao(string $cron, ?string $dataInicio = null, ?string $dataFim = null): ?string
+    {
+        try {
+            $now = new \DateTime();
+            
+            // Se tem data de fim e já passou, não deve executar mais
+            if ($dataFim) {
+                $fimDate = new \DateTime($dataFim);
+                if ($now > $fimDate) {
+                    return null; // Agendamento expirado
+                }
+            }
+            
+            // Se tem data de início e ainda não chegou, usar a data de início
+            if ($dataInicio) {
+                $inicioDate = new \DateTime($dataInicio);
+                if ($now < $inicioDate) {
+                    return $this->calcularProximaExecucaoCron($cron, $inicioDate);
+                }
+            }
+            
+            return $this->calcularProximaExecucaoCron($cron, $now);
+            
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+    
+    private function calcularProximaExecucaoCron(string $cron, \DateTime $fromDate): ?string
     {
         try {
             $parts = explode(' ', trim($cron));
@@ -275,16 +317,74 @@ class SchedulerController
                 return null;
             }
             
-            // Implementação simplificada
-            $now = new \DateTime();
-            $now->modify('+1 minute');
-            $now->setTime($now->format('H'), $now->format('i'), 0);
+            list($minute, $hour, $day, $month, $weekday) = $parts;
             
-            // Para uma implementação completa, usar uma biblioteca como dragonmantank/cron-expression
-            return $now->format('Y-m-d H:i:s');
+            // Se é um horário específico (ex: 30 10 * * *), calcular próxima ocorrência
+            if (is_numeric($minute) && is_numeric($hour)) {
+                $next = clone $fromDate;
+                $next->setTime((int)$hour, (int)$minute, 0);
+                
+                // Se o horário de hoje já passou, ir para amanhã
+                if ($next <= $fromDate) {
+                    $next->modify('+1 day');
+                }
+                
+                return $next->format('Y-m-d H:i:s');
+            }
+            
+            // Para intervalos (ex: */5 * * * *), calcular baseado no intervalo
+            if (strpos($minute, '*/') === 0) {
+                $interval = (int)substr($minute, 2);
+                $next = clone $fromDate;
+                $currentMinute = (int)$next->format('i');
+                $nextMinute = ceil($currentMinute / $interval) * $interval;
+                
+                if ($nextMinute >= 60) {
+                    $next->modify('+1 hour');
+                    $nextMinute = 0;
+                }
+                
+                $next->setTime((int)$next->format('H'), $nextMinute, 0);
+                
+                return $next->format('Y-m-d H:i:s');
+            }
+            
+            // Fallback: próximo minuto
+            $next = clone $fromDate;
+            $next->modify('+1 minute');
+            return $next->format('Y-m-d H:i:s');
+            
         } catch (\Exception $e) {
             return null;
         }
+    }
+    
+    private function calcularStatusRotina(array $rotina): string
+    {
+        $now = new \DateTime();
+        
+        // Se tem data de fim e já passou, está concluída
+        if ($rotina['data_fim']) {
+            $fimDate = new \DateTime($rotina['data_fim']);
+            if ($now > $fimDate) {
+                return 'concluida';
+            }
+        }
+        
+        // Se não está ativa, está pausada
+        if (!$rotina['ativa']) {
+            return 'pausada';
+        }
+        
+        // Se tem data de início e ainda não chegou, está aguardando
+        if ($rotina['data_inicio']) {
+            $inicioDate = new \DateTime($rotina['data_inicio']);
+            if ($now < $inicioDate) {
+                return 'aguardando';
+            }
+        }
+        
+        return 'ativa';
     }
     
     /**
@@ -467,8 +567,21 @@ class SchedulerController
                 $params[':notificar_falha'] = !empty($data['notificar_falha']) ? 1 : 0;
             }
             
-            $sql .= " WHERE id = :id_rotina";
-            $params[':id_rotina'] = $data['id_rotina'];
+            $sql .= " WHERE id = :id";
+            $params[':id'] = $data['id_rotina'];
+            
+            // Calcular próxima execução respeitando as datas de início e fim
+            $proximaExecucao = $this->calcularProximaExecucao(
+                $data['agendamento_cron'], 
+                $data['data_inicio'] ?? null, 
+                $data['data_fim'] ?? null
+            );
+            
+            // Se há próxima execução válida, incluir na atualização
+            if ($proximaExecucao && isset($colunas['proxima_execucao'])) {
+                $sql = str_replace(' WHERE id = :id', ', proxima_execucao = :proxima_execucao WHERE id = :id', $sql);
+                $params[':proxima_execucao'] = $proximaExecucao;
+            }
             
             // Executar atualização
             $stmt = $this->db->prepare($sql);
@@ -480,7 +593,7 @@ class SchedulerController
             echo json_encode([
                 'sucesso' => true,
                 'mensagem' => 'Agendamento configurado com sucesso!',
-                'proxima_execucao' => $this->calcularProximaExecucao($data['agendamento_cron'])
+                'proxima_execucao' => $proximaExecucao ?: 'N/A'
             ]);
             
         } catch (\Exception $e) {

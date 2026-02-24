@@ -9,13 +9,19 @@ $currentPage = 'usuarios';
 ob_start();
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <p class="text-muted mb-0">Gerencie os usuários do sistema</p>
+<div class="page-header-modern">
+    <div class="page-icon-modern">
+        <i class="bi bi-people"></i>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalUsuario" onclick="novoUsuario()">
-        <i class="bi bi-person-plus me-2"></i>Novo Usuário
-    </button>
+    <div>
+        <h1 class="page-title-modern">Usuários</h1>
+        <p class="page-subtitle-modern">Gerencie os usuários do sistema</p>
+    </div>
+    <div class="ms-auto">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalUsuario" onclick="novoUsuario()">
+            <i class="bi bi-person-plus me-2"></i>Novo Usuário
+        </button>
+    </div>
 </div>
 
 <!-- Stats -->
@@ -140,6 +146,44 @@ $extraStyles = '
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 .stat-card .stat-value { font-size: 1.75rem; }
+.page-header-modern {
+    background: white;
+    padding: 1.75rem 2rem;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.page-icon-modern {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    flex-shrink: 0;
+}
+.page-title-modern {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.page-subtitle-modern {
+    color: #64748b;
+    margin: 0;
+    font-size: 1rem;
+}
 </style>
 ';
 

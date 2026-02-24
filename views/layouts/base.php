@@ -654,6 +654,43 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                     <span>SQL Editor</span>
                 </a>
             </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>Diagrama ER</span>
+                </a>
+            </div>
+
+            <div class="menu-label">Automação</div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/apis-externas" class="menu-link <?= $currentPage === 'apis-externas' ? 'active' : '' ?>">
+                    <i class="bi bi-cloud-arrow-up-fill"></i>
+                    <span>APIs Externas</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/eventos-api" class="menu-link <?= $currentPage === 'eventos-api' ? 'active' : '' ?>">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                    <span>Eventos de API</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/workflows" class="menu-link <?= $currentPage === 'workflows' ? 'active' : '' ?>">
+                    <i class="bi bi-diagram-3-fill"></i>
+                    <span>Workflows</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/workflow-execucoes" class="menu-link <?= $currentPage === 'workflow-execucoes' ? 'active' : '' ?>">
+                    <i class="bi bi-play-btn-fill"></i>
+                    <span>Execuções</span>
+                </a>
+            </div>
 
             <div class="menu-label">Sistema</div>
             

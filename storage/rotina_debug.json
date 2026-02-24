@@ -1,0 +1,19 @@
+{
+    "id": "",
+    "nome": "Teste",
+    "id_conexao": "11",
+    "descricao": "",
+    "bloco_codigo": [
+        "step_1",
+        ""
+    ],
+    "tipo_bloco": [
+        "SELECT",
+        "SELECT"
+    ],
+    "script_sql": [
+        "select * from public.users;",
+        ""
+    ],
+    "id_usuario_criador": "1"
+}
