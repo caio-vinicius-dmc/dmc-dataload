@@ -691,6 +691,13 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                     <span>Execuções</span>
                 </a>
             </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/pipelines" class="menu-link <?= $currentPage === 'pipelines' ? 'active' : '' ?>">
+                    <i class="bi bi-bezier2"></i>
+                    <span>Pipelines</span>
+                </a>
+            </div>
 
             <div class="menu-label">Sistema</div>
             

@@ -174,7 +174,7 @@ class ConexoesController
     public function buscar(int $id): array
     {
         $db = Database::getConexao();
-        $s = $db->prepare('SELECT id, nome_conexao, tipo_banco, host, porta, nome_banco, usuario, senha_encriptada, parametros_extras FROM tb_perfis_conexao WHERE id = ?');
+        $s = $db->prepare('SELECT id, nome_conexao, tipo_banco, host, porta, nome_banco, usuario, parametros_extras FROM tb_perfis_conexao WHERE id = ?');
         $s->execute([$id]);
         $r = $s->fetch(PDO::FETCH_ASSOC);
         
@@ -189,6 +189,7 @@ class ConexoesController
                 $r = array_merge($r, $extras);
             }
         }
+        unset($r['parametros_extras']);
         
         return $r;
     }
@@ -199,6 +200,52 @@ class ConexoesController
         $d = $db->prepare('DELETE FROM tb_perfis_conexao WHERE id = ?');
         $d->execute([$id]);
         return ['sucesso' => true];
+    }
+
+    /**
+     * Testa uma conexão existente pelo ID (busca dados internamente, sem expor senha)
+     */
+    public function testarConexaoPorId(int $id): array
+    {
+        $db = Database::getConexao();
+        $s = $db->prepare('SELECT tipo_banco, host, porta, nome_banco, usuario, senha_encriptada, parametros_extras FROM tb_perfis_conexao WHERE id = ?');
+        $s->execute([$id]);
+        $r = $s->fetch(PDO::FETCH_ASSOC);
+
+        if (!$r) {
+            return ['sucesso' => false, 'mensagem' => 'Conexão não encontrada'];
+        }
+
+        // Descriptografar a senha
+        $key = $_ENV['ENCRYPTION_KEY'] ?? $_SERVER['ENCRYPTION_KEY'] ?? getenv('ENCRYPTION_KEY') ?: '';
+        $senhaPlain = '';
+        if (!empty($r['senha_encriptada']) && $key) {
+            try {
+                $senhaPlain = Crypto::decrypt($r['senha_encriptada'], $key);
+            } catch (\Exception $e) {
+                return ['sucesso' => false, 'mensagem' => 'Erro ao descriptografar senha: ' . $e->getMessage()];
+            }
+        }
+
+        // Montar dados para teste
+        $data = [
+            'tipo_banco' => $r['tipo_banco'],
+            'host' => $r['host'],
+            'porta' => $r['porta'],
+            'nome_banco' => $r['nome_banco'],
+            'usuario' => $r['usuario'],
+            'senha' => $senhaPlain,
+        ];
+
+        // Mesclar parâmetros extras (SID, instance_name, etc.)
+        if (!empty($r['parametros_extras'])) {
+            $extras = json_decode($r['parametros_extras'], true);
+            if (is_array($extras)) {
+                $data = array_merge($data, $extras);
+            }
+        }
+
+        return $this->testarConexao($data);
     }
 
     /**

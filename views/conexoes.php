@@ -6,6 +6,9 @@
 $pageTitle = 'Conexões';
 $currentPage = 'conexoes';
 
+// Gerar CSRF token para proteção dos formulários
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
+
 ob_start();
 ?>
 
@@ -116,6 +119,7 @@ ob_start();
             </div>
             <form id="formConexao">
                 <input type="hidden" name="id" id="conexaoId">
+                <input type="hidden" name="_csrf_token" id="csrfToken" value="<?= htmlspecialchars($csrfToken) ?>">
                 <div class="modal-body-modern">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -558,6 +562,16 @@ $extraScripts = <<<'SCRIPTS'
 <script>
 let tabela;
 
+// Função de escape HTML para prevenção de XSS
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+const csrfToken = document.getElementById('csrfToken') ? document.getElementById('csrfToken').value : '';
+
 const tipoIcons = {
     postgres: "bi-filetype-sql",
     mysql: "bi-filetype-sql",
@@ -609,28 +623,33 @@ function loadTable() {
         
         (res.data || []).forEach(function(r) {
             const icon = tipoIcons[r.tipo_banco] || "bi-database";
+            const safeNome = escapeHtml(r.nome_conexao);
+            const safeTipo = escapeHtml(r.tipo_banco);
+            const safeHost = escapeHtml(r.host);
+            const safeBanco = escapeHtml(r.nome_banco);
+            const safeId = parseInt(r.id, 10);
             tbody.append(`<tr>
                 <td>
                     <div class="d-flex align-items-center gap-2">
                         <div class="rounded-circle bg-primary bg-opacity-10 p-2">
                             <i class="${icon} text-primary"></i>
                         </div>
-                        <strong>${r.nome_conexao}</strong>
+                        <strong>${safeNome}</strong>
                     </div>
                 </td>
-                <td><span class="badge bg-secondary">${r.tipo_banco}</span></td>
-                <td>${r.host}</td>
-                <td>${r.nome_banco}</td>
+                <td><span class="badge bg-secondary">${safeTipo}</span></td>
+                <td>${safeHost}</td>
+                <td>${safeBanco}</td>
                 <td><span class="badge-status badge-info"><i class="bi bi-check-circle me-1"></i>Configurada</span></td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-info" onclick="testarConexaoId(${r.id})" title="Testar">
+                        <button class="btn btn-outline-info" onclick="testarConexaoId(${safeId})" title="Testar">
                             <i class="bi bi-plug"></i>
                         </button>
-                        <button class="btn btn-outline-primary" onclick="editarConexao(${r.id})" title="Editar">
+                        <button class="btn btn-outline-primary" onclick="editarConexao(${safeId})" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-outline-danger" onclick="excluirConexao(${r.id})" title="Excluir">
+                        <button class="btn btn-outline-danger" onclick="excluirConexao(${safeId})" title="Excluir">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -693,7 +712,7 @@ function excluirConexao(id) {
         confirmButtonText: "Sim, excluir"
     }).then((result) => {
         if (result.isConfirmed) {
-            $.post(baseUrl + "/conexoes/delete/" + id, function(res) {
+            $.post(baseUrl + "/conexoes/delete/" + id, { _csrf_token: csrfToken }, function(res) {
                 Swal.fire("Excluída!", "Conexão removida com sucesso.", "success");
                 loadTable();
             });
@@ -717,7 +736,6 @@ function testarConexao() {
             // Verificar se é um erro de driver faltante
             if (res.driver_faltante) {
                 const tipoBanco = res.tipo_banco;
-                const podeInstalarAuto = (tipoBanco === 'oracle' || tipoBanco === 'sqlserver');
                 
                 resultado.className = "alert alert-danger";
                 resultado.innerHTML = `
@@ -725,14 +743,12 @@ function testarConexao() {
                         <i class="bi bi-exclamation-triangle-fill fs-4"></i>
                         <div class="flex-fill">
                             <strong>Driver não disponível!</strong>
-                            <p class="mb-2">${res.mensagem}</p>
+                            <p class="mb-2">${escapeHtml(res.mensagem)}</p>
                             <div class="btn-group btn-group-sm">
-                                ${podeInstalarAuto ? `
-                                <button type="button" class="btn btn-success" onclick="instalarDriverModal('${tipoBanco}')">
+                                <button type="button" class="btn btn-success" onclick="instalarDriverModal('${escapeHtml(tipoBanco)}')">
                                     <i class="bi bi-download me-1"></i>
                                     Instalar Automaticamente
                                 </button>
-                                ` : ''}
                                 <button type="button" class="btn btn-outline-light" 
                                         onclick="window.open('${baseUrl}/drivers-status', '_blank')">
                                     <i class="bi bi-info-circle me-1"></i>
@@ -760,15 +776,13 @@ function testarConexaoId(id) {
         didOpen: () => Swal.showLoading()
     });
     
-    $.getJSON(baseUrl + "/conexoes/get/" + id, function(r) {
-        $.post(baseUrl + "/conexoes/test", r, function(res) {
-            if (res.sucesso) {
-                Swal.fire("Sucesso!", res.mensagem, "success");
-            } else {
-                Swal.fire("Erro!", res.mensagem || res.erro, "error");
-            }
-        }, "json");
-    });
+    $.post(baseUrl + "/conexoes/test/" + id, { _csrf_token: csrfToken }, function(res) {
+        if (res.sucesso) {
+            Swal.fire("Sucesso!", res.mensagem, "success");
+        } else {
+            Swal.fire("Erro!", res.mensagem || res.erro, "error");
+        }
+    }, "json");
 }
 
 function toggleSenha() {
@@ -786,7 +800,10 @@ function toggleSenha() {
 function instalarDriverModal(tipoBanco) {
     const nomes = {
         'oracle': 'Oracle OCI8',
-        'sqlserver': 'SQL Server'
+        'sqlserver': 'SQL Server',
+        'mysql': 'MySQL/MariaDB',
+        'mariadb': 'MySQL/MariaDB',
+        'postgres': 'PostgreSQL'
     };
     const nomeBanco = nomes[tipoBanco] || tipoBanco.toUpperCase();
 
@@ -801,7 +818,7 @@ function instalarDriverModal(tipoBanco) {
     $.ajax({
         url: baseUrl + "/conexoes/install-driver/" + tipoBanco,
         method: 'POST',
-        data: { auto_download: 'false' },
+        data: { auto_download: 'false', _csrf_token: csrfToken },
         dataType: 'json'
     }).then(response => {
         Swal.close();
@@ -855,7 +872,7 @@ function executarDownload(tipoBanco) {
     $.ajax({
         url: baseUrl + "/conexoes/install-driver/" + tipoBanco,
         method: 'POST',
-        data: { auto_download: 'true' },
+        data: { auto_download: 'true', _csrf_token: csrfToken },
         dataType: 'json'
     }).then(response => {
         mostrarResultado(response);

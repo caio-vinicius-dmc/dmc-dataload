@@ -10,6 +10,7 @@ use App\Controladores\RotinasController2 as RotinasController;
 use App\Controladores\ApiController;
 use App\Controladores\ApiExternaController;
 use App\Controladores\WorkflowController;
+use App\Controladores\PipelineController;
 use App\Servicos\ServicoAutenticacao;
 
 // Carregar .env
@@ -127,7 +128,15 @@ if ($path === '/api/sessao' && $method === 'GET') {
 
 // Middleware de autenticação para rotas protegidas
 if ($requerAutenticacao && !AuthMiddleware::verificarAutenticacao()) {
-    if (strpos($path, '/api/') === 0) {
+    // Rotas que respondem JSON (APIs e endpoints AJAX)
+    $isApiRoute = strpos($path, '/api/') === 0 
+        || strpos($path, '/conexoes/') === 0
+        || strpos($path, '/rotinas/') === 0
+        || strpos($path, '/workflows/') === 0
+        || strpos($path, '/pipelines/') === 0
+        || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest');
+    
+    if ($isApiRoute) {
         http_response_code(401);
         header('Content-Type: application/json');
         echo json_encode(['erro' => 'Não autenticado']);
@@ -207,15 +216,50 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
 
 // Rotas simples
 if ($path === '/conexoes/test' && $method === 'POST') {
+    // Validar CSRF token
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $data = $_POST;
+    unset($data['_csrf_token']);
     $c = new ConexoesController();
     header('Content-Type: application/json');
     echo json_encode($c->testarConexao($data));
     exit;
 }
 
+// Testar conexão existente por ID (sem expor senha)
+if (preg_match('#^/conexoes/test/(\d+)$#', $path, $m) && $method === 'POST') {
+    // Validar CSRF token
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $id = intval($m[1]);
+    $c = new ConexoesController();
+    header('Content-Type: application/json');
+    echo json_encode($c->testarConexaoPorId($id));
+    exit;
+}
+
 if ($path === '/conexoes/salvar' && $method === 'POST') {
+    // Validar CSRF token
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $data = $_POST;
+    unset($data['_csrf_token']);
     $c = new ConexoesController();
     header('Content-Type: application/json');
     echo json_encode($c->salvar($data));
@@ -238,6 +282,14 @@ if (preg_match('#^/conexoes/get/(\d+)$#', $path, $m) && $method === 'GET') {
 }
 
 if (preg_match('#^/conexoes/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    // Validar CSRF token
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $id = intval($m[1]);
     $c = new ConexoesController();
     header('Content-Type: application/json');
@@ -261,6 +313,14 @@ if (preg_match('#^/conexoes/driver-install-info/(\w+)$#', $path, $m) && $method 
 }
 
 if (preg_match('#^/conexoes/install-driver/(\w+)$#', $path, $m) && $method === 'POST') {
+    // Validar CSRF token
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $tipoBanco = $m[1];
     $c = new ConexoesController();
     header('Content-Type: application/json');
@@ -1253,6 +1313,180 @@ if (preg_match('#^/api/workflow-execucoes/cancelar/(\d+)$#', $path, $m) && $meth
     $c = new WorkflowController();
     header('Content-Type: application/json');
     echo json_encode($c->cancelarExecucao((int)$m[1]));
+    exit;
+}
+
+// =====================================================
+// ROTAS: PIPELINES
+// =====================================================
+
+// View Lista de Pipelines
+if ($path === '/pipelines') {
+    include __DIR__ . '/../views/pipelines/index.php';
+    exit;
+}
+
+// View Pipeline Builder (novo ou editar)
+if ($path === '/pipelines/builder' || preg_match('#^/pipelines/builder/(\d+)$#', $path, $matches)) {
+    $pipelineId = $matches[1] ?? null;
+    include __DIR__ . '/../views/pipelines/builder.php';
+    exit;
+}
+
+// API: Listar Pipelines
+if ($path === '/pipelines/list' && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listar());
+    exit;
+}
+
+// API: Buscar Pipeline por ID
+if (preg_match('#^/pipelines/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->buscar((int)$m[1]));
+    exit;
+}
+
+// API: Salvar Pipeline
+if ($path === '/pipelines/salvar' && $method === 'POST') {
+    AuthMiddleware::validarTokenCSRF();
+    $c = new PipelineController();
+    $data = $_POST;
+    $input = file_get_contents('php://input');
+    if ($input && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+        $data = json_decode($input, true);
+    }
+    header('Content-Type: application/json');
+    echo json_encode($c->salvar($data));
+    exit;
+}
+
+// API: Deletar Pipeline
+if (preg_match('#^/pipelines/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    AuthMiddleware::validarTokenCSRF();
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->deletar((int)$m[1]));
+    exit;
+}
+
+// API: Executar Pipeline
+if (preg_match('#^/pipelines/executar/(\d+)$#', $path, $m) && $method === 'POST') {
+    AuthMiddleware::validarTokenCSRF();
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->executar((int)$m[1]));
+    exit;
+}
+
+// API: Duplicar Pipeline
+if (preg_match('#^/pipelines/duplicar/(\d+)$#', $path, $m) && $method === 'POST') {
+    AuthMiddleware::validarTokenCSRF();
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->duplicar((int)$m[1]));
+    exit;
+}
+
+// API: Toggle Ativo Pipeline
+if (preg_match('#^/pipelines/toggle/(\d+)$#', $path, $m) && $method === 'POST') {
+    AuthMiddleware::validarTokenCSRF();
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->toggleAtivo((int)$m[1]));
+    exit;
+}
+
+// API: Exportar Pipeline
+if (preg_match('#^/pipelines/exportar/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->exportar((int)$m[1]));
+    exit;
+}
+
+// API: Importar Pipeline
+if ($path === '/pipelines/importar' && $method === 'POST') {
+    AuthMiddleware::validarTokenCSRF();
+    $c = new PipelineController();
+    $data = json_decode(file_get_contents('php://input'), true);
+    header('Content-Type: application/json');
+    echo json_encode($c->importar($data));
+    exit;
+}
+
+// API: Listar Conexões disponíveis (para nodes SQL)
+if ($path === '/pipelines/conexoes' && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarConexoes());
+    exit;
+}
+
+// API: Estatísticas de Pipelines
+if ($path === '/pipelines/stats' && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->estatisticas());
+    exit;
+}
+
+// API: Histórico de Execuções de um Pipeline
+if (preg_match('#^/pipelines/historico/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->historicoExecucoes((int)$m[1]));
+    exit;
+}
+
+// API: Detalhe de uma Execução
+if (preg_match('#^/pipelines/execucao/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->detalheExecucao((int)$m[1]));
+    exit;
+}
+
+// API: Listar APIs Externas disponíveis para nodes HTTP
+if ($path === '/pipelines/apis-externas' && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarApisExternas());
+    exit;
+}
+
+// API: Listar Eventos de API disponíveis para triggers
+if ($path === '/pipelines/eventos-api' && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarEventosApi());
+    exit;
+}
+
+// API: Listar Rotinas disponíveis para uso em pipelines
+if ($path === '/pipelines/rotinas' && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarRotinas());
+    exit;
+}
+
+// API: Listar Tabelas de uma conexão
+if (preg_match('#^/pipelines/tabelas/(\d+)$#', $path, $m) && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarTabelas((int)$m[1]));
+    exit;
+}
+
+// API: Listar Colunas de uma tabela
+if (preg_match('#^/pipelines/colunas/(\d+)/([^/]+)$#', $path, $m) && $method === 'GET') {
+    $c = new PipelineController();
+    $schema = $_GET['schema'] ?? '';
+    header('Content-Type: application/json');
+    echo json_encode($c->listarColunas((int)$m[1], urldecode($m[2]), $schema));
     exit;
 }
 

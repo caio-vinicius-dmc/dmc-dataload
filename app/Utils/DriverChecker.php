@@ -48,11 +48,63 @@ class DriverChecker
      */
     public static function getDriverInstallInfo(string $tipoBanco): array
     {
+        $phpIni = php_ini_loaded_file();
+        $extDir = PHP_EXTENSION_DIR;
+
         $info = [
+            'postgres' => [
+                'driver' => 'pgsql',
+                'nome' => 'PostgreSQL PDO',
+                'disponivel' => false,
+                'auto_install' => true,
+                'instrucoes' => [
+                    '1. A extensão geralmente já vem com o PHP/XAMPP',
+                    '2. Abra ' . $phpIni,
+                    '3. Remova o ";" de: ;extension=pgsql',
+                    '4. Remova o ";" de: ;extension=pdo_pgsql',
+                    '5. Reinicie o Apache/XAMPP',
+                ],
+                'links' => [
+                    'Documentação PHP PostgreSQL' => 'https://www.php.net/manual/pt_BR/book.pgsql.php'
+                ]
+            ],
+            'mysql' => [
+                'driver' => 'mysql',
+                'nome' => 'MySQL/MariaDB PDO',
+                'disponivel' => false,
+                'auto_install' => true,
+                'instrucoes' => [
+                    '1. A extensão geralmente já vem com o PHP/XAMPP',
+                    '2. Abra ' . $phpIni,
+                    '3. Remova o ";" de: ;extension=mysqli',
+                    '4. Remova o ";" de: ;extension=pdo_mysql',
+                    '5. Reinicie o Apache/XAMPP',
+                ],
+                'links' => [
+                    'Documentação PHP MySQL' => 'https://www.php.net/manual/pt_BR/book.mysqli.php'
+                ]
+            ],
+            'mariadb' => [
+                'driver' => 'mysql',
+                'nome' => 'MariaDB (via MySQL PDO)',
+                'disponivel' => false,
+                'auto_install' => true,
+                'instrucoes' => [
+                    '1. MariaDB usa o mesmo driver que MySQL',
+                    '2. Abra ' . $phpIni,
+                    '3. Remova o ";" de: ;extension=mysqli',
+                    '4. Remova o ";" de: ;extension=pdo_mysql',
+                    '5. Reinicie o Apache/XAMPP',
+                ],
+                'links' => [
+                    'Documentação PHP MySQL' => 'https://www.php.net/manual/pt_BR/book.mysqli.php'
+                ]
+            ],
             'oracle' => [
                 'driver' => 'oci',
                 'nome' => 'Oracle OCI8',
                 'disponivel' => false,
+                'auto_install' => true,
                 'instrucoes' => [
                     '1. Baixe o Oracle Instant Client:',
                     '   https://www.oracle.com/database/technologies/instant-client/downloads.html',
@@ -65,7 +117,7 @@ class DriverChecker
                     '   - Variáveis de Ambiente > PATH > Adicionar',
                     '',
                     '4. Habilite a extensão no php.ini:',
-                    '   - Abra ' . php_ini_loaded_file(),
+                    '   - Abra ' . $phpIni,
                     '   - Remova o ";" de: ;extension=oci8_12c (ou oci8_19)',
                     '   - Remova o ";" de: ;extension=pdo_oci',
                     '',
@@ -82,6 +134,7 @@ class DriverChecker
                 'driver' => 'sqlsrv',
                 'nome' => 'SQL Server PDO',
                 'disponivel' => false,
+                'auto_install' => true,
                 'instrucoes' => [
                     '1. Baixe os Microsoft Drivers for PHP for SQL Server:',
                     '   https://docs.microsoft.com/en-us/sql/connect/php/download-drivers-php-sql-server',
@@ -92,10 +145,10 @@ class DriverChecker
                     '3. Copie os arquivos para a pasta ext do PHP:',
                     '   - php_sqlsrv_xx_ts.dll',
                     '   - php_pdo_sqlsrv_xx_ts.dll',
-                    '   Para: ' . PHP_EXTENSION_DIR,
+                    '   Para: ' . $extDir,
                     '',
                     '4. Habilite as extensões no php.ini:',
-                    '   - Abra ' . php_ini_loaded_file(),
+                    '   - Abra ' . $phpIni,
                     '   - Adicione: extension=php_sqlsrv_xx_ts.dll',
                     '   - Adicione: extension=php_pdo_sqlsrv_xx_ts.dll',
                     '',

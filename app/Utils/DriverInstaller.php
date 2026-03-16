@@ -35,6 +35,11 @@ class DriverInstaller
                     return self::installOracle($autoDownload);
                 case 'sqlserver':
                     return self::installSqlServer($autoDownload);
+                case 'mysql':
+                case 'mariadb':
+                    return self::installMySQL($autoDownload);
+                case 'postgres':
+                    return self::installPostgres($autoDownload);
                 default:
                     return [
                         'sucesso' => false,
@@ -362,20 +367,352 @@ class DriverInstaller
             }
         }
 
-        // DLLs não encontradas - indicar download
-        $downloadUrl = 'https://docs.microsoft.com/en-us/sql/connect/php/download-drivers-php-sql-server';
+        // DLLs não encontradas - download automático
+        $downloadUrl = self::getSqlServerDriverUrl($phpVersion, $arch, $isThreadSafe);
+
+        if (!$downloadUrl) {
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Não foi possível determinar a URL de download para PHP ' . $phpVersion,
+                'steps' => $steps,
+                'manual_required' => true
+            ];
+        }
+
+        // Se não tiver aprovação, retornar info para solicitar
+        if (!$autoDownload) {
+            $steps[] = "URL de download preparada";
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Download automático requer aprovação do usuário',
+                'steps' => $steps,
+                'requer_download' => true,
+                'download_info' => [
+                    'url' => $downloadUrl,
+                    'tipo' => 'sqlserver',
+                    'arch' => $arch,
+                    'php_version' => $phpVersion,
+                    'tamanho_estimado' => '2 MB'
+                ]
+            ];
+        }
+
+        // Download e instalação
+        $steps[] = "Baixando Microsoft Drivers for PHP for SQL Server...";
         
+        $zipFile = self::$tempDir . DIRECTORY_SEPARATOR . 'sqlsrv.zip';
+        $extractDir = self::$tempDir . DIRECTORY_SEPARATOR . 'sqlsrv_extracted';
+        
+        $download = self::downloadFile($downloadUrl, $zipFile);
+        
+        if (!$download['sucesso']) {
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Erro ao baixar driver SQL Server. Faça download manualmente: https://learn.microsoft.com/en-us/sql/connect/php/download-drivers-php-sql-server',
+                'steps' => $steps
+            ];
+        }
+
+        $steps[] = "✓ Download concluído: " . self::formatFileSize(filesize($zipFile));
+        $steps[] = "Extraindo arquivos...";
+        
+        $extract = self::extractZip($zipFile, $extractDir);
+        if (!$extract['sucesso']) {
+            return ['sucesso' => false, 'mensagem' => 'Erro ao extrair arquivo', 'steps' => $steps];
+        }
+
+        $steps[] = "✓ Arquivos extraídos";
+        
+        // Encontrar DLLs compatíveis com a versão do PHP
+        $ts = $isThreadSafe ? 'ts' : 'nts';
+        $allDlls = self::findFiles($extractDir, '*.dll');
+        $dllsCopied = 0;
+
+        // Filtrar DLLs compatíveis: php_sqlsrv_XX_ts_xXX.dll e php_pdo_sqlsrv_XX_ts_xXX.dll
+        $phpMajorMinor = PHP_MAJOR_VERSION . PHP_MINOR_VERSION; // ex: "83"
+        $archSuffix = $arch === 64 ? 'x64' : 'x86';
+
+        foreach ($allDlls as $dllFile) {
+            $dllName = basename($dllFile);
+            // Apenas copiar DLLs que correspondem à versão/arch/TS do PHP
+            $isMatch = (
+                stripos($dllName, $phpMajorMinor) !== false &&
+                stripos($dllName, $ts) !== false &&
+                stripos($dllName, $archSuffix) !== false
+            );
+            // Fallback: se não achou match exato, copiar todas as DLLs que tenham a versão do PHP
+            if (!$isMatch && stripos($dllName, $phpMajorMinor) !== false && stripos($dllName, $ts) !== false) {
+                $isMatch = true;
+            }
+            if ($isMatch) {
+                $destFile = $extDir . DIRECTORY_SEPARATOR . $dllName;
+                if (copy($dllFile, $destFile)) {
+                    $steps[] = "  ✓ Copiado: $dllName";
+                    $dllsCopied++;
+                }
+            }
+        }
+
+        if ($dllsCopied === 0) {
+            // Tentar copiar qualquer DLL encontrada
+            foreach ($allDlls as $dllFile) {
+                $dllName = basename($dllFile);
+                if (stripos($dllName, 'sqlsrv') !== false) {
+                    $destFile = $extDir . DIRECTORY_SEPARATOR . $dllName;
+                    if (copy($dllFile, $destFile)) {
+                        $steps[] = "  ✓ Copiado: $dllName";
+                        $dllsCopied++;
+                    }
+                }
+            }
+        }
+
+        if ($dllsCopied === 0) {
+            return ['sucesso' => false, 'mensagem' => 'Nenhuma DLL compatível encontrada no pacote', 'steps' => $steps];
+        }
+
+        // Limpar temporários
+        @unlink($zipFile);
+        self::recursiveDelete($extractDir);
+        $steps[] = "✓ Arquivos temporários removidos";
+
+        // Habilitar no php.ini
+        $steps[] = "Habilitando extensões no php.ini...";
+        $phpIni = php_ini_loaded_file();
+        
+        // Buscar DLLs recém-copiadas
+        $newSqlsrvDlls = glob($extDir . DIRECTORY_SEPARATOR . 'php_sqlsrv_*' . $phpMajorMinor . '*' . $ts . '*.dll');
+        $newPdoDlls = glob($extDir . DIRECTORY_SEPARATOR . 'php_pdo_sqlsrv_*' . $phpMajorMinor . '*' . $ts . '*.dll');
+        
+        $extensions = [];
+        if (!empty($newSqlsrvDlls)) $extensions[] = "extension=" . basename(end($newSqlsrvDlls));
+        if (!empty($newPdoDlls)) $extensions[] = "extension=" . basename(end($newPdoDlls));
+        
+        if (!empty($extensions)) {
+            $enableResult = self::enableExtensionInPhpIni($phpIni, $extensions);
+            if ($enableResult['sucesso']) {
+                $steps[] = "✓ php.ini atualizado";
+            } else {
+                $steps[] = "⚠️ Erro ao modificar php.ini: " . $enableResult['mensagem'];
+            }
+        }
+
+        // Reiniciar Apache
+        $steps[] = "Reiniciando Apache...";
+        $restart = self::restartApache();
+        
+        if ($restart['sucesso']) {
+            $steps[] = "✓ Apache reiniciado com sucesso";
+            return [
+                'sucesso' => true,
+                'mensagem' => 'Driver SQL Server instalado! Teste a conexão em alguns segundos.',
+                'steps' => $steps,
+                'requer_reload' => true
+            ];
+        } else {
+            return [
+                'sucesso' => true,
+                'mensagem' => 'Instalação concluída! Reinicie o XAMPP manualmente.',
+                'steps' => $steps,
+                'requer_restart_manual' => true
+            ];
+        }
+    }
+
+    /**
+     * Instala driver MySQL/MariaDB (habilita extensão no php.ini)
+     */
+    private static function installMySQL(bool $autoDownload = false): array
+    {
+        self::log("Instalando driver MySQL/MariaDB...");
+        
+        $steps = [];
+        $phpVersion = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+        $steps[] = "Detectado PHP $phpVersion";
+        
+        $extDir = PHP_EXTENSION_DIR;
+        $phpIni = php_ini_loaded_file();
+
+        // MySQL/PDO_MySQL geralmente já vem com o PHP/XAMPP, só pode estar desabilitado
+        $possibleDlls = ['php_mysqli.dll', 'php_pdo_mysql.dll'];
+        $existingDlls = [];
+        
+        foreach ($possibleDlls as $dll) {
+            if (file_exists($extDir . DIRECTORY_SEPARATOR . $dll)) {
+                $existingDlls[] = $dll;
+            }
+        }
+
+        if (!empty($existingDlls)) {
+            $steps[] = "DLLs encontradas: " . implode(', ', $existingDlls);
+            $steps[] = "Habilitando extensões no php.ini...";
+            
+            $extensions = [];
+            foreach ($existingDlls as $dll) {
+                $extName = str_replace('.dll', '', $dll);
+                $extName = str_replace('php_', '', $extName);
+                $extensions[] = "extension=$extName";
+            }
+            
+            $result = self::enableExtensionInPhpIni($phpIni, $extensions);
+            
+            if ($result['sucesso']) {
+                $steps[] = "✓ Extensões habilitadas no php.ini";
+                $steps[] = "Reiniciando Apache...";
+                
+                $restart = self::restartApache();
+                if ($restart['sucesso']) {
+                    $steps[] = "✓ Apache reiniciado com sucesso";
+                    return [
+                        'sucesso' => true,
+                        'mensagem' => 'Driver MySQL habilitado com sucesso!',
+                        'steps' => $steps,
+                        'requer_reload' => true
+                    ];
+                } else {
+                    return [
+                        'sucesso' => true,
+                        'mensagem' => 'Extensão habilitada! Reinicie o XAMPP manualmente.',
+                        'steps' => $steps,
+                        'requer_restart_manual' => true
+                    ];
+                }
+            }
+            
+            return ['sucesso' => false, 'mensagem' => 'Erro ao habilitar extensões: ' . ($result['mensagem'] ?? ''), 'steps' => $steps];
+        }
+
+        // DLLs não encontradas - checar também extensões sem prefixo php_
+        $altNames = ['mysqli', 'pdo_mysql'];
+        $phpIniContent = file_get_contents($phpIni);
+        
+        foreach ($altNames as $ext) {
+            // Verificar se existe comentada
+            if (preg_match('/^;\s*extension\s*=\s*' . preg_quote($ext, '/') . '/m', $phpIniContent)) {
+                $existingDlls[] = $ext;
+            }
+        }
+        
+        if (!empty($existingDlls)) {
+            $steps[] = "Extensões encontradas (comentadas): " . implode(', ', $existingDlls);
+            $extensions = array_map(fn($e) => "extension=$e", $existingDlls);
+            $result = self::enableExtensionInPhpIni($phpIni, $extensions);
+            
+            if ($result['sucesso']) {
+                $steps[] = "✓ Extensões descomentadas";
+                $restart = self::restartApache();
+                return [
+                    'sucesso' => true,
+                    'mensagem' => 'Driver MySQL habilitado! ' . ($restart['sucesso'] ? 'Apache reiniciado.' : 'Reinicie o XAMPP manualmente.'),
+                    'steps' => $steps,
+                    'requer_restart_manual' => !$restart['sucesso'],
+                    'requer_reload' => $restart['sucesso']
+                ];
+            }
+        }
+
         return [
             'sucesso' => false,
-            'mensagem' => 'DLLs não encontradas. Download requer aprovação.',
-            'steps' => $steps,
-            'requer_download' => true,
-            'download_info' => [
-                'url' => $downloadUrl,
-                'tipo' => 'sqlserver',
-                'arch' => $arch,
-                'php_version' => $phpVersion
-            ]
+            'mensagem' => 'Driver MySQL não encontrado na instalação do PHP. Considere reinstalar o PHP/XAMPP com suporte a MySQL.',
+            'steps' => $steps
+        ];
+    }
+
+    /**
+     * Instala driver PostgreSQL (habilita extensão no php.ini)
+     */
+    private static function installPostgres(bool $autoDownload = false): array
+    {
+        self::log("Instalando driver PostgreSQL...");
+        
+        $steps = [];
+        $phpVersion = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+        $steps[] = "Detectado PHP $phpVersion";
+        
+        $extDir = PHP_EXTENSION_DIR;
+        $phpIni = php_ini_loaded_file();
+
+        // PostgreSQL geralmente já vem com o PHP/XAMPP
+        $possibleDlls = ['php_pgsql.dll', 'php_pdo_pgsql.dll'];
+        $existingDlls = [];
+        
+        foreach ($possibleDlls as $dll) {
+            if (file_exists($extDir . DIRECTORY_SEPARATOR . $dll)) {
+                $existingDlls[] = $dll;
+            }
+        }
+
+        if (!empty($existingDlls)) {
+            $steps[] = "DLLs encontradas: " . implode(', ', $existingDlls);
+            $steps[] = "Habilitando extensões no php.ini...";
+            
+            $extensions = [];
+            foreach ($existingDlls as $dll) {
+                $extName = str_replace('.dll', '', $dll);
+                $extName = str_replace('php_', '', $extName);
+                $extensions[] = "extension=$extName";
+            }
+            
+            $result = self::enableExtensionInPhpIni($phpIni, $extensions);
+            
+            if ($result['sucesso']) {
+                $steps[] = "✓ Extensões habilitadas no php.ini";
+                $steps[] = "Reiniciando Apache...";
+                
+                $restart = self::restartApache();
+                if ($restart['sucesso']) {
+                    $steps[] = "✓ Apache reiniciado com sucesso";
+                    return [
+                        'sucesso' => true,
+                        'mensagem' => 'Driver PostgreSQL habilitado com sucesso!',
+                        'steps' => $steps,
+                        'requer_reload' => true
+                    ];
+                } else {
+                    return [
+                        'sucesso' => true,
+                        'mensagem' => 'Extensão habilitada! Reinicie o XAMPP manualmente.',
+                        'steps' => $steps,
+                        'requer_restart_manual' => true
+                    ];
+                }
+            }
+            
+            return ['sucesso' => false, 'mensagem' => 'Erro ao habilitar extensões: ' . ($result['mensagem'] ?? ''), 'steps' => $steps];
+        }
+
+        // DLLs não encontradas - checar extensões sem prefixo
+        $altNames = ['pgsql', 'pdo_pgsql'];
+        $phpIniContent = file_get_contents($phpIni);
+        
+        foreach ($altNames as $ext) {
+            if (preg_match('/^;\s*extension\s*=\s*' . preg_quote($ext, '/') . '/m', $phpIniContent)) {
+                $existingDlls[] = $ext;
+            }
+        }
+        
+        if (!empty($existingDlls)) {
+            $steps[] = "Extensões encontradas (comentadas): " . implode(', ', $existingDlls);
+            $extensions = array_map(fn($e) => "extension=$e", $existingDlls);
+            $result = self::enableExtensionInPhpIni($phpIni, $extensions);
+            
+            if ($result['sucesso']) {
+                $steps[] = "✓ Extensões descomentadas";
+                $restart = self::restartApache();
+                return [
+                    'sucesso' => true,
+                    'mensagem' => 'Driver PostgreSQL habilitado! ' . ($restart['sucesso'] ? 'Apache reiniciado.' : 'Reinicie o XAMPP manualmente.'),
+                    'steps' => $steps,
+                    'requer_restart_manual' => !$restart['sucesso'],
+                    'requer_reload' => $restart['sucesso']
+                ];
+            }
+        }
+
+        return [
+            'sucesso' => false,
+            'mensagem' => 'Driver PostgreSQL não encontrado na instalação do PHP. Considere reinstalar o PHP/XAMPP com suporte a pgsql.',
+            'steps' => $steps
         ];
     }
 
@@ -536,6 +873,34 @@ class DriverInstaller
     }
 
     /**
+     * Retorna URL de download do PECL para SQL Server drivers
+     */
+    private static function getSqlServerDriverUrl(string $phpVersion, int $arch, bool $isThreadSafe): ?string
+    {
+        // Microsoft SQL Server drivers for PHP - PECL Windows
+        // Formato: https://downloads.php.net/~windows/pecl/releases/sqlsrv/VERSION/php_sqlsrv-VERSION-PHP_VERSION-ts-VC-ARCH.zip
+        $vcMap = [
+            '7.4' => 'vs16',
+            '8.0' => 'vs16',
+            '8.1' => 'vs16',
+            '8.2' => 'vs16',
+            '8.3' => 'vs16',
+            '8.4' => 'vs17'
+        ];
+
+        $vc = $vcMap[$phpVersion] ?? null;
+        if (!$vc) return null;
+
+        $ts = $isThreadSafe ? 'ts' : 'nts';
+        $archStr = $arch === 64 ? 'x64' : 'x86';
+
+        // Versão mais recente do sqlsrv
+        $sqlsrvVersion = '5.12.0';
+
+        return "https://downloads.php.net/~windows/pecl/releases/sqlsrv/$sqlsrvVersion/php_sqlsrv-$sqlsrvVersion-$phpVersion-$ts-$vc-$archStr.zip";
+    }
+
+    /**
      * Retorna URL do PECL para Oracle
      */
     private static function getPeclOracleUrl(string $phpVersion, int $arch, bool $isThreadSafe): ?string
@@ -549,7 +914,8 @@ class DriverInstaller
             '8.0' => 'vs16',
             '8.1' => 'vs16',
             '8.2' => 'vs16',
-            '8.3' => 'vs16'
+            '8.3' => 'vs16',
+            '8.4' => 'vs17'
         ];
 
         $vc = $vcMap[$phpVersion] ?? 'vs16';
