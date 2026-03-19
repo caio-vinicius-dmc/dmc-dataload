@@ -32,9 +32,9 @@ class LogsController
                 $params[] = strtoupper($_GET['nivel']); // PostgreSQL é case-sensitive
             }
             
-            if (!empty($_GET['categoria'])) {
+            if (!empty($_GET['canal'])) {
                 $filtros[] = "canal = ?";
-                $params[] = $_GET['categoria'];
+                $params[] = $_GET['canal'];
             }
             
             if (!empty($_GET['data_de'])) {
@@ -156,9 +156,9 @@ class LogsController
                 $params[] = $_GET['nivel'];
             }
             
-            if (!empty($_GET['categoria'])) {
+            if (!empty($_GET['canal'])) {
                 $filtros[] = "canal = ?";
-                $params[] = $_GET['categoria'];
+                $params[] = $_GET['canal'];
             }
             
             $where = count($filtros) > 0 ? 'WHERE ' . implode(' AND ', $filtros) : '';

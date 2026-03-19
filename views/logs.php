@@ -263,7 +263,6 @@ ob_start();
 $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 :root {
     --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -693,7 +692,6 @@ $extraStyles = <<<'STYLES'
 STYLES;
 
 $extraScripts = <<<'SCRIPTS'
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 let autoRefreshInterval = null;

@@ -69,6 +69,9 @@ ob_start();
                         <i class="bi bi-eraser"></i>
                     </button>
                 </div>
+                <button class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex" onclick="abrirModalCompartilhamento('pipeline', document.getElementById('pipelineId').value)" title="Compartilhar">
+                    <i class="bi bi-share"></i>
+                </button>
                 <button class="btn btn-sm btn-outline-primary d-none d-sm-inline-flex" onclick="validatePipeline()" title="Validar">
                     <i class="bi bi-check2-all"></i>
                 </button>
@@ -78,6 +81,27 @@ ob_start();
                 <button class="btn btn-sm btn-primary" onclick="savePipeline()">
                     <i class="bi bi-save"></i><span class="d-none d-sm-inline ms-1">Salvar</span>
                 </button>
+                <?php 
+                $nivelLogado = App\Core\AuthMiddleware::obterUsuario()['nivel_acesso'] ?? 'operador';
+                if (in_array($nivelLogado, ['super_admin', 'admin'])): ?>
+                <div class="dropdown d-none d-sm-inline-block">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Visibilidade">
+                        <i class="bi bi-building"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:280px">
+                        <small class="fw-bold text-muted"><i class="bi bi-building me-1"></i>Visibilidade</small>
+                        <div class="mt-2">
+                            <label class="form-label form-label-sm">Empresas</label>
+                            <select class="form-select form-select-sm" name="empresas[]" id="rbac_empresas" multiple size="3"></select>
+                        </div>
+                        <div class="mt-2">
+                            <label class="form-label form-label-sm">Projetos</label>
+                            <select class="form-select form-select-sm" name="projetos[]" id="rbac_projetos" multiple size="3"></select>
+                        </div>
+                        <small class="text-muted">Ctrl+click para múltiplas</small>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -127,6 +151,13 @@ ob_start();
                         <div class="palette-node-info">
                             <div class="palette-node-name">Trigger</div>
                             <div class="palette-node-desc">Início do pipeline</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="api_call">
+                        <div class="palette-node-icon" style="background:#7c3aed"><i class="bi bi-cloud-check"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">API Call</div>
+                            <div class="palette-node-desc">Chamar API e avaliar condição</div>
                         </div>
                     </div>
                     <div class="palette-node" draggable="true" data-type="end">
@@ -287,12 +318,13 @@ ob_start();
 <input type="hidden" id="pipelineId" value="<?= $pipelineId ? htmlspecialchars($pipelineId) : '' ?>">
 <input type="hidden" id="csrfToken" value="<?= htmlspecialchars($csrfToken) ?>">
 
+<?php include __DIR__ . '/../partials/compartilhamento_modal.php'; ?>
+
 <?php
 $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
 <link href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.60/dist/drawflow.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 /* ========== BUILDER LAYOUT ========== */
 /* Override content-wrapper padding for full-screen builder */
@@ -931,7 +963,6 @@ STYLES;
 
 $extraScripts = <<<SCRIPTS
 <script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.60/dist/drawflow.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // ============================================================
 // PIPELINE BUILDER - Main Application
@@ -967,7 +998,8 @@ const NODE_TYPES = {
     script:       { label: 'Script',        icon: 'bi-code-slash',        color: '#ef4444', inputs: 1, outputs: 1, category: 'action' },
     set_variable: { label: 'Set Variable',  icon: 'bi-braces',            color: '#14b8a6', inputs: 1, outputs: 1, category: 'action' },
     email:        { label: 'Email',         icon: 'bi-envelope',          color: '#ec4899', inputs: 1, outputs: 1, category: 'action' },
-    log_node:     { label: 'Log',           icon: 'bi-journal-text',      color: '#6b7280', inputs: 1, outputs: 1, category: 'action' }
+    log_node:     { label: 'Log',           icon: 'bi-journal-text',      color: '#6b7280', inputs: 1, outputs: 1, category: 'action' },
+    api_call:     { label: 'API Call',      icon: 'bi-cloud-check',       color: '#7c3aed', inputs: 1, outputs: 2, category: 'io' }
 };
 
 // ============================================================
@@ -1160,6 +1192,9 @@ function getNodeSubtitle(type, data) {
         case 'set_variable': return data.variable_name || 'Configurar';
         case 'email': return data.email_to || 'Configurar';
         case 'delay': return (data.delay_seconds || '1') + 's';
+        case 'api_call':
+            var selApi = data.api_id ? apisExternas.find(function(a){return a.id==data.api_id}) : null;
+            return selApi ? selApi.nome : 'Selecione API';
         default: return '';
     }
 }
@@ -1178,6 +1213,9 @@ function getNodeBody(type, data) {
         case 'http_request':
             if (data.url) return '<code>' + escapeHtml(data.url.substring(0, 50)) + '</code>';
             return '';
+        case 'api_call':
+            if (data.jsonpath) return '<code>' + escapeHtml(data.jsonpath) + '</code> ' + escapeHtml(data.condition_op || '==') + ' ' + escapeHtml(data.condition_value || '');
+            return '<span class="text-muted">Configurar condição</span>';
         default: return '';
     }
 }
@@ -1299,6 +1337,15 @@ function getTypeProperties(type, data, nodeId) {
                 } else {
                     h += '<div class="alert alert-info small py-2" style="border-radius:8px"><i class="bi bi-info-circle me-1"></i>Nenhum evento de API cadastrado. <a href="'+baseUrl+'/eventos-api" target="_blank">Configurar</a></div>';
                 }
+            }
+            if (data.trigger_type === 'webhook') {
+                var webhookUrl = baseUrl + '/pipelines/webhook/' + (pipelineId || 'NOVO');
+                h += '<div class="mb-3"><label class="prop-label">URL do Webhook</label>';
+                h += '<div class="input-group input-group-sm"><input type="text" class="prop-control font-monospace" value="'+escapeHtml(webhookUrl)+'" readonly id="webhookUrl_'+nodeId+'">';
+                h += '<button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById(\'webhookUrl_'+nodeId+'\').value);Swal.fire({icon:\'success\',title:\'Copiado!\',toast:true,position:\'top-end\',timer:2000,showConfirmButton:false})" title="Copiar"><i class="bi bi-clipboard"></i></button></div>';
+                h += '<div class="prop-help mt-1"><i class="bi bi-info-circle me-1"></i>Envie um POST para esta URL para disparar o pipeline</div></div>';
+                h += propInput(nodeId, 'webhook_secret', 'Secret (opcional)', data.webhook_secret || '', 'meu-secret-seguro');
+                h += '<div class="prop-help"><i class="bi bi-shield-lock me-1"></i>Se definido, valida o header X-Webhook-Secret</div>';
             }
             break;
 
@@ -1437,6 +1484,36 @@ function getTypeProperties(type, data, nodeId) {
 
         case 'end':
             h += '<p class="text-muted small">Nó final do pipeline. Sem configurações adicionais.</p>';
+            break;
+
+        case 'api_call':
+            if (apisExternas.length > 0) {
+                h += propSelect(nodeId, 'api_id', 'API Externa', data.api_id || '', 
+                    [{v:'', l:'Selecione uma API...'}].concat(apisExternas.map(function(api) {
+                        return {v: api.id, l: api.nome + ' (' + (api.metodo||'GET') + ')'};
+                    }))
+                );
+                var selApiCall = data.api_id ? apisExternas.find(function(a){return a.id==data.api_id}) : null;
+                if (selApiCall) {
+                    h += '<div class="cron-helper mb-2"><div class="small"><strong>URL:</strong> '+escapeHtml((selApiCall.url||'').substring(0,60))+'</div>';
+                    h += '<div class="small"><strong>Método:</strong> '+escapeHtml(selApiCall.metodo||'GET')+'</div></div>';
+                }
+            } else {
+                h += '<div class="alert alert-info small py-2" style="border-radius:8px"><i class="bi bi-info-circle me-1"></i>Nenhuma API cadastrada. <a href="'+baseUrl+'/apis-externas" target="_blank">Cadastrar</a></div>';
+            }
+            h += '</div><div class="prop-group"><div class="prop-group-title">Extração JSONPath</div>';
+            h += propInput(nodeId, 'jsonpath', 'JSONPath', data.jsonpath || '', '$.data.status');
+            h += '<div class="prop-help mb-2"><i class="bi bi-braces me-1"></i>Ex: $.data.status, $.results[0].value</div>';
+            h += '</div><div class="prop-group"><div class="prop-group-title">Condição (opcional)</div>';
+            h += propSelect(nodeId, 'condition_op', 'Operador', data.condition_op || 'equals', [
+                {v:'equals',l:'Igual a'}, {v:'not_equals',l:'Diferente de'}, {v:'contains',l:'Contém'},
+                {v:'greater_than',l:'Maior que'}, {v:'less_than',l:'Menor que'},
+                {v:'is_true',l:'É verdadeiro'}, {v:'is_false',l:'É falso'},
+                {v:'is_null',l:'É nulo'}, {v:'is_not_null',l:'Não é nulo'}
+            ]);
+            h += propInput(nodeId, 'condition_value', 'Valor Esperado', data.condition_value || '', 'true');
+            h += propInput(nodeId, 'output_variable', 'Salvar resultado em', data.output_variable || 'api_result', 'api_result');
+            h += '<div class="prop-help mt-2"><i class="bi bi-info-circle me-1"></i>Output 1 = Condição atendida, Output 2 = Não atendida</div>';
             break;
     }
     
@@ -1579,7 +1656,10 @@ function savePipeline() {
             dados_flow: JSON.stringify(flowData),
             dados_code: document.getElementById('codeEditor').value,
             trigger_tipo: getTriggerType(flowData),
-            agendamento_cron: getTriggerCron(flowData)
+            agendamento_cron: getTriggerCron(flowData),
+            trigger_config: JSON.stringify(getTriggerConfig(flowData)),
+            'empresas[]': (function() { var s = document.getElementById('rbac_empresas'); return s ? Array.from(s.selectedOptions).map(function(o){return o.value}) : []; })(),
+            'projetos[]': (function() { var s = document.getElementById('rbac_projetos'); return s ? Array.from(s.selectedOptions).map(function(o){return o.value}) : []; })()
         },
         dataType: 'json'
     }).then(function(res) {
@@ -1627,6 +1707,13 @@ function loadPipeline(id) {
             // Code editor content
             if (p.dados_code) {
                 document.getElementById('codeEditor').value = p.dados_code;
+            }
+
+            // Preencher empresas/projetos RBAC
+            var empIds = (res.empresas || []).map(function(e) { return e.id_empresa || e.id; });
+            var projIds = (res.projetos || []).map(function(p) { return p.id_projeto || p.id; });
+            if (typeof rbacCarregarOpcoes === 'function') {
+                rbacCarregarOpcoes(function() { rbacPreencherSelects(empIds, projIds); });
             }
 
             updateEmptyOverlay();
@@ -2094,6 +2181,21 @@ function getTriggerCron(flowData) {
     return '';
 }
 
+function getTriggerConfig(flowData) {
+    var nodes = flowData.drawflow && flowData.drawflow.Home ? flowData.drawflow.Home.data : {};
+    for (var k in nodes) {
+        if (nodes[k].name === 'trigger' || (nodes[k].data && nodes[k].data.type === 'trigger')) {
+            var d = nodes[k].data;
+            var config = { trigger_type: d.trigger_type || 'manual' };
+            if (d.trigger_type === 'cron') config.cron_expression = d.cron_expression || '';
+            if (d.trigger_type === 'api_event') config.evento_api_id = d.evento_api_id || '';
+            if (d.trigger_type === 'webhook') config.webhook_secret = d.webhook_secret || '';
+            return config;
+        }
+    }
+    return { trigger_type: 'manual' };
+}
+
 function setCronPreset(nodeId, expr) {
     updateNodeProp(nodeId, 'cron_expression', expr);
     showProperties(nodeId);
@@ -2105,6 +2207,9 @@ spinStyle.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:r
 document.head.appendChild(spinStyle);
 </script>
 SCRIPTS;
+
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-recurso.js"></script>';
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-compartilhamento.js"></script>';
 
 include __DIR__ . '/../layouts/base.php';
 ?>

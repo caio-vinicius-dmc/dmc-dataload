@@ -5,12 +5,12 @@ use App\Core\Database;
 use App\Core\AuthMiddleware;
 use App\Core\ErrorHandler;
 use App\Core\Logger;
-use App\Controladores\ConexoesController;
-use App\Controladores\RotinasController2 as RotinasController;
-use App\Controladores\ApiController;
-use App\Controladores\ApiExternaController;
-use App\Controladores\WorkflowController;
-use App\Controladores\PipelineController;
+use App\Controllers\ConexoesController;
+use App\Controllers\RotinasController2 as RotinasController;
+use App\Controllers\ApiController;
+use App\Controllers\ApiExternaController;
+use App\Controllers\WorkflowController;
+use App\Controllers\PipelineController;
 use App\Servicos\ServicoAutenticacao;
 
 // Carregar .env
@@ -82,8 +82,9 @@ if ($path === '/login' && $method === 'GET') {
 }
 
 if ($path === '/login' && $method === 'POST') {
+    header('Content-Type: application/json');
     try {
-        $usuario = $_POST['usuario'] ?? '';
+        $usuario = trim($_POST['usuario'] ?? '');
         $senha = $_POST['senha'] ?? '';
         
         $svc = new ServicoAutenticacao();
@@ -91,10 +92,9 @@ if ($path === '/login' && $method === 'POST') {
         
         if ($resultado['sucesso']) {
             AuthMiddleware::definirUsuario($resultado['usuario']);
-            header('Content-Type: application/json');
+            \App\Servicos\ServicoAuditoria::registrar('login', 'sessao', $resultado['usuario']['id'] ?? null, $usuario);
             echo json_encode(['sucesso' => true]);
         } else {
-            header('Content-Type: application/json');
             echo json_encode(['sucesso' => false, 'erro' => $resultado['mensagem']]);
         }
     } catch (Exception $e) {
@@ -106,6 +106,7 @@ if ($path === '/login' && $method === 'POST') {
 
 // Logout
 if ($path === '/logout' && $method === 'POST') {
+    \App\Servicos\ServicoAuditoria::registrar('logout', 'sessao');
     AuthMiddleware::destruirSessao();
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true]);
@@ -146,6 +147,38 @@ if ($requerAutenticacao && !AuthMiddleware::verificarAutenticacao()) {
     exit;
 }
 
+// Restrição do Operador: bloquear páginas não permitidas
+if ($requerAutenticacao && AuthMiddleware::verificarAutenticacao()) {
+    $usuario = AuthMiddleware::obterUsuario();
+    if (($usuario['nivel_acesso'] ?? '') === 'operador') {
+        $isApiRoute = (strpos($path, '/api/') === 0 || strpos($path, '/conexoes/') === 0 
+            || strpos($path, '/rotinas/') === 0 || strpos($path, '/pipelines/') === 0
+            || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest'));
+        
+        if ($isApiRoute) {
+            // Para APIs: operador só pode GET em rotas permitidas
+            if (!\App\Servicos\ServicoPermissao::operadorPodeAcessarApi($path, $method)) {
+                http_response_code(403);
+                header('Content-Type: application/json');
+                echo json_encode(['erro' => 'Acesso negado. Operadores têm acesso somente leitura.', 'sucesso' => false]);
+                exit;
+            }
+        } else {
+            // Para páginas: operador só pode acessar as permitidas
+            if (!\App\Servicos\ServicoPermissao::operadorPodeAcessarPagina($path)) {
+                http_response_code(403);
+                echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Acesso Negado</title>
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head><body class="bg-light d-flex align-items-center justify-content-center vh-100">
+                <div class="text-center"><h1 class="text-danger">403</h1><h3>Acesso Negado</h3>
+                <p class="text-muted">Operadores só podem acessar: Dashboard, Histórico, Diagrama, Scheduler e Calendário.</p>
+                <a href="' . BASE_URL . '/dashboard" class="btn btn-primary mt-3">Ir para Dashboard</a></div></body></html>';
+                exit;
+            }
+        }
+    }
+}
+
 // Dashboard
 if ($path === '/' || $path === '/dashboard') {
     include __DIR__ . '/../views/dashboard.php';
@@ -160,40 +193,106 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
         // Total de rotinas
         $total = $db->query("SELECT COUNT(*) FROM tb_rotinas")->fetchColumn();
         
-        // Rotinas em execução
-        $emExec = $db->query("SELECT COUNT(*) FROM tb_rotinas WHERE esta_executando = true")->fetchColumn();
+        // Em execução (rotinas + pipelines + workflows)
+        $emExec = $db->query("
+            SELECT (SELECT COUNT(*) FROM tb_rotinas WHERE esta_executando = true)
+                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'running')
+                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'running')
+        ")->fetchColumn();
         
-        // Execuções hoje
-        $execHoje = $db->query("SELECT COUNT(*) FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE")->fetchColumn();
+        // Execuções hoje (rotinas + pipelines + workflows)
+        $execHoje = $db->query("
+            SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE)
+                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE)
+                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE)
+        ")->fetchColumn();
         
-        // Falhas hoje
-        $falhasHoje = $db->query("SELECT COUNT(*) FROM tb_logs_execucao WHERE status = 'falha' AND data_inicio >= CURRENT_DATE")->fetchColumn();
+        // Falhas hoje (rotinas + pipelines + workflows)
+        $falhasHoje = $db->query("
+            SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE status IN ('falha','erro') AND data_inicio >= CURRENT_DATE)
+                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'error' AND data_inicio >= CURRENT_DATE)
+                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'failed' AND data_inicio >= CURRENT_DATE)
+        ")->fetchColumn();
         
         // Rotinas ativas (agendadas)
         $ativas = $db->query("SELECT COUNT(*) FROM tb_rotinas WHERE ativa = true AND agendamento_cron IS NOT NULL")->fetchColumn();
         
         // Próximas execuções (5)
-        $proximas = $db->query("SELECT r.id, r.nome, r.proxima_execucao, p.nome_conexao as conexao
+        $proximas = $db->query("SELECT r.id, r.nome, r.proxima_execucao, r.agendamento_cron, p.nome_conexao as conexao, 'rotina' as tipo
             FROM tb_rotinas r 
             LEFT JOIN tb_perfis_conexao p ON r.id_conexao = p.id
             WHERE r.ativa = true AND r.proxima_execucao IS NOT NULL 
             ORDER BY r.proxima_execucao ASC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
         
-        // Últimas execuções (10)
-        $ultimas = $db->query("SELECT l.id, l.status, l.data_inicio, l.duracao_ms, r.nome as rotina
-            FROM tb_logs_execucao l 
-            LEFT JOIN tb_rotinas r ON l.id_rotina = r.id
-            ORDER BY l.data_inicio DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+        // Incluir pipelines com cron nas próximas execuções
+        $proximasPip = $db->query("SELECT id, nome, agendamento_cron, 'pipeline' as tipo
+            FROM tb_pipelines
+            WHERE ativo = true AND trigger_tipo = 'cron' AND agendamento_cron IS NOT NULL AND agendamento_cron != ''
+            ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);
         
-        // Dados para gráfico (últimos 7 dias)
-        $grafico = $db->query("SELECT 
-            DATE(data_inicio) as data,
-            COUNT(*) FILTER (WHERE status = 'sucesso') as sucesso,
-            COUNT(*) FILTER (WHERE status = 'falha') as falha
-            FROM tb_logs_execucao 
-            WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY DATE(data_inicio)
-            ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
+        // Calcular próxima execução para pipelines usando cálculo simples
+        $schedulerCtrl = new \App\Controllers\SchedulerController();
+        foreach ($proximasPip as &$pip) {
+            $pip['proxima_execucao'] = $schedulerCtrl->calcularProximaExecucao($pip['agendamento_cron']);
+            $pip['conexao'] = null;
+        }
+        unset($pip);
+        $proximasPip = array_filter($proximasPip, fn($p) => $p['proxima_execucao'] !== null);
+        
+        // Mesclar e ordenar por próxima execução
+        $todasProximas = array_merge($proximas, $proximasPip);
+        usort($todasProximas, fn($a, $b) => strcmp($a['proxima_execucao'] ?? '', $b['proxima_execucao'] ?? ''));
+        $todasProximas = array_slice($todasProximas, 0, 5);
+        
+        // Total de pipelines
+        $totalPipelines = $db->query("SELECT COUNT(*) FROM tb_pipelines")->fetchColumn();
+        $pipelinesAtivos = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE ativo = true AND trigger_tipo = 'cron'")->fetchColumn();
+        
+        // Total de workflows
+        $totalWorkflows = $db->query("SELECT COUNT(*) FROM tb_workflows")->fetchColumn();
+        $workflowsAtivos = $db->query("SELECT COUNT(*) FROM tb_workflows WHERE ativo = true")->fetchColumn();
+        
+        // Últimas execuções (10) - todas as fontes
+        $ultimas = $db->query("
+            (SELECT l.id, l.status, l.data_inicio, l.duracao_ms, r.nome as rotina, 'rotina' as tipo_execucao
+            FROM tb_logs_execucao l LEFT JOIN tb_rotinas r ON l.id_rotina = r.id)
+            UNION ALL
+            (SELECT pe.id, 
+                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' ELSE pe.status END,
+                pe.data_inicio, pe.duracao_ms, p.nome, 'pipeline'
+            FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id)
+            UNION ALL
+            (SELECT we.id, 
+                CASE we.status WHEN 'completed' THEN 'sucesso' WHEN 'failed' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' WHEN 'paused' THEN 'pausado' ELSE we.status END,
+                we.data_inicio, we.duracao_ms, w.nome, 'workflow'
+            FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id)
+            ORDER BY data_inicio DESC LIMIT 10
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Dados para gráfico (últimos 7 dias) - todas as fontes
+        $grafico = $db->query("SELECT data,
+            SUM(sucesso) as sucesso, SUM(falha) as falha
+            FROM (
+                SELECT DATE(data_inicio) as data,
+                    COUNT(*) FILTER (WHERE status = 'sucesso') as sucesso,
+                    COUNT(*) FILTER (WHERE status IN ('falha','erro')) as falha
+                FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY DATE(data_inicio)
+                UNION ALL
+                SELECT DATE(data_inicio),
+                    COUNT(*) FILTER (WHERE status = 'success'),
+                    COUNT(*) FILTER (WHERE status = 'error')
+                FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY DATE(data_inicio)
+                UNION ALL
+                SELECT DATE(data_inicio),
+                    COUNT(*) FILTER (WHERE status = 'completed'),
+                    COUNT(*) FILTER (WHERE status = 'failed')
+                FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY DATE(data_inicio)
+            ) combined
+            GROUP BY data ORDER BY data ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
         
         header('Content-Type: application/json');
         echo json_encode([
@@ -203,7 +302,11 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
             'falhas_hoje' => (int)$falhasHoje,
             'em_execucao' => (int)$emExec,
             'rotinas_ativas' => (int)$ativas,
-            'proximas_execucoes' => $proximas,
+            'total_pipelines' => (int)$totalPipelines,
+            'pipelines_agendados' => (int)$pipelinesAtivos,
+            'total_workflows' => (int)$totalWorkflows,
+            'workflows_ativos' => (int)$workflowsAtivos,
+            'proximas_execucoes' => $todasProximas,
             'ultimas_execucoes' => $ultimas,
             'grafico_7dias' => $grafico
         ]);
@@ -262,7 +365,14 @@ if ($path === '/conexoes/salvar' && $method === 'POST') {
     unset($data['_csrf_token']);
     $c = new ConexoesController();
     header('Content-Type: application/json');
-    echo json_encode($c->salvar($data));
+    $resultado = $c->salvar($data);
+    \App\Servicos\ServicoAuditoria::registrar(
+        isset($data['id']) && $data['id'] ? 'editar' : 'criar',
+        'conexao',
+        (int)($resultado['id'] ?? $data['id'] ?? 0),
+        $data['nome'] ?? ''
+    );
+    echo json_encode($resultado);
     exit;
 }
 
@@ -277,7 +387,10 @@ if (preg_match('#^/conexoes/get/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
     $c = new ConexoesController();
     header('Content-Type: application/json');
-    echo json_encode($c->buscar($id));
+    $resultado = $c->buscar($id);
+    $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('conexao', $id);
+    $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('conexao', $id);
+    echo json_encode($resultado);
     exit;
 }
 
@@ -293,6 +406,7 @@ if (preg_match('#^/conexoes/delete/(\d+)$#', $path, $m) && $method === 'POST') {
     $id = intval($m[1]);
     $c = new ConexoesController();
     header('Content-Type: application/json');
+    \App\Servicos\ServicoAuditoria::registrar('excluir', 'conexao', $id);
     echo json_encode($c->deletar($id));
     exit;
 }
@@ -329,6 +443,22 @@ if (preg_match('#^/conexoes/install-driver/(\w+)$#', $path, $m) && $method === '
 }
 
 if (preg_match('#^/rotinas/run/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    // Rate limiting: max 10 execuções por minuto por sessão
+    $rateLimiter = new \App\Core\RateLimiter();
+    $sessionId = session_id() ?: 'anonymous';
+    if (!$rateLimiter->permitir("exec_rotina:{$sessionId}", 10, 60)) {
+        http_response_code(429);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Limite de execuções excedido. Aguarde 1 minuto.', 'sucesso' => false]);
+        exit;
+    }
     $id = intval($m[1]);
     $r = new RotinasController();
     header('Content-Type: application/json');
@@ -347,20 +477,44 @@ if (preg_match('#^/rotinas/get/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
     $c = new RotinasController();
     header('Content-Type: application/json');
-    echo json_encode($c->buscar($id));
+    $resultado = $c->buscar($id);
+    $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('rotina', $id);
+    $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('rotina', $id);
+    echo json_encode($resultado);
     exit;
 }
 
 if ($path === '/rotinas/salvar' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $data = $_POST;
+    unset($data['_csrf_token']);
     $c = new RotinasController();
     header('Content-Type: application/json');
-    echo json_encode($c->salvar($data));
+    $resultado = $c->salvar($data);
+    \App\Servicos\ServicoAuditoria::registrar(
+        isset($data['id']) && $data['id'] ? 'editar' : 'criar',
+        'rotina', (int)($resultado['id'] ?? $data['id'] ?? 0), $data['nome'] ?? ''
+    );
+    echo json_encode($resultado);
     exit;
 }
 
 if (preg_match('#^/rotinas/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $id = intval($m[1]);
+    \App\Servicos\ServicoAuditoria::registrar('excluir', 'rotina', $id);
     $c = new RotinasController();
     header('Content-Type: application/json');
     echo json_encode($c->deletar($id));
@@ -369,6 +523,13 @@ if (preg_match('#^/rotinas/delete/(\d+)$#', $path, $m) && $method === 'POST') {
 
 // Toggle ativa rotina
 if (preg_match('#^/rotinas/toggle/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $id = intval($m[1]);
     $c = new RotinasController();
     header('Content-Type: application/json');
@@ -445,7 +606,36 @@ if ($path === '/configuracoes') {
 
 // Admin - Usuários
 if ($path === '/admin/usuarios') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
     include __DIR__ . '/../views/admin/usuarios.php';
+    exit;
+}
+
+// Admin - Empresas
+if ($path === '/admin/empresas') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    include __DIR__ . '/../views/admin/empresas.php';
+    exit;
+}
+
+// Admin - Projetos
+if ($path === '/admin/projetos') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    include __DIR__ . '/../views/admin/projetos.php';
+    exit;
+}
+
+// Admin - Auditoria
+if ($path === '/admin/auditoria') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    include __DIR__ . '/../views/admin/auditoria.php';
+    exit;
+}
+
+// Admin - Webhooks
+if ($path === '/admin/webhooks') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    include __DIR__ . '/../views/admin/webhooks.php';
     exit;
 }
 
@@ -508,24 +698,52 @@ if ($path === '/api/scheduler/status' && $method === 'GET') {
 }
 
 if ($path === '/api/scheduler/start' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SchedulerController();
     $c->start();
     exit;
 }
 
 if ($path === '/api/scheduler/stop' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SchedulerController();
     $c->stop();
     exit;
 }
 
 if ($path === '/api/scheduler/toggle' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SchedulerController();
     $c->toggle();
     exit;
 }
 
 if ($path === '/api/scheduler/atualizar' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SchedulerController();
     $c->atualizar();
     exit;
@@ -538,6 +756,13 @@ if ($path === '/api/scheduler/logs' && $method === 'GET') {
 }
 
 if ($path === '/api/scheduler/salvar' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SchedulerController();
     $c->salvar();
     exit;
@@ -547,7 +772,7 @@ if ($path === '/api/scheduler/salvar' && $method === 'POST') {
 
 if (preg_match('#^/sql-editor/connect/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->connect($id));
     exit;
@@ -555,7 +780,7 @@ if (preg_match('#^/sql-editor/connect/(\d+)$#', $path, $m) && $method === 'GET')
 
 if (preg_match('#^/sql-editor/objects/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getObjects($id));
     exit;
@@ -563,7 +788,7 @@ if (preg_match('#^/sql-editor/objects/(\d+)$#', $path, $m) && $method === 'GET')
 
 if (preg_match('#^/sql-editor/metadata/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getMetadata($id));
     exit;
@@ -573,7 +798,7 @@ if (preg_match('#^/sql-editor/metadata/(\d+)$#', $path, $m) && $method === 'GET'
 if (preg_match('#^/sql-editor/tables/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
     $schema = urldecode($m[2]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getTables($id, $schema));
     exit;
@@ -582,7 +807,7 @@ if (preg_match('#^/sql-editor/tables/(\d+)/(.+)$#', $path, $m) && $method === 'G
 if (preg_match('#^/sql-editor/views/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
     $schema = urldecode($m[2]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getViews($id, $schema));
     exit;
@@ -591,7 +816,7 @@ if (preg_match('#^/sql-editor/views/(\d+)/(.+)$#', $path, $m) && $method === 'GE
 if (preg_match('#^/sql-editor/functions/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
     $schema = urldecode($m[2]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getFunctions($id, $schema));
     exit;
@@ -600,7 +825,7 @@ if (preg_match('#^/sql-editor/functions/(\d+)/(.+)$#', $path, $m) && $method ===
 if (preg_match('#^/sql-editor/procedures/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
     $schema = urldecode($m[2]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getProcedures($id, $schema));
     exit;
@@ -609,7 +834,7 @@ if (preg_match('#^/sql-editor/procedures/(\d+)/(.+)$#', $path, $m) && $method ==
 if (preg_match('#^/sql-editor/packages/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
     $schema = urldecode($m[2]);
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getPackages($id, $schema));
     exit;
@@ -617,7 +842,7 @@ if (preg_match('#^/sql-editor/packages/(\d+)/(.+)$#', $path, $m) && $method === 
 
 if ($path === '/sql-editor/execute' && $method === 'POST') {
     $data = $_POST;
-    $c = new \App\Controladores\SqlEditorController();
+    $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->execute($data));
     exit;
@@ -627,7 +852,7 @@ if ($path === '/sql-editor/execute' && $method === 'POST') {
 
 if (preg_match('#^/diagrama/estrutura/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new \App\Controladores\DiagramaController();
+    $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->getEstrutura($id));
     exit;
@@ -637,7 +862,7 @@ if (preg_match('#^/diagrama/estrutura-tabela/(\d+)/([^/]+)/([^/]+)$#', $path, $m
     $id = intval($m[1]);
     $schema = urldecode($m[2]);
     $tabela = urldecode($m[3]);
-    $c = new \App\Controladores\DiagramaController();
+    $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->getEstruturaTabela($id, $schema, $tabela));
     exit;
@@ -645,7 +870,7 @@ if (preg_match('#^/diagrama/estrutura-tabela/(\d+)/([^/]+)/([^/]+)$#', $path, $m
 
 if (preg_match('#^/diagrama/tabelas/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new \App\Controladores\DiagramaController();
+    $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->listarTabelas($id));
     exit;
@@ -653,7 +878,7 @@ if (preg_match('#^/diagrama/tabelas/(\d+)$#', $path, $m) && $method === 'GET') {
 
 if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new \App\Controladores\DiagramaController();
+    $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->carregarPosicoes($id));
     exit;
@@ -662,7 +887,7 @@ if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'GET') 
 if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'POST') {
     $id = intval($m[1]);
     $posicoes = json_decode(file_get_contents('php://input'), true) ?? [];
-    $c = new \App\Controladores\DiagramaController();
+    $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->salvarPosicoes($id, $posicoes));
     exit;
@@ -676,6 +901,13 @@ if (preg_match('#^/api/scheduler/detalhes/(\d+)$#', $path, $matches) && $method 
 }
 
 if ($path === '/api/scheduler/excluir' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SchedulerController();
     $c->excluir();
     exit;
@@ -692,32 +924,216 @@ if ($path === '/api/calendario/eventos' && $method === 'GET') {
 // ========== API USUÁRIOS (ADMIN) ==========
 
 if ($path === '/admin/usuarios/list' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
     $c = new \App\Controllers\UsersController();
     $c->listar();
     exit;
 }
 
 if ($path === '/admin/usuarios/salvar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\UsersController();
     $c->salvar();
     exit;
 }
 
 if (preg_match('#^/admin/usuarios/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
     $c = new \App\Controllers\UsersController();
     $c->get((int)$m[1]);
     exit;
 }
 
 if (preg_match('#^/admin/usuarios/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\UsersController();
     $c->delete((int)$m[1]);
     exit;
 }
 
 if ($path === '/admin/usuarios/reset-senha' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\UsersController();
     $c->resetSenha();
+    exit;
+}
+
+// ========== API EMPRESAS (ADMIN) ==========
+
+if ($path === '/admin/empresas/list' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\EmpresasController();
+    $c->listar();
+    exit;
+}
+
+if ($path === '/admin/empresas/salvar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\EmpresasController();
+    $c->salvar();
+    exit;
+}
+
+if (preg_match('#^/admin/empresas/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\EmpresasController();
+    $c->get((int)$m[1]);
+    exit;
+}
+
+if (preg_match('#^/admin/empresas/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\EmpresasController();
+    $c->delete((int)$m[1]);
+    exit;
+}
+
+// ========== API PROJETOS (ADMIN) ==========
+
+if ($path === '/admin/projetos/list' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ProjetosController();
+    $c->listar();
+    exit;
+}
+
+if ($path === '/admin/projetos/salvar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\ProjetosController();
+    $c->salvar();
+    exit;
+}
+
+if (preg_match('#^/admin/projetos/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ProjetosController();
+    $c->get((int)$m[1]);
+    exit;
+}
+
+if (preg_match('#^/admin/projetos/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\ProjetosController();
+    $c->delete((int)$m[1]);
+    exit;
+}
+
+// ========== API PERMISSÕES/COMPARTILHAMENTOS ==========
+
+if ($path === '/api/permissoes/empresas-usuario' && $method === 'GET') {
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoPermissao::empresasDisponiveisParaAdmin()]);
+    exit;
+}
+
+if ($path === '/api/permissoes/projetos-usuario' && $method === 'GET') {
+    header('Content-Type: application/json');
+    $idsEmpresas = isset($_GET['empresas']) ? array_map('intval', explode(',', $_GET['empresas'])) : null;
+    echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoPermissao::projetosDisponiveisParaAdmin($idsEmpresas)]);
+    exit;
+}
+
+if ($path === '/api/permissoes/papeis-disponiveis' && $method === 'GET') {
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoPermissao::papeisDisponiveis()]);
+    exit;
+}
+
+if ($path === '/api/compartilhamentos/salvar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    $tipo = $_POST['tipo_recurso'] ?? '';
+    $idRecurso = !empty($_POST['id_recurso']) ? (int)$_POST['id_recurso'] : null;
+    $idDestino = (int)($_POST['id_usuario_destino'] ?? 0);
+    $permissao = $_POST['permissao'] ?? 'ver';
+    if (!$tipo || !$idDestino) {
+        echo json_encode(['sucesso' => false, 'erro' => 'Dados incompletos']);
+        exit;
+    }
+    $ok = \App\Servicos\ServicoPermissao::compartilharRecurso($tipo, $idRecurso, $idDestino, $permissao);
+    echo json_encode(['sucesso' => $ok, 'mensagem' => $ok ? 'Compartilhado com sucesso' : 'Erro ao compartilhar']);
+    exit;
+}
+
+if ($path === '/api/compartilhamentos/remover' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    $tipo = $_POST['tipo_recurso'] ?? '';
+    $idRecurso = !empty($_POST['id_recurso']) ? (int)$_POST['id_recurso'] : null;
+    $idDestino = (int)($_POST['id_usuario_destino'] ?? 0);
+    $ok = \App\Servicos\ServicoPermissao::removerCompartilhamento($tipo, $idRecurso, $idDestino);
+    echo json_encode(['sucesso' => $ok]);
+    exit;
+}
+
+if ($path === '/api/compartilhamentos/listar' && $method === 'GET') {
+    header('Content-Type: application/json');
+    $tipo = $_GET['tipo_recurso'] ?? '';
+    $idRecurso = !empty($_GET['id_recurso']) ? (int)$_GET['id_recurso'] : null;
+    echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoPermissao::listarCompartilhamentos($tipo, $idRecurso)]);
     exit;
 }
 
@@ -743,52 +1159,135 @@ if ($path === '/api/logs/exportar' && $method === 'GET') {
 
 // ========== FIM NOVAS ROTAS ==========
 
-// API Histórico - Listar
+// API Histórico - Listar (Unificado: rotinas + pipelines + workflows)
 if ($path === '/api/historico' && $method === 'GET') {
     try {
         $db = Database::getConexao();
+        $tipo = $_GET['tipo'] ?? '';
         
-        $filtros = [];
-        $params = [];
+        $partsRotina = [];
+        $partsPipeline = [];
+        $partsWorkflow = [];
+        $paramsRotina = [];
+        $paramsPipeline = [];
+        $paramsWorkflow = [];
         
-        if (!empty($_GET['rotina'])) {
-            $filtros[] = "l.id_rotina = ?";
-            $params[] = (int)$_GET['rotina'];
-        }
+        // Filtros comuns
         if (!empty($_GET['status'])) {
-            $filtros[] = "l.status = ?";
-            $params[] = $_GET['status'];
+            $statusVal = $_GET['status'];
+            // Mapear status entre sistemas
+            $partsRotina[] = "l.status = ?";
+            $paramsRotina[] = $statusVal;
+            // Pipeline usa 'success'/'error' em vez de 'sucesso'/'falha'
+            $statusPipeline = str_replace(['sucesso','falha','executando'], ['success','error','running'], $statusVal);
+            $partsPipeline[] = "pe.status = ?";
+            $paramsPipeline[] = $statusPipeline;
+            // Workflow usa 'completed'/'failed' em vez de 'sucesso'/'falha'
+            $statusWorkflow = str_replace(['sucesso','falha','executando'], ['completed','failed','running'], $statusVal);
+            $partsWorkflow[] = "we.status = ?";
+            $paramsWorkflow[] = $statusWorkflow;
         }
         if (!empty($_GET['data_inicio'])) {
-            $filtros[] = "l.data_inicio >= ?";
-            $params[] = $_GET['data_inicio'] . ' 00:00:00';
+            $di = $_GET['data_inicio'] . ' 00:00:00';
+            $partsRotina[] = "l.data_inicio >= ?"; $paramsRotina[] = $di;
+            $partsPipeline[] = "pe.data_inicio >= ?"; $paramsPipeline[] = $di;
+            $partsWorkflow[] = "we.data_inicio >= ?"; $paramsWorkflow[] = $di;
         }
         if (!empty($_GET['data_fim'])) {
-            $filtros[] = "l.data_inicio <= ?";
-            $params[] = $_GET['data_fim'] . ' 23:59:59';
+            $df = $_GET['data_fim'] . ' 23:59:59';
+            $partsRotina[] = "l.data_inicio <= ?"; $paramsRotina[] = $df;
+            $partsPipeline[] = "pe.data_inicio <= ?"; $paramsPipeline[] = $df;
+            $partsWorkflow[] = "we.data_inicio <= ?"; $paramsWorkflow[] = $df;
+        }
+        if (!empty($_GET['rotina'])) {
+            $partsRotina[] = "l.id_rotina = ?"; $paramsRotina[] = (int)$_GET['rotina'];
         }
         
-        $where = count($filtros) > 0 ? ' AND ' . implode(' AND ', $filtros) : '';
+        $whereRotina = count($partsRotina) > 0 ? ' AND ' . implode(' AND ', $partsRotina) : '';
+        $wherePipeline = count($partsPipeline) > 0 ? ' AND ' . implode(' AND ', $partsPipeline) : '';
+        $whereWorkflow = count($partsWorkflow) > 0 ? ' AND ' . implode(' AND ', $partsWorkflow) : '';
         
-        // Buscar execuções
-        $sql = "SELECT l.*, r.nome as nome_rotina 
-                FROM tb_logs_execucao l 
-                LEFT JOIN tb_rotinas r ON l.id_rotina = r.id 
-                WHERE 1=1 {$where}
-                ORDER BY l.data_inicio DESC 
-                LIMIT 500";
+        $unions = [];
+        $allParams = [];
         
+        // Filtros de visibilidade RBAC
+        $filtroRotVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('rotina', 'r', 'id_usuario_criador');
+        $filtroPipVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
+        $filtroWfVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
+        
+        // Rotinas
+        if (!$tipo || $tipo === 'rotina') {
+            $unions[] = "SELECT l.id, 'rotina' as tipo_execucao, r.nome as nome_origem,
+                CASE l.status WHEN 'sucesso' THEN 'sucesso' WHEN 'falha' THEN 'falha' WHEN 'erro' THEN 'erro' WHEN 'executando' THEN 'executando' ELSE l.status END as status,
+                l.data_inicio, l.data_fim, l.duracao_ms, l.registros_processados,
+                l.blocos_executados as nodes_total, l.blocos_sucesso as nodes_sucesso, l.blocos_falha as nodes_falha,
+                l.mensagem_erro as erro
+                FROM tb_logs_execucao l LEFT JOIN tb_rotinas r ON l.id_rotina = r.id
+                WHERE 1=1 {$whereRotina} AND ({$filtroRotVis['where']})";
+            $allParams = array_merge($allParams, $paramsRotina, $filtroRotVis['params']);
+        }
+        
+        // Pipelines
+        if (!$tipo || $tipo === 'pipeline') {
+            $unions[] = "SELECT pe.id, 'pipeline' as tipo_execucao, p.nome as nome_origem,
+                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' ELSE pe.status END as status,
+                pe.data_inicio, pe.data_fim, pe.duracao_ms, NULL::bigint as registros_processados,
+                pe.nodes_total, pe.nodes_sucesso, pe.nodes_falha,
+                pe.erro
+                FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id
+                WHERE 1=1 {$wherePipeline} AND ({$filtroPipVis['where']})";
+            $allParams = array_merge($allParams, $paramsPipeline, $filtroPipVis['params']);
+        }
+        
+        // Workflows
+        if (!$tipo || $tipo === 'workflow') {
+            $unions[] = "SELECT we.id, 'workflow' as tipo_execucao, w.nome as nome_origem,
+                CASE we.status WHEN 'completed' THEN 'sucesso' WHEN 'failed' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' WHEN 'paused' THEN 'pausado' ELSE we.status END as status,
+                we.data_inicio, we.data_fim, we.duracao_ms, NULL::bigint as registros_processados,
+                we.nodes_total, we.nodes_sucesso, we.nodes_falha,
+                we.erro
+                FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id
+                WHERE 1=1 {$whereWorkflow} AND ({$filtroWfVis['where']})";
+            $allParams = array_merge($allParams, $paramsWorkflow, $filtroWfVis['params']);
+        }
+        
+        if (empty($unions)) {
+            $unions[] = "SELECT 0 as id, '' as tipo_execucao, '' as nome_origem, '' as status, NULL::timestamptz as data_inicio, NULL::timestamptz as data_fim, 0 as duracao_ms, NULL::bigint as registros_processados, 0 as nodes_total, 0 as nodes_sucesso, 0 as nodes_falha, '' as erro WHERE false";
+        }
+        
+        $sql = "(" . implode(") UNION ALL (", $unions) . ") ORDER BY data_inicio DESC LIMIT 500";
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute($allParams);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Estatísticas
-        $stats = $db->query("SELECT 
-            SUM(CASE WHEN status = 'sucesso' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
-            SUM(CASE WHEN status = 'falha' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
-            SUM(CASE WHEN status = 'executando' THEN 1 ELSE 0 END) as executando,
-            AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
-            FROM tb_logs_execucao")->fetch(PDO::FETCH_ASSOC);
+        // Estatísticas unificadas
+        $stats = $db->query("
+            SELECT 
+                COALESCE(r.sucesso_24h,0) + COALESCE(p.sucesso_24h,0) + COALESCE(w.sucesso_24h,0) as sucesso_24h,
+                COALESCE(r.falhas_24h,0) + COALESCE(p.falhas_24h,0) + COALESCE(w.falhas_24h,0) as falhas_24h,
+                COALESCE(r.executando,0) + COALESCE(p.executando,0) + COALESCE(w.executando,0) as executando,
+                (COALESCE(r.tempo_medio_ms,0) + COALESCE(p.tempo_medio_ms,0) + COALESCE(w.tempo_medio_ms,0)) / 
+                    NULLIF((CASE WHEN r.tempo_medio_ms IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN p.tempo_medio_ms IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN w.tempo_medio_ms IS NOT NULL THEN 1 ELSE 0 END), 0) as tempo_medio_ms
+            FROM
+            (SELECT 
+                SUM(CASE WHEN status = 'sucesso' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
+                SUM(CASE WHEN status IN ('falha','erro') AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
+                SUM(CASE WHEN status = 'executando' THEN 1 ELSE 0 END) as executando,
+                AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
+            FROM tb_logs_execucao) r,
+            (SELECT 
+                SUM(CASE WHEN status = 'success' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
+                SUM(CASE WHEN status = 'error' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
+                SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as executando,
+                AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
+            FROM tb_pipeline_execucoes) p,
+            (SELECT 
+                SUM(CASE WHEN status = 'completed' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
+                SUM(CASE WHEN status = 'failed' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
+                SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as executando,
+                AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
+            FROM tb_workflow_execucoes) w
+        ")->fetch(PDO::FETCH_ASSOC);
         
         header('Content-Type: application/json');
         echo json_encode([
@@ -803,13 +1302,163 @@ if ($path === '/api/historico' && $method === 'GET') {
     exit;
 }
 
-// API Histórico - Detalhes
+// API Histórico - Detalhes (por tipo)
+if (preg_match('#^/api/historico/(rotina|pipeline|workflow)/(\d+)$#', $path, $m) && $method === 'GET') {
+    try {
+        $tipoExec = $m[1];
+        $id = (int)$m[2];
+        $db = Database::getConexao();
+        
+        if ($tipoExec === 'rotina') {
+            $stmt = $db->prepare("SELECT l.*, r.nome as nome_rotina, r.id_usuario_criador as criador_recurso
+                FROM tb_logs_execucao l LEFT JOIN tb_rotinas r ON l.id_rotina = r.id WHERE l.id = ?");
+            $stmt->execute([$id]);
+            $log = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$log) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Não encontrado']); exit; }
+            if (!empty($log['id_rotina']) && !\App\Servicos\ServicoPermissao::podeVerRecurso('rotina', (int)$log['id_rotina'], isset($log['criador_recurso']) ? (int)$log['criador_recurso'] : null)) {
+                http_response_code(403); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Acesso negado']); exit;
+            }
+            
+            $log['tipo_execucao'] = 'rotina';
+            $log['nome_origem'] = $log['nome_rotina'] ?? 'Rotina #' . ($log['id_rotina'] ?? '?');
+            
+            // Processar logs detalhados
+            $log['logs'] = [];
+            $metaData = null;
+            if (!empty($log['meta'])) {
+                $metaData = is_string($log['meta']) ? json_decode($log['meta'], true) : $log['meta'];
+            } elseif (!empty($log['detalhes_json'])) {
+                $metaData = is_string($log['detalhes_json']) ? json_decode($log['detalhes_json'], true) : $log['detalhes_json'];
+            }
+            if (!empty($metaData) && is_array($metaData)) {
+                foreach ($metaData as $item) {
+                    $logItem = [
+                        'bloco' => $item['bloco'] ?? 'Bloco',
+                        'tipo' => $item['tipo'] ?? 'SQL',
+                        'ordem' => $item['ordem'] ?? null,
+                        'status' => 'sucesso',
+                        'duracao_ms' => $item['duracao_ms'] ?? null,
+                        'registros' => null, 'resultado' => null, 'erro' => null,
+                        'sql' => $item['sql'] ?? null, 'arquivo_csv' => null
+                    ];
+                    if (isset($item['res'])) {
+                        $res = $item['res'];
+                        $logItem['status'] = ($res['sucesso'] ?? true) ? 'sucesso' : 'erro';
+                        $logItem['resultado'] = $res['resultado'] ?? null;
+                        $logItem['erro'] = $res['erro'] ?? null;
+                        $logItem['registros'] = $res['linhas'] ?? $res['registros'] ?? null;
+                        $logItem['arquivo_csv'] = $res['arquivo'] ?? null;
+                    }
+                    if (isset($item['status'])) $logItem['status'] = $item['status'];
+                    if (isset($item['resultado'])) $logItem['resultado'] = $item['resultado'];
+                    if (isset($item['erro'])) { $logItem['erro'] = $item['erro']; $logItem['status'] = 'erro'; }
+                    if (isset($item['registros'])) $logItem['registros'] = $item['registros'];
+                    $log['logs'][] = $logItem;
+                }
+            }
+            
+        } elseif ($tipoExec === 'pipeline') {
+            $stmt = $db->prepare("SELECT pe.*, p.nome as nome_pipeline, p.modo, p.criado_por as criador_recurso
+                FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id WHERE pe.id = ?");
+            $stmt->execute([$id]);
+            $log = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$log) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Não encontrado']); exit; }
+            if (!empty($log['id_pipeline']) && !\App\Servicos\ServicoPermissao::podeVerRecurso('pipeline', (int)$log['id_pipeline'], isset($log['criador_recurso']) ? (int)$log['criador_recurso'] : null)) {
+                http_response_code(403); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Acesso negado']); exit;
+            }
+            
+            $log['tipo_execucao'] = 'pipeline';
+            $log['nome_origem'] = $log['nome_pipeline'] ?? 'Pipeline #' . ($log['id_pipeline'] ?? '?');
+            // Normalizar status
+            $statusMap = ['success'=>'sucesso','error'=>'falha','running'=>'executando','cancelled'=>'cancelado','pending'=>'pendente'];
+            $log['status'] = $statusMap[$log['status']] ?? $log['status'];
+            
+            // Processar log_execucao JSONB em blocos
+            $log['logs'] = [];
+            $logExec = null;
+            if (!empty($log['log_execucao'])) {
+                $logExec = is_string($log['log_execucao']) ? json_decode($log['log_execucao'], true) : $log['log_execucao'];
+            }
+            if (!empty($logExec) && is_array($logExec)) {
+                foreach ($logExec as $i => $item) {
+                    $log['logs'][] = [
+                        'bloco' => $item['node_label'] ?? $item['node_id'] ?? ('Nó ' . ($i + 1)),
+                        'tipo' => strtoupper($item['node_type'] ?? $item['tipo'] ?? 'NODE'),
+                        'ordem' => $item['ordem'] ?? ($i + 1),
+                        'status' => ($item['status'] ?? 'success') === 'success' ? 'sucesso' : 'erro',
+                        'duracao_ms' => $item['duracao_ms'] ?? null,
+                        'registros' => $item['registros'] ?? $item['rows_affected'] ?? null,
+                        'resultado' => isset($item['output']) ? (is_array($item['output']) ? json_encode($item['output']) : $item['output']) : null,
+                        'erro' => $item['erro'] ?? $item['error'] ?? null,
+                        'sql' => $item['sql'] ?? $item['query'] ?? null,
+                        'arquivo_csv' => null
+                    ];
+                }
+            }
+            // Resultado global
+            if (!empty($log['resultado'])) {
+                $log['resultado_decoded'] = is_string($log['resultado']) ? json_decode($log['resultado'], true) : $log['resultado'];
+            }
+            
+        } elseif ($tipoExec === 'workflow') {
+            $stmt = $db->prepare("SELECT we.*, w.nome as nome_workflow, w.criado_por as criador_recurso
+                FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id WHERE we.id = ?");
+            $stmt->execute([$id]);
+            $log = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$log) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Não encontrado']); exit; }
+            if (!empty($log['id_workflow']) && !\App\Servicos\ServicoPermissao::podeVerRecurso('workflow', (int)$log['id_workflow'], isset($log['criador_recurso']) ? (int)$log['criador_recurso'] : null)) {
+                http_response_code(403); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Acesso negado']); exit;
+            }
+            
+            $log['tipo_execucao'] = 'workflow';
+            $log['nome_origem'] = $log['nome_workflow'] ?? 'Workflow #' . ($log['id_workflow'] ?? '?');
+            $statusMap = ['completed'=>'sucesso','failed'=>'falha','running'=>'executando','cancelled'=>'cancelado','paused'=>'pausado','pending'=>'pendente'];
+            $log['status'] = $statusMap[$log['status']] ?? $log['status'];
+            
+            // Buscar execuções de nós
+            $stmtNodes = $db->prepare("SELECT * FROM tb_workflow_node_execucoes WHERE id_workflow_execucao = ? ORDER BY ordem, data_inicio");
+            $stmtNodes->execute([$id]);
+            $nodes = $stmtNodes->fetchAll(PDO::FETCH_ASSOC);
+            
+            $log['logs'] = [];
+            foreach ($nodes as $node) {
+                $nodeStatusMap = ['completed'=>'sucesso','failed'=>'erro','skipped'=>'pulado','running'=>'executando','waiting'=>'aguardando','pending'=>'pendente'];
+                $log['logs'][] = [
+                    'bloco' => $node['label'] ?? $node['node_id'] ?? 'Nó',
+                    'tipo' => strtoupper($node['tipo_node'] ?? 'NODE'),
+                    'ordem' => $node['ordem'] ?? null,
+                    'status' => $nodeStatusMap[$node['status']] ?? $node['status'],
+                    'duracao_ms' => $node['duracao_ms'] ?? null,
+                    'registros' => null,
+                    'resultado' => !empty($node['output_data']) ? (is_string($node['output_data']) ? $node['output_data'] : json_encode($node['output_data'])) : null,
+                    'erro' => $node['erro'] ?? null,
+                    'sql' => null,
+                    'arquivo_csv' => null
+                ];
+            }
+            
+            // Decodificar JSONs
+            if (!empty($log['trigger_data']) && is_string($log['trigger_data'])) $log['trigger_data'] = json_decode($log['trigger_data'], true);
+            if (!empty($log['contexto']) && is_string($log['contexto'])) $log['contexto'] = json_decode($log['contexto'], true);
+            if (!empty($log['resultado_json']) && is_string($log['resultado_json'])) $log['resultado_json'] = json_decode($log['resultado_json'], true);
+        }
+        
+        header('Content-Type: application/json');
+        echo json_encode(['sucesso' => true, 'dados' => $log]);
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode(ErrorHandler::tratarErro($e));
+    }
+    exit;
+}
+
+// API Histórico - Detalhes (legado - rotina por ID)
 if (preg_match('#^/api/historico/(\d+)$#', $path, $m) && $method === 'GET') {
     try {
         $id = (int)$m[1];
         $db = Database::getConexao();
         
-        $stmt = $db->prepare("SELECT l.*, r.nome as nome_rotina 
+        $stmt = $db->prepare("SELECT l.*, r.nome as nome_rotina, r.id_usuario_criador as criador_recurso
             FROM tb_logs_execucao l 
             LEFT JOIN tb_rotinas r ON l.id_rotina = r.id 
             WHERE l.id = ?");
@@ -820,6 +1469,14 @@ if (preg_match('#^/api/historico/(\d+)$#', $path, $m) && $method === 'GET') {
             http_response_code(404);
             header('Content-Type: application/json');
             echo json_encode(['sucesso' => false, 'erro' => 'Log não encontrado']);
+            exit;
+        }
+        
+        // Verificação RBAC
+        if (!empty($log['id_rotina']) && !\App\Servicos\ServicoPermissao::podeVerRecurso('rotina', (int)$log['id_rotina'], isset($log['criador_recurso']) ? (int)$log['criador_recurso'] : null)) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['sucesso' => false, 'erro' => 'Acesso negado']);
             exit;
         }
         
@@ -898,34 +1555,82 @@ if (preg_match('#^/api/historico/(\d+)$#', $path, $m) && $method === 'GET') {
     exit;
 }
 
-// API Histórico - Exportar CSV
+// API Histórico - Exportar CSV (unificado: rotinas + pipelines + workflows)
 if ($path === '/api/historico/exportar' && $method === 'GET') {
     try {
         $db = Database::getConexao();
         
-        $filtros = [];
-        $params = [];
+        $tipo = $_GET['tipo'] ?? '';
+        $partsRotina = [];
+        $partsPipeline = [];
+        $partsWorkflow = [];
+        $paramsRotina = [];
+        $paramsPipeline = [];
+        $paramsWorkflow = [];
         
-        if (!empty($_GET['rotina'])) {
-            $filtros[] = "l.id_rotina = ?";
-            $params[] = (int)$_GET['rotina'];
-        }
         if (!empty($_GET['status'])) {
-            $filtros[] = "l.status = ?";
-            $params[] = $_GET['status'];
+            $statusVal = $_GET['status'];
+            $partsRotina[] = "l.status = ?";
+            $paramsRotina[] = $statusVal;
+            $statusPipeline = str_replace(['sucesso','falha','executando'], ['success','error','running'], $statusVal);
+            $partsPipeline[] = "pe.status = ?";
+            $paramsPipeline[] = $statusPipeline;
+            $statusWorkflow = str_replace(['sucesso','falha','executando'], ['completed','failed','running'], $statusVal);
+            $partsWorkflow[] = "we.status = ?";
+            $paramsWorkflow[] = $statusWorkflow;
+        }
+        if (!empty($_GET['rotina'])) {
+            $partsRotina[] = "l.id_rotina = ?";
+            $paramsRotina[] = (int)$_GET['rotina'];
         }
         
-        $where = count($filtros) > 0 ? ' AND ' . implode(' AND ', $filtros) : '';
+        $whereRotina = count($partsRotina) > 0 ? ' AND ' . implode(' AND ', $partsRotina) : '';
+        $wherePipeline = count($partsPipeline) > 0 ? ' AND ' . implode(' AND ', $partsPipeline) : '';
+        $whereWorkflow = count($partsWorkflow) > 0 ? ' AND ' . implode(' AND ', $partsWorkflow) : '';
         
-        $sql = "SELECT l.id, r.nome as rotina, l.status, l.data_inicio, l.data_fim, 
-                       l.duracao_ms, l.registros_processados, l.mensagem_erro
-                FROM tb_logs_execucao l 
-                LEFT JOIN tb_rotinas r ON l.id_rotina = r.id 
-                WHERE 1=1 {$where}
-                ORDER BY l.data_inicio DESC";
+        // Filtros de visibilidade RBAC
+        $filtroRotVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('rotina', 'r', 'id_usuario_criador');
+        $filtroPipVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
+        $filtroWfVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
         
+        $unions = [];
+        $allParams = [];
+        
+        if (!$tipo || $tipo === 'rotina') {
+            $unions[] = "SELECT l.id, 'rotina' as tipo_execucao, r.nome as nome_origem,
+                CASE l.status WHEN 'sucesso' THEN 'sucesso' WHEN 'falha' THEN 'falha' WHEN 'erro' THEN 'erro' ELSE l.status END as status,
+                l.data_inicio, l.data_fim, l.duracao_ms, l.registros_processados,
+                l.mensagem_erro as erro
+                FROM tb_logs_execucao l LEFT JOIN tb_rotinas r ON l.id_rotina = r.id
+                WHERE 1=1 {$whereRotina} AND ({$filtroRotVis['where']})";
+            $allParams = array_merge($allParams, $paramsRotina, $filtroRotVis['params']);
+        }
+        if (!$tipo || $tipo === 'pipeline') {
+            $unions[] = "SELECT pe.id, 'pipeline' as tipo_execucao, p.nome as nome_origem,
+                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' ELSE pe.status END as status,
+                pe.data_inicio, pe.data_fim, pe.duracao_ms, NULL::bigint as registros_processados,
+                pe.erro
+                FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id
+                WHERE 1=1 {$wherePipeline} AND ({$filtroPipVis['where']})";
+            $allParams = array_merge($allParams, $paramsPipeline, $filtroPipVis['params']);
+        }
+        if (!$tipo || $tipo === 'workflow') {
+            $unions[] = "SELECT we.id, 'workflow' as tipo_execucao, w.nome as nome_origem,
+                CASE we.status WHEN 'completed' THEN 'sucesso' WHEN 'failed' THEN 'falha' ELSE we.status END as status,
+                we.data_inicio, we.data_fim, we.duracao_ms, NULL::bigint as registros_processados,
+                we.erro
+                FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id
+                WHERE 1=1 {$whereWorkflow} AND ({$filtroWfVis['where']})";
+            $allParams = array_merge($allParams, $paramsWorkflow, $filtroWfVis['params']);
+        }
+        
+        if (empty($unions)) {
+            $unions[] = "SELECT 0 as id, '' as tipo_execucao, '' as nome_origem, '' as status, NULL::timestamptz as data_inicio, NULL::timestamptz as data_fim, 0 as duracao_ms, NULL::bigint as registros_processados, '' as erro WHERE false";
+        }
+        
+        $sql = "(" . implode(") UNION ALL (", $unions) . ") ORDER BY data_inicio DESC LIMIT 5000";
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute($allParams);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         header('Content-Type: text/csv; charset=utf-8');
@@ -934,19 +1639,20 @@ if ($path === '/api/historico/exportar' && $method === 'GET') {
         $output = fopen('php://output', 'w');
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
         
-        // Header
-        fputcsv($output, ['ID', 'Rotina', 'Status', 'Início', 'Fim', 'Duração (ms)', 'Registros', 'Erro'], ';');
+        // Header com tipo_execucao
+        fputcsv($output, ['ID', 'Tipo', 'Nome', 'Status', 'Início', 'Fim', 'Duração (ms)', 'Registros', 'Erro'], ';');
         
         foreach ($dados as $row) {
             fputcsv($output, [
                 $row['id'],
-                $row['rotina'],
+                $row['tipo_execucao'],
+                $row['nome_origem'],
                 $row['status'],
                 $row['data_inicio'],
                 $row['data_fim'],
                 $row['duracao_ms'],
                 $row['registros_processados'],
-                $row['mensagem_erro']
+                $row['erro']
             ], ';');
         }
         
@@ -985,6 +1691,23 @@ if (preg_match('#^/api/download-csv/(\d+)$#', $path, $m) && $method === 'GET') {
 
 // API Executar rotina (via histórico ou dashboard)
 if ($path === '/api/executar-rotina' && $method === 'POST') {
+    // Validar CSRF
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    // Rate limiting: max 10 execuções por minuto por sessão
+    $rateLimiter = new \App\Core\RateLimiter();
+    $sessionId = session_id() ?: 'anonymous';
+    if (!$rateLimiter->permitir("exec_rotina:{$sessionId}", 10, 60)) {
+        http_response_code(429);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Limite de execuções excedido. Aguarde 1 minuto.', 'sucesso' => false]);
+        exit;
+    }
     try {
         $db = Database::getConexao();
         
@@ -1094,21 +1817,47 @@ if ($path === '/api/apis-externas/list' && $method === 'GET') {
 // Buscar API por ID
 if (preg_match('#^/api/apis-externas/get/(\d+)$#', $path, $m) && $method === 'GET') {
     $c = new ApiExternaController();
+    $id = (int)$m[1];
     header('Content-Type: application/json');
-    echo json_encode($c->buscarApi((int)$m[1]));
+    $resultado = $c->buscarApi($id);
+    $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('api', $id);
+    $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('api', $id);
+    echo json_encode($resultado);
     exit;
 }
 
 // Salvar API
 if ($path === '/api/apis-externas/salvar' && $method === 'POST') {
     $c = new ApiExternaController();
+    $data = $_POST;
+    $input = file_get_contents('php://input');
+    if ($input && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+        $data = json_decode($input, true);
+    }
+    // Validar CSRF token
+    $csrfToken = $data['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    unset($data['_csrf_token']);
     header('Content-Type: application/json');
-    echo json_encode($c->salvarApi($_POST));
+    echo json_encode($c->salvarApi($data));
     exit;
 }
 
 // Deletar API
 if (preg_match('#^/api/apis-externas/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    // Validar CSRF token
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new ApiExternaController();
     header('Content-Type: application/json');
     echo json_encode($c->deletarApi((int)$m[1]));
@@ -1118,8 +1867,31 @@ if (preg_match('#^/api/apis-externas/delete/(\d+)$#', $path, $m) && $method === 
 // Testar API
 if ($path === '/api/apis-externas/testar' && $method === 'POST') {
     $c = new ApiExternaController();
+    $data = $_POST;
+    $input = file_get_contents('php://input');
+    if ($input && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+        $data = json_decode($input, true);
+    }
+    // Validar CSRF token
+    $csrfToken = $data['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    unset($data['_csrf_token']);
+    // Rate limiting: max 20 testes por minuto por sessão
+    $rateLimiter = new \App\Core\RateLimiter();
+    $sessionId = session_id() ?: 'anonymous';
+    if (!$rateLimiter->permitir("api_test:{$sessionId}", 20, 60)) {
+        http_response_code(429);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Limite de testes excedido. Aguarde 1 minuto.', 'sucesso' => false]);
+        exit;
+    }
     header('Content-Type: application/json');
-    echo json_encode($c->testarApi($_POST));
+    echo json_encode($c->testarApi($data));
     exit;
 }
 
@@ -1135,7 +1907,7 @@ if ($path === '/eventos-api') {
 
 // Listar Eventos
 if ($path === '/api/eventos-api/list' && $method === 'GET') {
-    $idApi = isset($_GET['id_api']) ? (int)$_GET['id_api'] : null;
+    $idApi = isset($_GET['id_api']) ? (int)$_GET['id_api'] : (isset($_GET['api']) ? (int)$_GET['api'] : null);
     $c = new ApiExternaController();
     header('Content-Type: application/json');
     echo json_encode($c->listarEventos($idApi));
@@ -1153,13 +1925,35 @@ if (preg_match('#^/api/eventos-api/get/(\d+)$#', $path, $m) && $method === 'GET'
 // Salvar Evento
 if ($path === '/api/eventos-api/salvar' && $method === 'POST') {
     $c = new ApiExternaController();
+    $data = $_POST;
+    $input = file_get_contents('php://input');
+    if ($input && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+        $data = json_decode($input, true);
+    }
+    // Validar CSRF token
+    $csrfToken = $data['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    unset($data['_csrf_token']);
     header('Content-Type: application/json');
-    echo json_encode($c->salvarEvento($_POST));
+    echo json_encode($c->salvarEvento($data));
     exit;
 }
 
 // Deletar Evento
 if (preg_match('#^/api/eventos-api/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    // Validar CSRF token
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new ApiExternaController();
     header('Content-Type: application/json');
     echo json_encode($c->deletarEvento((int)$m[1]));
@@ -1169,8 +1963,22 @@ if (preg_match('#^/api/eventos-api/delete/(\d+)$#', $path, $m) && $method === 'P
 // Testar JSONPath
 if ($path === '/api/eventos-api/testar-jsonpath' && $method === 'POST') {
     $c = new ApiExternaController();
+    $data = $_POST;
+    $input = file_get_contents('php://input');
+    if ($input && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+        $data = json_decode($input, true);
+    }
+    // Validar CSRF token
+    $csrfToken = $data['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    unset($data['_csrf_token']);
     header('Content-Type: application/json');
-    echo json_encode($c->testarJsonPath($_POST));
+    echo json_encode($c->testarJsonPath($data));
     exit;
 }
 
@@ -1180,6 +1988,208 @@ if ($path === '/api/valores-capturados/list' && $method === 'GET') {
     $c = new ApiExternaController();
     header('Content-Type: application/json');
     echo json_encode($c->listarValoresCapturados($idEvento));
+    exit;
+}
+
+// Executar Polling Manual de uma API
+if (preg_match('#^/api/apis-externas/polling/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $engine = new \App\Core\ApiPollingEngine();
+    header('Content-Type: application/json');
+    echo json_encode($engine->executarPollingApi((int)$m[1]));
+    exit;
+}
+
+// Executar Polling de todas as APIs
+if ($path === '/api/apis-externas/polling' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $engine = new \App\Core\ApiPollingEngine();
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'resultados' => $engine->executarPolling()]);
+    exit;
+}
+
+// =====================================================
+// ROTAS: NOTIFICAÇÕES
+// =====================================================
+
+// Listar Notificações
+if ($path === '/api/notificacoes/list' && $method === 'GET') {
+    $limite = isset($_GET['limite']) ? min((int)$_GET['limite'], 100) : 20;
+    $db = \App\Core\Database::getConexao();
+    $stmt = $db->prepare("SELECT * FROM tb_notificacoes ORDER BY created_at DESC LIMIT ?");
+    $stmt->execute([$limite]);
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'dados' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+    exit;
+}
+
+// Contar Notificações não lidas
+if ($path === '/api/notificacoes/count' && $method === 'GET') {
+    $db = \App\Core\Database::getConexao();
+    $stmt = $db->query("SELECT COUNT(*) FROM tb_notificacoes WHERE lida = false");
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'count' => (int)$stmt->fetchColumn()]);
+    exit;
+}
+
+// Marcar notificação como lida
+if (preg_match('#^/api/notificacoes/lida/(\d+)$#', $path, $m) && $method === 'POST') {
+    $db = \App\Core\Database::getConexao();
+    $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE id = ?");
+    $stmt->execute([(int)$m[1]]);
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true]);
+    exit;
+}
+
+// Marcar todas como lidas
+if ($path === '/api/notificacoes/lida-todas' && $method === 'POST') {
+    $db = \App\Core\Database::getConexao();
+    $db->exec("UPDATE tb_notificacoes SET lida = true WHERE lida = false");
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true]);
+    exit;
+}
+
+// =====================================================
+// ROTAS: CONFIGURAÇÕES
+// =====================================================
+
+// API: Carregar configurações
+if ($path === '/api/configuracoes' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->carregar();
+    exit;
+}
+
+// API: Salvar configurações por grupo
+if (preg_match('#^/api/configuracoes/(geral|email|ldap|scheduler|seguranca|notificacoes)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->salvarGrupo($m[1]);
+    exit;
+}
+
+// API: Testar e-mail
+if ($path === '/api/configuracoes/testar-email' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->testarEmail();
+    exit;
+}
+
+// API: Exportar configurações
+if ($path === '/api/configuracoes/exportar' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->exportar();
+    exit;
+}
+
+// API: Importar configurações
+if ($path === '/api/configuracoes/importar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->importar();
+    exit;
+}
+
+// API: Limpar dados antigos
+if ($path === '/api/configuracoes/limpar-dados' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->limparDados();
+    exit;
+}
+
+// =====================================================
+// ROTAS: AUDITORIA
+// =====================================================
+
+// API: Listar auditoria
+if ($path === '/api/auditoria' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoAuditoria::listar($_GET));
+    exit;
+}
+
+// API: Exportar auditoria CSV
+if ($path === '/api/auditoria/exportar' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    \App\Servicos\ServicoAuditoria::exportar($_GET);
+    exit;
+}
+
+// =====================================================
+// ROTAS: WEBHOOKS
+// =====================================================
+
+// API: Listar webhooks
+if ($path === '/api/webhooks/list' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoWebhook::listar());
+    exit;
+}
+
+// API: Buscar webhook
+if (preg_match('#^/api/webhooks/get/(\d+)$#', $path, $m) && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoWebhook::buscar((int)$m[1]));
+    exit;
+}
+
+// API: Salvar webhook
+if ($path === '/api/webhooks/salvar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoWebhook::salvar($_POST));
+    exit;
+}
+
+// API: Excluir webhook
+if (preg_match('#^/api/webhooks/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoWebhook::excluir((int)$m[1]));
+    exit;
+}
+
+// API: Testar webhook
+if (preg_match('#^/api/webhooks/testar/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoWebhook::testar((int)$m[1]));
     exit;
 }
 
@@ -1217,8 +2227,12 @@ if ($path === '/api/workflows/list' && $method === 'GET') {
 // Buscar Workflow por ID
 if (preg_match('#^/api/workflows/get/(\d+)$#', $path, $m) && $method === 'GET') {
     $c = new WorkflowController();
+    $id = (int)$m[1];
     header('Content-Type: application/json');
-    echo json_encode($c->buscar((int)$m[1]));
+    $resultado = $c->buscar($id);
+    $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('workflow', $id);
+    $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('workflow', $id);
+    echo json_encode($resultado);
     exit;
 }
 
@@ -1233,13 +2247,36 @@ if ($path === '/api/workflows/salvar' && $method === 'POST') {
         $data = json_decode($input, true);
     }
     
+    // Validar CSRF
+    $csrfToken = $data['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    unset($data['_csrf_token']);
+    
     header('Content-Type: application/json');
-    echo json_encode($c->salvar($data));
+    $resultado = $c->salvar($data);
+    \App\Servicos\ServicoAuditoria::registrar(
+        isset($data['id']) && $data['id'] ? 'editar' : 'criar',
+        'workflow', (int)($resultado['id'] ?? $data['id'] ?? 0), $data['nome'] ?? ''
+    );
+    echo json_encode($resultado);
     exit;
 }
 
 // Deletar Workflow
 if (preg_match('#^/api/workflows/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    \App\Servicos\ServicoAuditoria::registrar('excluir', 'workflow', (int)$m[1]);
     $c = new WorkflowController();
     header('Content-Type: application/json');
     echo json_encode($c->deletar((int)$m[1]));
@@ -1248,6 +2285,13 @@ if (preg_match('#^/api/workflows/delete/(\d+)$#', $path, $m) && $method === 'POS
 
 // Alternar ativo
 if (preg_match('#^/api/workflows/toggle/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new WorkflowController();
     header('Content-Type: application/json');
     echo json_encode($c->alternarAtivo((int)$m[1]));
@@ -1256,6 +2300,13 @@ if (preg_match('#^/api/workflows/toggle/(\d+)$#', $path, $m) && $method === 'POS
 
 // Duplicar Workflow
 if (preg_match('#^/api/workflows/duplicar/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new WorkflowController();
     header('Content-Type: application/json');
     echo json_encode($c->duplicar((int)$m[1]));
@@ -1264,12 +2315,30 @@ if (preg_match('#^/api/workflows/duplicar/(\d+)$#', $path, $m) && $method === 'P
 
 // Executar Workflow
 if (preg_match('#^/api/workflows/executar/(\d+)$#', $path, $m) && $method === 'POST') {
-    $c = new WorkflowController();
+    // Validar CSRF (aceita via JSON body, POST ou header)
     $contexto = [];
     $input = file_get_contents('php://input');
     if ($input) {
         $contexto = json_decode($input, true) ?? [];
     }
+    $csrfToken = $contexto['_csrf_token'] ?? $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    unset($contexto['_csrf_token']);
+    // Rate limiting: max 10 execuções de workflow por minuto por sessão
+    $rateLimiter = new \App\Core\RateLimiter();
+    $sessionId = session_id() ?: 'anonymous';
+    if (!$rateLimiter->permitir("exec_workflow:{$sessionId}", 10, 60)) {
+        http_response_code(429);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Limite de execuções excedido. Aguarde 1 minuto.', 'sucesso' => false]);
+        exit;
+    }
+    $c = new WorkflowController();
     header('Content-Type: application/json');
     echo json_encode($c->executar((int)$m[1], $contexto));
     exit;
@@ -1310,6 +2379,13 @@ if ($path === '/api/workflows/stats' && $method === 'GET') {
 
 // Cancelar execução
 if (preg_match('#^/api/workflow-execucoes/cancelar/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new WorkflowController();
     header('Content-Type: application/json');
     echo json_encode($c->cancelarExecucao((int)$m[1]));
@@ -1344,14 +2420,24 @@ if ($path === '/pipelines/list' && $method === 'GET') {
 // API: Buscar Pipeline por ID
 if (preg_match('#^/pipelines/get/(\d+)$#', $path, $m) && $method === 'GET') {
     $c = new PipelineController();
+    $id = (int)$m[1];
     header('Content-Type: application/json');
-    echo json_encode($c->buscar((int)$m[1]));
+    $resultado = $c->buscar($id);
+    $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('pipeline', $id);
+    $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('pipeline', $id);
+    echo json_encode($resultado);
     exit;
 }
 
 // API: Salvar Pipeline
 if ($path === '/pipelines/salvar' && $method === 'POST') {
-    AuthMiddleware::validarTokenCSRF();
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new PipelineController();
     $data = $_POST;
     $input = file_get_contents('php://input');
@@ -1359,13 +2445,25 @@ if ($path === '/pipelines/salvar' && $method === 'POST') {
         $data = json_decode($input, true);
     }
     header('Content-Type: application/json');
-    echo json_encode($c->salvar($data));
+    $resultado = $c->salvar($data);
+    \App\Servicos\ServicoAuditoria::registrar(
+        isset($data['id']) && $data['id'] ? 'editar' : 'criar',
+        'pipeline', (int)($resultado['id'] ?? $data['id'] ?? 0), $data['nome'] ?? ''
+    );
+    echo json_encode($resultado);
     exit;
 }
 
 // API: Deletar Pipeline
 if (preg_match('#^/pipelines/delete/(\d+)$#', $path, $m) && $method === 'POST') {
-    AuthMiddleware::validarTokenCSRF();
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    \App\Servicos\ServicoAuditoria::registrar('excluir', 'pipeline', (int)$m[1]);
     $c = new PipelineController();
     header('Content-Type: application/json');
     echo json_encode($c->deletar((int)$m[1]));
@@ -1374,7 +2472,22 @@ if (preg_match('#^/pipelines/delete/(\d+)$#', $path, $m) && $method === 'POST') 
 
 // API: Executar Pipeline
 if (preg_match('#^/pipelines/executar/(\d+)$#', $path, $m) && $method === 'POST') {
-    AuthMiddleware::validarTokenCSRF();
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    // Rate limiting: max 10 execuções de pipeline por minuto por sessão
+    $rateLimiter = new \App\Core\RateLimiter();
+    $sessionId = session_id() ?: 'anonymous';
+    if (!$rateLimiter->permitir("exec_pipeline:{$sessionId}", 10, 60)) {
+        http_response_code(429);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Limite de execuções excedido. Aguarde 1 minuto.', 'sucesso' => false]);
+        exit;
+    }
     $c = new PipelineController();
     header('Content-Type: application/json');
     echo json_encode($c->executar((int)$m[1]));
@@ -1383,7 +2496,13 @@ if (preg_match('#^/pipelines/executar/(\d+)$#', $path, $m) && $method === 'POST'
 
 // API: Duplicar Pipeline
 if (preg_match('#^/pipelines/duplicar/(\d+)$#', $path, $m) && $method === 'POST') {
-    AuthMiddleware::validarTokenCSRF();
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new PipelineController();
     header('Content-Type: application/json');
     echo json_encode($c->duplicar((int)$m[1]));
@@ -1392,7 +2511,13 @@ if (preg_match('#^/pipelines/duplicar/(\d+)$#', $path, $m) && $method === 'POST'
 
 // API: Toggle Ativo Pipeline
 if (preg_match('#^/pipelines/toggle/(\d+)$#', $path, $m) && $method === 'POST') {
-    AuthMiddleware::validarTokenCSRF();
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new PipelineController();
     header('Content-Type: application/json');
     echo json_encode($c->toggleAtivo((int)$m[1]));
@@ -1409,7 +2534,13 @@ if (preg_match('#^/pipelines/exportar/(\d+)$#', $path, $m) && $method === 'GET')
 
 // API: Importar Pipeline
 if ($path === '/pipelines/importar' && $method === 'POST') {
-    AuthMiddleware::validarTokenCSRF();
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
     $c = new PipelineController();
     $data = json_decode(file_get_contents('php://input'), true);
     header('Content-Type: application/json');
@@ -1502,3 +2633,218 @@ if ($path === '/debug/create_user' && $method === 'GET') {
 }
 
 echo "<h1>DMC DataLoad</h1><p>Front controller mínimo. Configure o server document root em public/</p>";
+
+// ========== API FILA DE EXECUÇÃO (Background Queue) ==========
+
+// Página de fila
+if ($path === '/admin/fila') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    include __DIR__ . '/../views/admin/fila.php';
+    exit;
+}
+
+// Enfileirar execução
+if ($path === '/api/fila/enfileirar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $tipo = $_POST['tipo'] ?? '';
+    $idRecurso = (int)($_POST['id_recurso'] ?? 0);
+    $nomeRecurso = $_POST['nome_recurso'] ?? '';
+    $prioridade = (int)($_POST['prioridade'] ?? 5);
+    if (!in_array($tipo, ['rotina', 'pipeline', 'workflow']) || $idRecurso <= 0) {
+        http_response_code(400);
+        header('Content-Type: application/json');
+        echo json_encode(['sucesso' => false, 'erro' => 'Tipo e id_recurso são obrigatórios']);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoFila::enfileirar($tipo, $idRecurso, $nomeRecurso, $prioridade));
+    exit;
+}
+
+// Status de um item da fila
+if (preg_match('#^/api/fila/status/(\d+)$#', $path, $m) && $method === 'GET') {
+    header('Content-Type: application/json');
+    $item = \App\Servicos\ServicoFila::status((int)$m[1]);
+    echo json_encode($item ? ['sucesso' => true, 'dados' => $item] : ['sucesso' => false, 'erro' => 'Item não encontrado']);
+    exit;
+}
+
+// Listar fila
+if ($path === '/api/fila/listar' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $status = $_GET['status'] ?? null;
+    $tipo = $_GET['tipo'] ?? null;
+    $limite = min(100, max(1, (int)($_GET['limite'] ?? 50)));
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
+    header('Content-Type: application/json');
+    echo json_encode(array_merge(['sucesso' => true], \App\Servicos\ServicoFila::listar($status, $tipo, $limite, $offset)));
+    exit;
+}
+
+// Estatísticas da fila
+if ($path === '/api/fila/stats' && $method === 'GET') {
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoFila::estatisticas()]);
+    exit;
+}
+
+// Cancelar item da fila
+if (preg_match('#^/api/fila/cancelar/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $ok = \App\Servicos\ServicoFila::cancelar((int)$m[1]);
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => $ok, 'mensagem' => $ok ? 'Cancelado' : 'Item não encontrado ou não pode ser cancelado']);
+    exit;
+}
+
+// ========== API CANAIS DE NOTIFICAÇÃO (Slack/Teams) ==========
+
+// Página de canais
+if ($path === '/admin/canais') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    include __DIR__ . '/../views/admin/canais.php';
+    exit;
+}
+
+// Listar canais
+if ($path === '/api/canais/listar' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoCanalNotificacao::listar()]);
+    exit;
+}
+
+// Salvar canal
+if ($path === '/api/canais/salvar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoCanalNotificacao::salvar($_POST));
+    exit;
+}
+
+// Deletar canal
+if (preg_match('#^/api/canais/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoCanalNotificacao::deletar((int)$m[1]));
+    exit;
+}
+
+// Testar canal
+if (preg_match('#^/api/canais/testar/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoCanalNotificacao::testar((int)$m[1]));
+    exit;
+}
+
+// ========== API BACKUP/RESTORE ==========
+
+// Página de backups
+if ($path === '/admin/backups') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    include __DIR__ . '/../views/admin/backups.php';
+    exit;
+}
+
+// Listar backups
+if ($path === '/api/backups/listar' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoBackup::listar()]);
+    exit;
+}
+
+// Criar backup
+if ($path === '/api/backups/criar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $tipo = $_POST['tipo'] ?? 'completo';
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoBackup::criar($tipo));
+    exit;
+}
+
+// Download backup
+if (preg_match('#^/api/backups/download/(\d+)$#', $path, $m) && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    \App\Servicos\ServicoBackup::download((int)$m[1]);
+    exit;
+}
+
+// Restaurar backup
+if ($path === '/api/backups/restaurar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    if (!isset($_FILES['arquivo'])) {
+        http_response_code(400);
+        header('Content-Type: application/json');
+        echo json_encode(['sucesso' => false, 'erro' => 'Nenhum arquivo enviado']);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoBackup::restaurar($_FILES['arquivo']));
+    exit;
+}
+
+// Deletar backup
+if (preg_match('#^/api/backups/delete/(\d+)$#', $path, $m) && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    echo json_encode(\App\Servicos\ServicoBackup::deletar((int)$m[1]));
+    exit;
+}

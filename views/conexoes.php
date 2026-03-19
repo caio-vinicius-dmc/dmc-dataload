@@ -25,7 +25,7 @@ ob_start();
         <a href="<?= $baseUrl ?>/drivers-status" class="btn btn-outline-secondary" target="_blank">
             <i class="bi bi-plugin me-2"></i>Status dos Drivers
         </a>
-        <button class="btn-modern-primary" data-bs-toggle="modal" data-bs-target="#modalConexao" onclick="novaConexao()">
+        <button class="btn-modern-primary" onclick="novaConexao()">
             <i class="bi bi-plus-lg me-2"></i>Nova Conexão
         </button>
     </div>
@@ -188,6 +188,8 @@ ob_start();
                     </div>
                     
                     <div id="resultadoTeste" class="mt-3" style="display: none;"></div>
+                    
+                    <?php include __DIR__ . '/partials/recurso_empresa_projeto.php'; ?>
                 </div>
                 <div class="modal-footer-modern">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -203,12 +205,13 @@ ob_start();
     </div>
 </div>
 
+<?php include __DIR__ . '/partials/compartilhamento_modal.php'; ?>
+
 <?php
 $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 :root {
     --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -557,7 +560,6 @@ STYLES;
 $extraScripts = <<<'SCRIPTS'
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 let tabela;
@@ -649,6 +651,9 @@ function loadTable() {
                         <button class="btn btn-outline-primary" onclick="editarConexao(${safeId})" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </button>
+                        <button class="btn btn-outline-secondary" onclick="abrirModalCompartilhamento('conexao', ${safeId})" title="Compartilhar">
+                            <i class="bi bi-share"></i>
+                        </button>
                         <button class="btn btn-outline-danger" onclick="excluirConexao(${safeId})" title="Excluir">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -670,11 +675,12 @@ function novaConexao() {
     document.getElementById("conexaoId").value = "";
     document.getElementById("modalTitle").textContent = "Nova Conexão";
     document.getElementById("resultadoTeste").style.display = "none";
+    if (typeof rbacLimparSelects === 'function') rbacLimparSelects();
     
     // Disparar evento change para mostrar campos corretos do PostgreSQL (padrão)
     document.getElementById("tipo_banco").dispatchEvent(new Event('change'));
     
-    new bootstrap.Modal("#modalConexao").show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConexao')).show();
 }
 
 function editarConexao(id) {
@@ -693,11 +699,18 @@ function editarConexao(id) {
         document.getElementById("modalTitle").textContent = "Editar Conexão";
         document.getElementById("resultadoTeste").style.display = "none";
         
+        // Preencher empresas/projetos
+        var empIds = (r.empresas || []).map(function(e) { return e.id_empresa || e.id; });
+        var projIds = (r.projetos || []).map(function(p) { return p.id_projeto || p.id; });
+        if (typeof rbacCarregarOpcoes === 'function') {
+            rbacCarregarOpcoes(function() { if (typeof rbacPreencherSelects === 'function') rbacPreencherSelects(empIds, projIds); });
+        }
+        
         // Disparar evento change para mostrar campos corretos
         document.getElementById("tipo_banco").dispatchEvent(new Event('change'));
         document.getElementById("tipo_conexao_oracle").dispatchEvent(new Event('change'));
         
-        new bootstrap.Modal("#modalConexao").show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConexao')).show();
     });
 }
 
@@ -963,7 +976,7 @@ document.getElementById("formConexao").addEventListener("submit", function(e) {
     
     $.post(baseUrl + "/conexoes/salvar", $(this).serialize(), function(res) {
         if (res.sucesso) {
-            bootstrap.Modal.getInstance("#modalConexao").hide();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConexao')).hide();
             Swal.fire("Salvo!", res.mensagem || "Conexão salva com sucesso.", "success");
             loadTable();
         } else {
@@ -980,6 +993,9 @@ $(document).ready(function() {
 });
 </script>
 SCRIPTS;
+
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-recurso.js"></script>';
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-compartilhamento.js"></script>';
 
 include __DIR__ . '/layouts/base.php';
 ?>

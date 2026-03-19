@@ -2,6 +2,9 @@
 $pageTitle = 'APIs Externas';
 $currentPage = 'apis-externas';
 
+// Gerar CSRF token para proteção dos formulários
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
+
 ob_start();
 ?>
 
@@ -489,6 +492,8 @@ ob_start();
                             </div>
                         </div>
                     </div>
+                    
+                    <?php include __DIR__ . '/partials/recurso_empresa_projeto.php'; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-primary" onclick="testarApi()">
@@ -545,75 +550,25 @@ ob_start();
     </div>
 </div>
 
+<?php include __DIR__ . '/partials/compartilhamento_modal.php'; ?>
+
 <?php
 $content = ob_get_clean();
 
 $extraStyles = <<<STYLES
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>' . <<<'SCRIPTS'
 <script>
 let apis = [];
 
 // Funções auxiliares de UI
 function mostrarErro(mensagem) {
-    // Criar toast de erro
-    const toast = `
-        <div class="toast align-items-center text-white bg-danger border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-exclamation-triangle me-2"></i>${mensagem}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-    
-    // Container de toasts (criar se não existir)
-    let container = $('#toast-container');
-    if (container.length === 0) {
-        $('body').append('<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999"></div>');
-        container = $('#toast-container');
-    }
-    
-    // Adicionar e mostrar toast
-    const toastEl = $(toast);
-    container.append(toastEl);
-    const bsToast = new bootstrap.Toast(toastEl[0]);
-    bsToast.show();
-    
-    // Remover após ocultar
-    toastEl.on('hidden.bs.toast', function() {
-        $(this).remove();
-    });
+    Swal.fire({icon: 'error', title: 'Erro', text: mensagem, toast: true, position: 'top-end', timer: 4000, showConfirmButton: false});
 }
 
 function mostrarSucesso(mensagem) {
-    const toast = `
-        <div class="toast align-items-center text-white bg-success border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-check-circle me-2"></i>${mensagem}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-    
-    let container = $('#toast-container');
-    if (container.length === 0) {
-        $('body').append('<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999"></div>');
-        container = $('#toast-container');
-    }
-    
-    const toastEl = $(toast);
-    container.append(toastEl);
-    const bsToast = new bootstrap.Toast(toastEl[0]);
-    bsToast.show();
-    
-    toastEl.on('hidden.bs.toast', function() {
-        $(this).remove();
-    });
+    Swal.fire({icon: 'success', title: 'Sucesso', text: mensagem, toast: true, position: 'top-end', timer: 3000, showConfirmButton: false});
 }
 
 // Carregar APIs
@@ -642,31 +597,42 @@ function renderizarApis(lista) {
     lista.forEach(api => {
         const statusClass = api.ativo ? 'active' : 'inactive';
         const badgeClass = api.ativo ? 'bg-success' : 'bg-secondary';
+        const authLabel = api.auth_tipo || 'none';
+        const authClass = 'auth-' + authLabel;
+        const statusIndicator = api.ultimo_status === 'success' ? 'status-success' : (api.ultimo_status === 'error' ? 'status-error' : 'status-unknown');
         
         html += `
         <div class="col-md-6 col-xl-4">
-            <div class="card api-card \${statusClass} h-100">
+            <div class="card api-card ${statusClass} h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-0">\${api.nome}</h6>
-                        <span class="method-badge method-\${api.metodo}">\${api.metodo}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="status-indicator ${statusIndicator}"></span>
+                            <h6 class="mb-0">${api.nome}</h6>
+                        </div>
+                        <span class="method-badge method-${api.metodo}">${api.metodo}</span>
                     </div>
-                    <p class="text-muted small text-truncate mb-2" title="\${api.url}">\${api.url}</p>
-                    <div class="d-flex gap-2 mb-3">
-                        <span class="auth-badge">\${api.tipo_autenticacao || 'none'}</span>
-                        <span class="badge \${badgeClass}">\${api.ativo ? 'Ativa' : 'Inativa'}</span>
+                    <p class="text-muted small text-truncate mb-2" title="${api.url}">${api.url}</p>
+                    ${api.descricao ? '<p class="text-muted small mb-2">' + api.descricao.substring(0, 80) + '</p>' : ''}
+                    <div class="d-flex gap-2 mb-3 flex-wrap">
+                        <span class="auth-badge ${authClass}">${authLabel}</span>
+                        <span class="badge ${badgeClass}">${api.ativo ? 'Ativa' : 'Inativa'}</span>
+                        ${api.total_eventos > 0 ? '<span class="badge bg-info">' + api.total_eventos + ' evento(s)</span>' : ''}
                     </div>
                     <div class="btn-group w-100 btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="testarApi(\${api.id_api})" title="Testar">
+                        <button class="btn btn-outline-primary" onclick="testarApiExistente(${api.id})" title="Testar">
                             <i class="bi bi-play-circle"></i>
                         </button>
-                        <button class="btn btn-outline-warning" onclick="editarApi(\${api.id_api})" title="Editar">
+                        <button class="btn btn-outline-warning" onclick="editarApi(${api.id})" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <a href="\${baseUrl}/eventos-api?api=\${api.id_api}" class="btn btn-outline-info" title="Eventos">
+                        <a href="${baseUrl}/eventos-api?api=${api.id}" class="btn btn-outline-info" title="Eventos">
                             <i class="bi bi-bell"></i>
                         </a>
-                        <button class="btn btn-outline-danger" onclick="excluirApi(\${api.id_api})" title="Excluir">
+                        <button class="btn btn-outline-secondary" onclick="abrirModalCompartilhamento('api', ${api.id})" title="Compartilhar">
+                            <i class="bi bi-share"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="excluirApi(${api.id})" title="Excluir">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -683,118 +649,238 @@ function renderizarApis(lista) {
 function atualizarEstatisticas() {
     const total = apis.length;
     const ativas = apis.filter(a => a.ativo).length;
+    const comErro = apis.filter(a => a.ultimo_status === 'error').length;
+    const totalEventos = apis.reduce((sum, a) => sum + (parseInt(a.total_eventos) || 0), 0);
     
-    $.getJSON(baseUrl + '/api/eventos-api/list', function(res) {
-        const eventos = (res.sucesso && res.dados) ? res.dados.length : 0;
-        
-        $('#totalApis').text(total);
-        $('#apisAtivas').text(ativas);
-        $('#totalEventos').text(eventos);
-        $('#ultimaExecucao').text('0h');
-    });
+    $('#totalApis').text(total);
+    $('#apisAtivas').text(ativas);
+    $('#totalEventos').text(totalEventos);
+    $('#apisComErro').text(comErro);
+}
+
+// Toggle auth fields
+function toggleAuthFields() {
+    const tipo = $('#apiAuthTipo').val();
+    const container = $('#authFieldsContainer');
+    
+    if (tipo === 'none') {
+        container.html('<p class="text-muted mb-0 mt-2">Sem autenticação</p>');
+        return;
+    }
+    
+    let html = '';
+    if (tipo === 'bearer') {
+        html = `<label class="form-label">Bearer Token</label>
+                <input type="text" class="form-control" name="bearer_token" id="apiBearerToken" placeholder="Token de autenticação">`;
+    } else if (tipo === 'basic') {
+        html = `<div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">Usuário</label>
+                        <input type="text" class="form-control" name="basic_username" id="apiBasicUsername">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Senha</label>
+                        <input type="password" class="form-control" name="basic_password" id="apiBasicPassword">
+                    </div>
+                </div>`;
+    } else if (tipo === 'api_key') {
+        html = `<div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label">API Key</label>
+                        <input type="text" class="form-control" name="api_key" id="apiKeyValue">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Header Name</label>
+                        <input type="text" class="form-control" name="api_key_header" id="apiKeyHeader" value="X-API-Key">
+                    </div>
+                </div>`;
+    }
+    container.html(html);
+}
+
+// Adicionar header
+function adicionarHeader() {
+    const container = $('#headersContainer');
+    const idx = container.find('.header-row').length;
+    container.append(`
+        <div class="header-row">
+            <input type="text" class="form-control form-control-sm" name="header_keys[]" placeholder="Header Key" value="">
+            <input type="text" class="form-control form-control-sm" name="header_values[]" placeholder="Header Value" value="">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('.header-row').remove()">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    `);
+}
+
+// Toggle body card
+function toggleBodyCard() {
+    const metodo = $('#apiMetodo').val();
+    if (['POST', 'PUT', 'PATCH'].includes(metodo)) {
+        $('#bodyCard').show();
+    } else {
+        $('#bodyCard').hide();
+    }
 }
 
 // Abrir modal API
-function abrirModalApi(id = null) {
+function abrirModalApi(id) {
+    $('#formApi')[0].reset();
+    $('#apiId').val('');
+    $('#apiAtivo').prop('checked', true);
+    $('#headersContainer').empty();
+    toggleAuthFields();
+    toggleBodyCard();
+    rbacLimparSelects();
+    
     if (id) {
-        const api = apis.find(a => a.id_api === id);
-        if (api) {
-            $('#modalApiLabel').text('Editar API');
-            $('#apiId').val(api.id_api);
-            $('#apiNome').val(api.nome);
-            $('#apiDescricao').val(api.descricao);
-            $('#apiUrl').val(api.url);
-            $('#apiMetodo').val(api.metodo);
-            $('#apiTipoAuth').val(api.tipo_autenticacao || 'none');
-            $('#apiIntervalo').val(api.intervalo_verificacao);
-            $('#apiAtivo').prop('checked', api.ativo);
-        }
+        $('#modalApiTitulo').text('Editar API');
+        // Buscar dados completos da API
+        $.getJSON(baseUrl + '/api/apis-externas/get/' + id, function(res) {
+            if (res.sucesso && res.dados) {
+                const api = res.dados;
+                $('#apiId').val(api.id);
+                $('#apiNome').val(api.nome);
+                $('#apiDescricao').val(api.descricao);
+                $('#apiUrl').val(api.url);
+                $('#apiMetodo').val(api.metodo);
+                $('#apiTipoResposta').val(api.tipo_resposta);
+                $('#apiAuthTipo').val(api.auth_tipo || 'none');
+                $('#apiIntervalo').val(api.intervalo_polling);
+                $('#apiTimeout').val(api.timeout);
+                $('#apiAtivo').prop('checked', api.ativo);
+                $('#apiBodyTemplate').val(api.body_template);
+                
+                toggleAuthFields();
+                toggleBodyCard();
+                
+                // Preencher credenciais
+                if (api.auth_tipo === 'bearer' && api.credenciais) {
+                    $('#apiBearerToken').val(api.credenciais.token || '');
+                } else if (api.auth_tipo === 'basic' && api.credenciais) {
+                    $('#apiBasicUsername').val(api.credenciais.username || '');
+                    $('#apiBasicPassword').val(api.credenciais.password || '');
+                } else if (api.auth_tipo === 'api_key' && api.credenciais) {
+                    $('#apiKeyValue').val(api.credenciais.api_key || '');
+                    $('#apiKeyHeader').val(api.credenciais.api_key_header || 'X-API-Key');
+                }
+                
+                // Preencher headers
+                if (api.headers && typeof api.headers === 'object') {
+                    Object.entries(api.headers).forEach(([key, value]) => {
+                        $('#headersContainer').append(`
+                            <div class="header-row">
+                                <input type="text" class="form-control form-control-sm" name="header_keys[]" value="${key}">
+                                <input type="text" class="form-control form-control-sm" name="header_values[]" value="${value}">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('.header-row').remove()">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        `);
+                    });
+                }
+                
+                // Preencher empresas/projetos RBAC
+                var empIds = (res.empresas || []).map(function(e) { return e.id_empresa || e.id; });
+                var projIds = (res.projetos || []).map(function(p) { return p.id_projeto || p.id; });
+                rbacCarregarOpcoes(function() { rbacPreencherSelects(empIds, projIds); });
+                
+                new bootstrap.Modal('#modalApi').show();
+            } else {
+                mostrarErro('Erro ao carregar dados da API');
+            }
+        });
     } else {
-        $('#modalApiLabel').text('Nova API');
-        $('#formApi')[0].reset();
-        $('#apiId').val('');
-        $('#apiAtivo').prop('checked', true);
+        $('#modalApiTitulo').text('Nova API');
+        new bootstrap.Modal('#modalApi').show();
     }
-    new bootstrap.Modal('#modalApi').show();
 }
 
-// Salvar API
-function salvarApi() {
-    // Validação dos campos
+// Salvar API - coleta dados do formulário nativo
+function salvarApi(e) {
+    if (e) e.preventDefault();
+    
     const nome = $('#apiNome').val().trim();
     const url = $('#apiUrl').val().trim();
-    const intervalo = parseInt($('#apiIntervalo').val());
     
-    // Validações
-    if (!nome) {
-        mostrarErro('O campo Nome é obrigatório');
-        $('#apiNome').focus();
-        return false;
-    }
-    
-    if (nome.length < 3) {
+    if (!nome || nome.length < 3) {
         mostrarErro('O nome deve ter pelo menos 3 caracteres');
         $('#apiNome').focus();
         return false;
     }
     
-    if (!url) {
-        mostrarErro('O campo URL é obrigatório');
-        $('#apiUrl').focus();
-        return false;
-    }
-    
-    // Validar formato de URL
-    const urlPattern = /^https?:\/\/.+/i;
-    if (!urlPattern.test(url)) {
+    if (!url || !/^https?:\/\/.+/i.test(url)) {
         mostrarErro('URL inválida. Deve começar com http:// ou https://');
         $('#apiUrl').focus();
         return false;
     }
     
-    if (isNaN(intervalo) || intervalo < 10) {
-        mostrarErro('Intervalo deve ser no mínimo 10 segundos');
-        $('#apiIntervalo').focus();
-        return false;
-    }
+    // Coletar headers do formulário
+    const headerKeys = [];
+    const headerValues = [];
+    $('input[name="header_keys[]"]').each(function() { headerKeys.push($(this).val()); });
+    $('input[name="header_values[]"]').each(function() { headerValues.push($(this).val()); });
     
     const data = {
-        id_api: $('#apiId').val() || null,
+        id: $('#apiId').val() || null,
         nome: nome,
         descricao: $('#apiDescricao').val().trim(),
         url: url,
         metodo: $('#apiMetodo').val(),
-        tipo_autenticacao: $('#apiTipoAuth').val(),
-        credenciais: $('#apiAuthConfig').val(),
-        intervalo_verificacao: intervalo,
-        ativo: $('#apiAtivo').is(':checked')
+        tipo_resposta: $('#apiTipoResposta').val(),
+        auth_tipo: $('#apiAuthTipo').val(),
+        header_keys: headerKeys,
+        header_values: headerValues,
+        body_template: $('#apiBodyTemplate').val(),
+        intervalo_polling: parseInt($('#apiIntervalo').val()) || 60,
+        timeout: parseInt($('#apiTimeout').val()) || 30,
+        ativo: $('#apiAtivo').is(':checked') ? '1' : '0'
     };
     
-    // Desabilitar botão para evitar duplo clique
-    const btnSalvar = $('#modalApi .btn-primary');
+    // Adicionar credenciais conforme tipo
+    const authTipo = data.auth_tipo;
+    if (authTipo === 'bearer') {
+        data.bearer_token = $('#apiBearerToken').val();
+    } else if (authTipo === 'basic') {
+        data.basic_username = $('#apiBasicUsername').val();
+        data.basic_password = $('#apiBasicPassword').val();
+    } else if (authTipo === 'api_key') {
+        data.api_key = $('#apiKeyValue').val();
+        data.api_key_header = $('#apiKeyHeader').val();
+    }
+    
+    // Empresas/Projetos RBAC
+    var empSel = document.getElementById('rbac_empresas');
+    var projSel = document.getElementById('rbac_projetos');
+    if (empSel) data.empresas = Array.from(empSel.selectedOptions).map(function(o) { return parseInt(o.value); });
+    if (projSel) data.projetos = Array.from(projSel.selectedOptions).map(function(o) { return parseInt(o.value); });
+    
+    const btnSalvar = $('#formApi button[type="submit"]');
     btnSalvar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Salvando...');
     
     $.ajax({
         url: baseUrl + '/api/apis-externas/salvar',
         method: 'POST',
         contentType: 'application/json',
+        headers: {'X-CSRF-TOKEN': csrfToken},
         data: JSON.stringify(data),
         success: function(res) {
-            btnSalvar.prop('disabled', false).html('Salvar');
+            btnSalvar.prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Salvar');
             if (res.sucesso) {
                 mostrarSucesso(res.mensagem || 'API salva com sucesso!');
                 bootstrap.Modal.getInstance('#modalApi').hide();
                 carregarApis();
             } else {
-                mostrarErro('Erro: ' + (res.erro || 'Erro desconhecido'));
+                mostrarErro(res.erro || 'Erro ao salvar');
             }
         },
         error: function(xhr) {
-            btnSalvar.prop('disabled', false).html('Salvar');
-            const msg = xhr.responseJSON?.erro || 'Erro ao comunicar com servidor';
-            mostrarErro(msg);
+            btnSalvar.prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Salvar');
+            mostrarErro(xhr.responseJSON?.erro || 'Erro ao comunicar com servidor');
         }
     });
+    
+    return false;
 }
 
 // Editar API
@@ -804,85 +890,175 @@ function editarApi(id) {
 
 // Excluir API
 function excluirApi(id) {
-    if (!confirm('Deseja realmente excluir esta API?')) return;
-    
-    $.post(baseUrl + '/api/apis-externas/delete/' + id, function(res) {
-        if (res.sucesso) {
-            alert('API excluída!');
-            carregarApis();
-        } else {
-            alert('Erro: ' + (res.erro || 'Erro desconhecido'));
+    const api = apis.find(a => a.id === id);
+    Swal.fire({
+        title: 'Excluir API?',
+        text: 'Deseja realmente excluir "' + (api ? api.nome : 'esta API') + '"? Esta ação não pode ser desfeita.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Sim, excluir',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post(baseUrl + '/api/apis-externas/delete/' + id, {_csrf_token: csrfToken}, function(res) {
+                if (res.sucesso) {
+                    mostrarSucesso('API excluída com sucesso!');
+                    carregarApis();
+                } else {
+                    mostrarErro(res.erro || 'Erro ao excluir');
+                }
+            }).fail(function() {
+                mostrarErro('Erro ao comunicar com o servidor');
+            });
         }
     });
 }
 
-// Testar API
-function testarApi(id) {
-    const api = apis.find(a => a.id_api === id);
+// Testar API existente (por ID)
+function testarApiExistente(id) {
+    const api = apis.find(a => a.id === id);
     if (!api) return;
     
-    $('#modalTesteApi #testeApiNome').text(api.nome);
-    $('#modalTesteApi #testeApiUrl').text(api.url);
-    $('#modalTesteApi #testeApiMetodo').text(api.metodo);
-    $('#testeResultado').html('<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Testando API...</p></div>');
+    $('#testeApiNome').text(api.nome);
+    $('#testeApiUrl').text(api.url);
+    $('#testeApiMetodo').text(api.metodo);
+    $('#testeResultado').html('<div class="text-center py-3"><div class="spinner-border text-primary"></div><p class="mt-2">Testando API...</p></div>');
     
     new bootstrap.Modal('#modalTesteApi').show();
+    
+    // Buscar dados completos para testar
+    $.getJSON(baseUrl + '/api/apis-externas/get/' + id, function(getRes) {
+        if (!getRes.sucesso) {
+            $('#testeResultado').html('<div class="alert alert-danger">Erro ao buscar dados da API</div>');
+            return;
+        }
+        const apiData = getRes.dados;
+        
+        $.ajax({
+            url: baseUrl + '/api/apis-externas/testar',
+            method: 'POST',
+            contentType: 'application/json',
+            headers: {'X-CSRF-TOKEN': csrfToken},
+            data: JSON.stringify({
+                url: apiData.url,
+                metodo: apiData.metodo,
+                auth_tipo: apiData.auth_tipo,
+                tipo_resposta: apiData.tipo_resposta,
+                timeout: apiData.timeout,
+                header_keys: apiData.headers ? Object.keys(apiData.headers) : [],
+                header_values: apiData.headers ? Object.values(apiData.headers) : [],
+                bearer_token: apiData.credenciais?.token,
+                basic_username: apiData.credenciais?.username,
+                basic_password: apiData.credenciais?.password,
+                api_key: apiData.credenciais?.api_key,
+                api_key_header: apiData.credenciais?.api_key_header
+            }),
+            success: function(res) {
+                const isOk = res.sucesso;
+                const resposta = typeof res.response === 'object' ? JSON.stringify(res.response, null, 2) : (res.response_raw || res.response || '');
+                $('#testeResultado').html(`
+                    <div class="alert alert-${isOk ? 'success' : 'danger'}">
+                        <strong><i class="bi bi-${isOk ? 'check-circle' : 'x-circle'} me-2"></i>${isOk ? 'Sucesso!' : 'Erro'}</strong><br>
+                        <small>HTTP ${res.http_code || '?'} | Tempo: ${res.tempo_ms || 0}ms</small>
+                    </div>
+                    <div class="response-preview"><pre class="mb-0" style="color: #e2e8f0;">${$('<div>').text(resposta).html()}</pre></div>
+                `);
+            },
+            error: function(xhr) {
+                $('#testeResultado').html('<div class="alert alert-danger">Erro na requisição: ' + xhr.status + ' ' + xhr.statusText + '</div>');
+            }
+        });
+    });
+}
+
+// Testar API a partir do modal de formulário (sem salvar)
+function testarApi() {
+    const url = $('#apiUrl').val().trim();
+    if (!url) {
+        mostrarErro('Preencha a URL antes de testar');
+        return;
+    }
+    
+    const headerKeys = [];
+    const headerValues = [];
+    $('input[name="header_keys[]"]').each(function() { headerKeys.push($(this).val()); });
+    $('input[name="header_values[]"]').each(function() { headerValues.push($(this).val()); });
+    
+    const data = {
+        url: url,
+        metodo: $('#apiMetodo').val(),
+        auth_tipo: $('#apiAuthTipo').val(),
+        tipo_resposta: $('#apiTipoResposta').val(),
+        timeout: parseInt($('#apiTimeout').val()) || 30,
+        header_keys: headerKeys,
+        header_values: headerValues,
+        body_template: $('#apiBodyTemplate').val(),
+        bearer_token: $('#apiBearerToken').val(),
+        basic_username: $('#apiBasicUsername').val(),
+        basic_password: $('#apiBasicPassword').val(),
+        api_key: $('#apiKeyValue').val(),
+        api_key_header: $('#apiKeyHeader').val()
+    };
+    
+    Swal.fire({title: 'Testando...', text: 'Conectando à API', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
     
     $.ajax({
         url: baseUrl + '/api/apis-externas/testar',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({ id_api: id }),
+        headers: {'X-CSRF-TOKEN': csrfToken},
+        data: JSON.stringify(data),
         success: function(res) {
             if (res.sucesso) {
-                const resposta = typeof res.resposta === 'object' ? JSON.stringify(res.resposta, null, 2) : res.resposta;
-                $('#testeResultado').html(`
-                    <div class="alert alert-success">
-                        <strong><i class="bi bi-check-circle me-2"></i>Sucesso!</strong><br>
-                        <small>Status: ${res.status_code || '200'} | Tempo: ${res.tempo_ms || 0}ms</small>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">Resposta</div>
-                        <div class="card-body">
-                            <pre style="max-height: 300px; overflow-y: auto;" class="mb-0">${resposta}</pre>
-                        </div>
-                    </div>
-                `);
+                const resposta = typeof res.response === 'object' ? JSON.stringify(res.response, null, 2) : (res.response_raw || '');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Conexão OK!',
+                    html: '<small>HTTP ' + (res.http_code || '200') + ' | Tempo: ' + (res.tempo_ms || 0) + 'ms</small><pre class="text-start mt-2" style="max-height:200px;overflow:auto;font-size:0.8rem;background:#f8f9fa;padding:0.5rem;border-radius:4px;">' + $('<div>').text(resposta).html() + '</pre>'
+                });
             } else {
-                $('#testeResultado').html(`
-                    <div class="alert alert-danger">
-                        <strong><i class="bi bi-x-circle me-2"></i>Erro!</strong><br>
-                        ${res.erro || 'Erro desconhecido'}
-                    </div>
-                `);
+                Swal.fire({icon: 'error', title: 'Falha', text: res.erro || 'HTTP ' + res.http_code});
             }
         },
         error: function(xhr) {
-            $('#testeResultado').html(`
-                <div class="alert alert-danger">
-                    <strong><i class="bi bi-exclamation-triangle me-2"></i>Erro na Requisição</strong><br>
-                    Status: ${xhr.status} - ${xhr.statusText}
-                </div>
-            `);
+            Swal.fire({icon: 'error', title: 'Erro', text: 'Erro ao comunicar: ' + xhr.status});
         }
     });
 }
 
-// Mostrar campos auth
-$('#apiTipoAuth').on('change', function() {
-    if (this.value === 'none') {
-        $('#authFields').hide();
-    } else {
-        $('#authFields').show();
+// Filtrar APIs por busca
+$('#searchApis').on('input', function() {
+    const term = $(this).val().toLowerCase();
+    if (!term) {
+        renderizarApis(apis);
+        return;
     }
+    const filtered = apis.filter(a => 
+        a.nome.toLowerCase().includes(term) || 
+        a.url.toLowerCase().includes(term) ||
+        (a.descricao || '').toLowerCase().includes(term)
+    );
+    renderizarApis(filtered);
 });
 
 // Inicializar
 $(document).ready(function() {
     carregarApis();
+    
+    // Form submit handler
+    $('#formApi').on('submit', function(e) {
+        return salvarApi(e);
+    });
+    
+    // Toggle body card on method change
+    $('#apiMetodo').on('change', toggleBodyCard);
 });
 </script>
 SCRIPTS;
+
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-recurso.js"></script>';
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-compartilhamento.js"></script>';
 
 include __DIR__ . '/layouts/base.php';
 ?>

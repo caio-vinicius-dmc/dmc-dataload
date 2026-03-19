@@ -820,7 +820,6 @@ ob_start();
 $content = ob_get_clean();
 $base = defined('BASE_URL') ? BASE_URL : '';
 $extraScripts = <<<'SCRIPTS'
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>

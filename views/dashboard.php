@@ -85,6 +85,54 @@ ob_start();
     </div>
 </div>
 
+<!-- Pipeline & Workflow Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card-modern" style="border-left: 4px solid #17a2b8;">
+            <div class="stat-icon-modern" style="color: #17a2b8;">
+                <i class="bi bi-diagram-3-fill"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="totalPipelines">0</div>
+                <div class="stat-label-modern">Pipelines</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card-modern" style="border-left: 4px solid #20c997;">
+            <div class="stat-icon-modern" style="color: #20c997;">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="pipelinesAgendados">0</div>
+                <div class="stat-label-modern">Pipelines Agendados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card-modern" style="border-left: 4px solid #7c3aed;">
+            <div class="stat-icon-modern" style="color: #7c3aed;">
+                <i class="bi bi-shuffle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="totalWorkflows">0</div>
+                <div class="stat-label-modern">Workflows</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card-modern" style="border-left: 4px solid #a78bfa;">
+            <div class="stat-icon-modern" style="color: #a78bfa;">
+                <i class="bi bi-toggle-on"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="workflowsAtivos">0</div>
+                <div class="stat-label-modern">Workflows Ativos</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Gráficos -->
 <div class="row g-4 mb-4">
     <div class="col-12 col-lg-8">
@@ -138,7 +186,7 @@ ob_start();
                     <table class="table-modern" id="tblUltimas">
                         <thead>
                             <tr>
-                                <th><i class="bi bi-gear-fill me-1"></i>Rotina</th>
+                                <th><i class="bi bi-gear-fill me-1"></i>Origem</th>
                                 <th><i class="bi bi-calendar3 me-1"></i>Data/Hora</th>
                                 <th><i class="bi bi-check-circle me-1"></i>Status</th>
                                 <th><i class="bi bi-clock me-1"></i>Duração</th>
@@ -173,7 +221,7 @@ ob_start();
                     <table class="table-modern" id="tblProximas">
                         <thead>
                             <tr>
-                                <th><i class="bi bi-gear-fill me-1"></i>Rotina</th>
+                                <th><i class="bi bi-gear-fill me-1"></i>Origem</th>
                                 <th><i class="bi bi-calendar-event me-1"></i>Agendamento</th>
                                 <th><i class="bi bi-clock-fill me-1"></i>Próxima</th>
                             </tr>
@@ -182,7 +230,7 @@ ob_start();
                             <tr>
                                 <td colspan="3" class="text-center py-4 text-muted">
                                     <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-                                    <small>Nenhuma rotina agendada</small>
+                                    <small>Nenhuma execução agendada</small>
                                 </td>
                             </tr>
                         </tbody>
@@ -720,6 +768,10 @@ function carregarMetricas() {
         $('#execHoje').text(res.execucoes_hoje || 0);
         $('#falhasHoje').text(res.falhas_hoje || 0);
         $('#emExec').text(res.em_execucao || 0);
+        $('#totalPipelines').text(res.total_pipelines || 0);
+        $('#pipelinesAgendados').text(res.pipelines_agendados || 0);
+        $('#totalWorkflows').text(res.total_workflows || 0);
+        $('#workflowsAtivos').text(res.workflows_ativos || 0);
         
         // Atualizar gráfico de execuções dos últimos 7 dias
         if (res.grafico_7dias && res.grafico_7dias.length > 0 && chartExec) {
@@ -782,8 +834,11 @@ function carregarMetricas() {
                         e.duracao_ms < 60000 ? (e.duracao_ms / 1000).toFixed(1) + 's' : 
                         Math.floor(e.duracao_ms / 60000) + 'm' + Math.floor((e.duracao_ms % 60000) / 1000) + 's') : '-';
                     
+                    const tipoIcons = { rotina: '🔄', pipeline: '⚡', workflow: '🔀' };
+                    const tipoIcon = tipoIcons[e.tipo_execucao] || '';
+                    
                     tbody.append(`<tr>
-                        <td><strong>${e.rotina || 'Desconhecida'}</strong></td>
+                        <td><strong>${tipoIcon} ${e.rotina || 'Desconhecida'}</strong></td>
                         <td><small class="text-muted">${data}</small></td>
                         <td><span class="badge-status ${badgeClass}">${e.status}</span></td>
                         <td><small>${duracao}</small></td>
@@ -800,7 +855,7 @@ function carregarMetricas() {
             if (res.proximas_execucoes.length === 0) {
                 tbody.html(`<tr><td colspan="3" class="text-center py-5 text-muted">
                     <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-                    <small>Nenhuma rotina agendada</small>
+                    <small>Nenhuma execução agendada</small>
                 </td></tr>`);
             } else {
                 res.proximas_execucoes.slice(0, 5).forEach(e => {
@@ -811,9 +866,14 @@ function carregarMetricas() {
                         hour: '2-digit',
                         minute: '2-digit'
                     }) : '-';
+                    const tipoBadges = {
+                        pipeline: ' <span class="badge bg-info text-white" style="font-size:0.65rem;">Pipeline</span>',
+                        workflow: ' <span class="badge text-white" style="font-size:0.65rem; background:#7c3aed;">Workflow</span>'
+                    };
+                    const tipoBadge = tipoBadges[e.tipo] || '';
                     
                     tbody.append(`<tr>
-                        <td><strong>${e.nome || 'Rotina'}</strong></td>
+                        <td><strong>${e.nome || 'Desconhecido'}</strong>${tipoBadge}</td>
                         <td><code style="font-size: 0.8rem; background: rgba(0,0,0,0.05); padding: 0.25rem 0.5rem; border-radius: 4px;">${e.agendamento_cron || '-'}</code></td>
                         <td><small class="text-muted">${proxima}</small></td>
                     </tr>`);

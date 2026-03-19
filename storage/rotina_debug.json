@@ -1,19 +1,6 @@
 {
-    "id": "",
-    "nome": "Teste",
-    "id_conexao": "11",
-    "descricao": "",
-    "bloco_codigo": [
-        "step_1",
-        ""
-    ],
-    "tipo_bloco": [
-        "SELECT",
-        "SELECT"
-    ],
-    "script_sql": [
-        "select * from public.users;",
-        ""
-    ],
-    "id_usuario_criador": "1"
+    "nome": "TESTE_Nova_Conexao_MySQL",
+    "descricao": "Rotina teste",
+    "id_conexao": "18",
+    "blocos": "[{\"codigo_bloco\":\"bloco_1\",\"ordem\":1,\"script_sql\":\"SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() LIMIT 5\",\"tipo_bloco\":\"sql\"}]"
 }

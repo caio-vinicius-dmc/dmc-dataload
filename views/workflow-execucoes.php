@@ -370,7 +370,7 @@ let autoRefreshInterval = null;
 
 // Carregar execuções
 function carregarExecucoes() {
-    $.getJSON(baseUrl + '/api/workflows/execucoes/list', function(res) {
+    $.getJSON(baseUrl + '/api/workflow-execucoes/list', function(res) {
         if (res.sucesso) {
             execucoes = res.dados || [];
             renderizarListaExecucoes(execucoes);
@@ -404,27 +404,33 @@ function renderizarListaExecucoes(lista) {
     lista.forEach(exec => {
         const statusBadge = {
             'running': 'status-running',
-            'success': 'status-success',
-            'error': 'status-error',
-            'pending': 'status-pending'
+            'completed': 'status-success',
+            'failed': 'status-error',
+            'pending': 'status-pending',
+            'cancelled': 'status-pending',
+            'paused': 'status-pending'
         }[exec.status] || 'status-pending';
         
         const statusLabel = {
             'running': 'Em Execução',
-            'success': 'Sucesso',
-            'error': 'Erro',
-            'pending': 'Pendente'
+            'completed': 'Sucesso',
+            'failed': 'Erro',
+            'pending': 'Pendente',
+            'cancelled': 'Cancelado',
+            'paused': 'Pausado'
         }[exec.status] || exec.status;
         
+        const duracaoSeg = exec.duracao_ms ? (exec.duracao_ms / 1000).toFixed(1) : '0';
+        
         html += `
-        <div class="execution-card p-3 mb-2 \${execucaoSelecionada === exec.id_execucao ? 'border-primary' : ''}" onclick="selecionarExecucao(\${exec.id_execucao})">
+        <div class="execution-card p-3 mb-2 \${execucaoSelecionada === exec.id ? 'border-primary' : ''}" onclick="selecionarExecucao(\${exec.id})">
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <strong>\${exec.workflow_nome || 'Workflow #' + exec.id_workflow}</strong>
                 <span class="status-badge \${statusBadge}">\${statusLabel}</span>
             </div>
             <div class="text-muted small">
-                <div><i class="bi bi-calendar me-1"></i>\${new Date(exec.iniciado_em).toLocaleString('pt-BR')}</div>
-                <div><i class="bi bi-clock me-1"></i>Duração: \${exec.duracao_segundos || 0}s</div>
+                <div><i class="bi bi-calendar me-1"></i>\${exec.data_inicio ? new Date(exec.data_inicio).toLocaleString('pt-BR') : '-'}</div>
+                <div><i class="bi bi-clock me-1"></i>Duração: \${duracaoSeg}s</div>
             </div>
         </div>
         `;
@@ -434,7 +440,7 @@ function renderizarListaExecucoes(lista) {
     
     // Auto-selecionar primeira
     if (!execucaoSelecionada && lista.length > 0) {
-        selecionarExecucao(lista[0].id_execucao);
+        selecionarExecucao(lista[0].id);
     }
 }
 
@@ -443,7 +449,7 @@ function selecionarExecucao(id) {
     execucaoSelecionada = id;
     renderizarListaExecucoes(execucoes);
     
-    $.getJSON(baseUrl + '/api/workflows/execucoes/get/' + id, function(res) {
+    $.getJSON(baseUrl + '/api/workflow-execucoes/get/' + id, function(res) {
         if (res.sucesso) {
             renderizarDetalhesExecucao(res.dados);
         }
@@ -455,18 +461,19 @@ function renderizarDetalhesExecucao(exec) {
     const container = $('#detalhesExecucao');
     
     let nodesHtml = '';
-    if (exec.nodes && exec.nodes.length > 0) {
-        exec.nodes.forEach(node => {
+    const nodes = exec.nodes_execucoes || [];
+    if (nodes.length > 0) {
+        nodes.forEach(node => {
             const statusClass = {
-                'success': 'success',
-                'error': 'error',
+                'completed': 'success',
+                'failed': 'error',
                 'running': 'running',
                 'skipped': 'skipped'
             }[node.status] || '';
             
             const icon = {
-                'success': 'check-circle-fill',
-                'error': 'x-circle-fill',
+                'completed': 'check-circle-fill',
+                'failed': 'x-circle-fill',
                 'running': 'arrow-repeat',
                 'skipped': 'dash-circle'
             }[node.status] || 'circle';
@@ -475,13 +482,12 @@ function renderizarDetalhesExecucao(exec) {
             <div class="node-exec-item \${statusClass}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <div class="fw-bold"><i class="bi bi-\${icon} me-2"></i>\${node.node_tipo}: \${node.label || 'Node'}</div>
-                        <small class="text-muted">\${node.iniciado_em ? new Date(node.iniciado_em).toLocaleTimeString('pt-BR') : ''}</small>
+                        <div class="fw-bold"><i class="bi bi-\${icon} me-2"></i>\${node.tipo_node}: \${node.label || 'Node'}</div>
+                        <small class="text-muted">\${node.data_inicio ? new Date(node.data_inicio).toLocaleTimeString('pt-BR') : ''}</small>
                     </div>
                     <small class="text-muted">\${node.duracao_ms || 0}ms</small>
                 </div>
                 \${node.erro ? '<div class="text-danger small mt-2">' + node.erro + '</div>' : ''}
-                \${node.log ? '<pre class="small mt-2 mb-0" style="font-size: 0.75rem;">' + node.log + '</pre>' : ''}
             </div>
             `;
         });
@@ -491,28 +497,32 @@ function renderizarDetalhesExecucao(exec) {
     
     const statusBadge = {
         'running': '<span class="badge bg-primary">Em Execução</span>',
-        'success': '<span class="badge bg-success">Sucesso</span>',
-        'error': '<span class="badge bg-danger">Erro</span>',
-        'pending': '<span class="badge bg-warning">Pendente</span>'
+        'completed': '<span class="badge bg-success">Sucesso</span>',
+        'failed': '<span class="badge bg-danger">Erro</span>',
+        'pending': '<span class="badge bg-warning">Pendente</span>',
+        'cancelled': '<span class="badge bg-secondary">Cancelado</span>',
+        'paused': '<span class="badge bg-info">Pausado</span>'
     }[exec.status] || '<span class="badge bg-secondary">' + exec.status + '</span>';
+    
+    const duracaoSeg = exec.duracao_ms ? (exec.duracao_ms / 1000).toFixed(1) : '0';
     
     const html = `
     <div class="mb-4">
         <div class="d-flex justify-content-between align-items-start">
             <div>
                 <h5>\${exec.workflow_nome || 'Workflow #' + exec.id_workflow}</h5>
-                <div class="text-muted small">Execução #\${exec.id_execucao}</div>
+                <div class="text-muted small">Execução #\${exec.id}</div>
             </div>
             \${statusBadge}
         </div>
         <div class="row mt-3 g-2">
             <div class="col-6">
                 <div class="text-muted small">Início:</div>
-                <div>\${new Date(exec.iniciado_em).toLocaleString('pt-BR')}</div>
+                <div>\${exec.data_inicio ? new Date(exec.data_inicio).toLocaleString('pt-BR') : '-'}</div>
             </div>
             <div class="col-6">
                 <div class="text-muted small">Duração:</div>
-                <div>\${exec.duracao_segundos || 0}s</div>
+                <div>\${duracaoSeg}s</div>
             </div>
         </div>
     </div>
@@ -527,8 +537,8 @@ function renderizarDetalhesExecucao(exec) {
 // Atualizar estatísticas
 function atualizarEstatisticas() {
     const total = execucoes.length;
-    const sucesso = execucoes.filter(e => e.status === 'success').length;
-    const erro = execucoes.filter(e => e.status === 'error').length;
+    const sucesso = execucoes.filter(e => e.status === 'completed').length;
+    const erro = execucoes.filter(e => e.status === 'failed').length;
     const running = execucoes.filter(e => e.status === 'running').length;
     
     $('#totalExecucoes').text(total);

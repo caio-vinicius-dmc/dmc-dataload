@@ -32,6 +32,7 @@
 - 📈 **Histórico Detalhado** - Logs completos de todas as operações
 - 💾 **Exportação de Dados** - Geração automática de CSV
 - 👥 **Gestão de Usuários** - Múltiplos níveis de acesso
+- 🔗 **Pipelines Visuais** - Builder drag-and-drop com Drawflow.js para orquestração de fluxos
 
 ---
 
@@ -92,7 +93,22 @@
 - Exportação para CSV
 - Download de resultados
 
-### 👥 Administração
+### � Pipelines Visuais
+- Builder drag-and-drop com canvas Drawflow.js
+- 3 modos de construção: No-Code, Low-Code e Code
+- 12 tipos de nós: SQL Query, HTTP Request, Transform, Filter, Merge, Split, Condition, Loop, Delay, Log, Notification, Custom Script
+- Integração com APIs Externas cadastradas no sistema
+- Integração com Eventos de API para triggers automáticos
+- Browser de tabelas e colunas por conexão
+- Triggers configuráveis: Manual, CRON, Evento, Webhook
+- Presets CRON pré-configurados (a cada minuto, hora, diário, semanal, mensal)
+- Execução com ordenação topológica dos nós
+- Console de execução em tempo real com logs por nó
+- Validação de pipeline antes da execução
+- Importação e exportação de pipelines (JSON)
+- UI 100% responsiva (mobile, tablet, desktop) com painéis deslizantes
+
+### �👥 Administração
 - Gestão de usuários
 - Níveis de acesso (Admin, Operador, Visualizador)
 - Logs do sistema
@@ -118,6 +134,7 @@
 - **SweetAlert2** - Notificações elegantes
 - **Chart.js** - Gráficos interativos
 - **Bootstrap Icons** - Ícones
+- **Drawflow.js** - Canvas visual para pipelines drag-and-drop
 
 ### Infraestrutura
 - **Apache/XAMPP** - Servidor web
@@ -275,6 +292,20 @@ Abra o navegador em: `http://localhost:8080` ou `http://dataload.local`
 7. Redimensione os painéis arrastando as bordas
 8. Exporte resultados para CSV
 
+### 6. Criar e Executar um Pipeline
+
+1. Acesse **Pipelines** no menu lateral
+2. Clique em **Novo Pipeline**
+3. Escolha o modo de construção (No-Code, Low-Code ou Code)
+4. Arraste nós do painel esquerdo para o canvas
+5. Conecte os nós arrastando entre as portas de entrada/saída
+6. Configure cada nó clicando nele (query SQL, URL HTTP, transformações, etc.)
+7. Para nós SQL, use o **Browser de Tabelas** para selecionar tabelas e colunas
+8. Para nós HTTP, selecione uma **API Externa** cadastrada
+9. Configure o trigger (Manual, CRON, Evento ou Webhook)
+10. Clique em **Salvar** e depois **Executar**
+11. Acompanhe a execução no console inferior
+
 ---
 
 ## 📁 Estrutura do Projeto
@@ -316,6 +347,9 @@ DMC-DATALOAD/
 │   ├── scheduler.php           # Agendamentos
 │   ├── sql_editor.php          # Editor SQL
 │   ├── logs.php                # Logs do sistema
+│   ├── pipelines/              # Módulo de Pipelines
+│   │   ├── index.php           # Lista de pipelines
+│   │   └── builder.php         # Builder visual drag-and-drop
 │   └── ...
 ├── .env                        # Configurações (não versionado)
 ├── .env.example                # Exemplo de configurações
@@ -358,6 +392,29 @@ A aplicação possui uma API RESTful completa. Principais endpoints:
 - `GET /sql-editor/objects/{id}` - Listar objetos
 - `POST /sql-editor/execute` - Executar query
 
+### Pipelines
+- `GET /pipelines` - Página de listagem
+- `GET /pipelines/builder` - Builder visual (novo)
+- `GET /pipelines/builder/{id}` - Builder visual (editar)
+- `GET /pipelines/list` - Listar pipelines (API)
+- `GET /pipelines/get/{id}` - Buscar pipeline por ID
+- `POST /pipelines/salvar` - Criar/atualizar pipeline
+- `POST /pipelines/delete/{id}` - Excluir pipeline
+- `POST /pipelines/executar/{id}` - Executar pipeline
+- `POST /pipelines/duplicar/{id}` - Duplicar pipeline
+- `POST /pipelines/toggle/{id}` - Ativar/desativar
+- `GET /pipelines/exportar/{id}` - Exportar JSON
+- `POST /pipelines/importar` - Importar JSON
+- `GET /pipelines/conexoes` - Listar conexões disponíveis
+- `GET /pipelines/stats` - Estatísticas
+- `GET /pipelines/historico/{id}` - Histórico de execuções
+- `GET /pipelines/execucao/{id}` - Detalhes de execução
+- `GET /pipelines/apis-externas` - Listar APIs externas
+- `GET /pipelines/eventos-api` - Listar eventos de API
+- `GET /pipelines/rotinas` - Listar rotinas disponíveis
+- `GET /pipelines/tabelas/{connId}` - Listar tabelas de uma conexão
+- `GET /pipelines/colunas/{connId}/{tabela}` - Listar colunas de uma tabela
+
 ### Dashboard
 - `GET /api/dashboard/metricas` - Métricas e estatísticas
 
@@ -377,6 +434,8 @@ A aplicação possui uma API RESTful completa. Principais endpoints:
 | `tb_blocos_rotina` | Blocos SQL das rotinas |
 | `tb_logs_execucao` | Histórico de execuções |
 | `tb_logs_sistema` | Logs gerais do sistema |
+| `tb_pipelines` | Pipelines visuais (flow JSONB, triggers, modo) |
+| `tb_pipeline_execucoes` | Histórico de execuções de pipelines |
 
 ### Schema
 

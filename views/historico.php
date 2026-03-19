@@ -5,6 +5,7 @@
  */
 $pageTitle = 'Histórico';
 $currentPage = 'historico';
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
 
 ob_start();
 ?>
@@ -16,7 +17,7 @@ ob_start();
     </div>
     <div>
         <h1 class="page-title-modern">Histórico de Execuções</h1>
-        <p class="page-subtitle-modern">Monitore e analise todas as execuções das suas rotinas</p>
+        <p class="page-subtitle-modern">Monitore e analise todas as execuções: rotinas, pipelines e workflows</p>
     </div>
     <div class="d-flex gap-2 ms-auto">
         <button class="btn-modern-outline" onclick="recarregar()">
@@ -36,7 +37,16 @@ ob_start();
     </div>
     <div class="card-modern-body">
         <div class="row g-3 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="form-label-modern">Tipo</label>
+                <select class="form-select-modern" id="filtroTipo">
+                    <option value="">Todos os tipos</option>
+                    <option value="rotina">🔄 Rotinas</option>
+                    <option value="pipeline">⚡ Pipelines</option>
+                    <option value="workflow">🔀 Workflows</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label-modern">Rotina</label>
                 <select class="form-select-modern" id="filtroRotina">
                     <option value="">Todas as rotinas</option>
@@ -60,7 +70,7 @@ ob_start();
                 <label class="form-label-modern">Data Fim</label>
                 <input type="date" class="form-control-modern" id="filtroDataFim">
             </div>
-            <div class="col-md-3 d-flex gap-2">
+            <div class="col-md-2 d-flex gap-2">
                 <button class="btn btn-modern-primary flex-fill" onclick="aplicarFiltros()">
                     <i class="bi bi-search me-2"></i>Buscar
                 </button>
@@ -147,12 +157,12 @@ ob_start();
                 <thead>
                     <tr>
                         <th><i class="bi bi-hash me-1"></i>ID</th>
-                        <th><i class="bi bi-gear-fill me-1"></i>Rotina</th>
+                        <th><i class="bi bi-tag-fill me-1"></i>Tipo</th>
+                        <th><i class="bi bi-gear-fill me-1"></i>Origem</th>
                         <th><i class="bi bi-check-circle me-1"></i>Status</th>
                         <th><i class="bi bi-calendar3 me-1"></i>Início</th>
-                        <th><i class="bi bi-calendar-check me-1"></i>Fim</th>
                         <th><i class="bi bi-clock me-1"></i>Duração</th>
-                        <th><i class="bi bi-list-ol me-1"></i>Registros</th>
+                        <th><i class="bi bi-layers me-1"></i>Nós</th>
                         <th><i class="bi bi-three-dots me-1"></i>Ações</th>
                     </tr>
                 </thead>
@@ -198,7 +208,6 @@ $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 :root {
     --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -984,10 +993,10 @@ $extraStyles = <<<'STYLES'
 </style>
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>';
+$extraScripts .= <<<'SCRIPTS'
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
 .bloco-card {
@@ -1234,11 +1243,27 @@ $extraScripts = <<<'SCRIPTS'
     border-radius: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
+.bg-purple {
+    background-color: #7c3aed !important;
+}
 </style>
 
 <script>
 let tabela;
 let currentLogId = null;
+let currentLogTipo = null;
+
+// Mostrar/ocultar filtro de rotina conforme o tipo selecionado
+$(document).ready(function() {
+    $("#filtroTipo").change(function() {
+        const tipo = $(this).val();
+        if (tipo && tipo !== 'rotina') {
+            $("#filtroRotina").closest(".col-md-2").hide();
+        } else {
+            $("#filtroRotina").closest(".col-md-2").show();
+        }
+    });
+});
 
 function formatDuracao(ms) {
     if (!ms) return "-";
@@ -1253,11 +1278,13 @@ function loadTable(params = "") {
 
 function aplicarFiltros() {
     const params = new URLSearchParams();
+    const tipo = $("#filtroTipo").val();
     const rotina = $("#filtroRotina").val();
     const status = $("#filtroStatus").val();
     const dataInicio = $("#filtroDataInicio").val();
     const dataFim = $("#filtroDataFim").val();
     
+    if (tipo) params.append("tipo", tipo);
     if (rotina) params.append("rotina", rotina);
     if (status) params.append("status", status);
     if (dataInicio) params.append("data_inicio", dataInicio);
@@ -1267,8 +1294,9 @@ function aplicarFiltros() {
 }
 
 function limparFiltros() {
-    $("#filtroRotina, #filtroStatus").val("");
+    $("#filtroTipo, #filtroRotina, #filtroStatus").val("");
     $("#filtroDataInicio, #filtroDataFim").val("");
+    $("#filtroRotina").closest(".col-md-2").show();
     loadTable();
 }
 
@@ -1284,11 +1312,19 @@ function recarregar() {
     tabela.ajax.reload();
 }
 
-function verDetalhes(id) {
+function verDetalhes(tipo, id) {
     currentLogId = id;
-    $.get(baseUrl + "/api/historico/" + id, function(res) {
+    currentLogTipo = tipo;
+    const url = tipo ? `${baseUrl}/api/historico/${tipo}/${id}` : `${baseUrl}/api/historico/${id}`;
+    $.get(url, function(res) {
         if (res.sucesso) {
             renderizarDetalhes(res.dados);
+            // Mostrar/ocultar botão reexecutar conforme o tipo
+            if (tipo === 'rotina') {
+                $("#btnReexecutar").show();
+            } else {
+                $("#btnReexecutar").hide();
+            }
             new bootstrap.Modal("#modalDetalhes").show();
         } else {
             Swal.fire("Erro", res.erro || "Erro ao carregar detalhes", "error");
@@ -1296,11 +1332,23 @@ function verDetalhes(id) {
     });
 }
 
+function renderCsvRow(dados) {
+    const link = dados.caminho_csv 
+        ? '<a href="' + baseUrl + '/api/download-csv/' + dados.id + '" class="btn btn-sm btn-success"><i class="bi bi-download me-1"></i>Download</a>'
+        : '<span class="text-muted">-</span>';
+    return '<div class="info-row"><span class="info-label">Arquivo CSV</span><span class="info-value">' + link + '</span></div>';
+}
+
 function renderizarDetalhes(dados) {
     console.log("🎯 renderizarDetalhes chamado com:", dados);
     
+    const tipoExec = dados.tipo_execucao || 'rotina';
+    const tipoLabels = { rotina: 'Rotina', pipeline: 'Pipeline', workflow: 'Workflow' };
+    const tipoIcons = { rotina: '🔄', pipeline: '⚡', workflow: '🔀' };
+    
     // Atualizar subtítulo do modal
-    const subtitle = dados.nome_rotina ? `Rotina: ${dados.nome_rotina}` : 'Visualize informações completas';
+    const nomeOrigem = dados.nome_rotina || dados.nome_origem || '-';
+    const subtitle = `${tipoLabels[tipoExec] || 'Execução'}: ${nomeOrigem}`;
     document.getElementById('modalSubtitle').textContent = subtitle;
     
     // Determinar classe do status
@@ -1323,8 +1371,12 @@ function renderizarDetalhes(dados) {
                         <span class="info-value">#${dados.id}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Rotina</span>
-                        <span class="info-value">${dados.nome_rotina || "-"}</span>
+                        <span class="info-label">Tipo</span>
+                        <span class="info-value">${tipoIcons[tipoExec] || ''} ${tipoLabels[tipoExec] || tipoExec}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Origem</span>
+                        <span class="info-value">${nomeOrigem}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Status</span>
@@ -1354,27 +1406,23 @@ function renderizarDetalhes(dados) {
                         Estatísticas
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Blocos Executados</span>
-                        <span class="info-value">${dados.blocos_executados || (dados.logs?.length || 0)}</span>
+                        <span class="info-label">${tipoExec === 'rotina' ? 'Blocos Executados' : 'Nós Executados'}</span>
+                        <span class="info-value">${dados.blocos_executados || dados.nodes_total || (dados.logs?.length || 0)}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Blocos com Sucesso</span>
-                        <span class="info-value text-success">${dados.blocos_sucesso || (dados.logs?.filter(l => l.status === 'sucesso').length || 0)}</span>
+                        <span class="info-label">${tipoExec === 'rotina' ? 'Blocos' : 'Nós'} com Sucesso</span>
+                        <span class="info-value text-success">${dados.blocos_sucesso || dados.nodes_sucesso || (dados.logs?.filter(l => l.status === 'sucesso').length || 0)}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Blocos com Falha</span>
-                        <span class="info-value text-danger">${dados.blocos_falha || (dados.logs?.filter(l => l.status !== 'sucesso').length || 0)}</span>
+                        <span class="info-label">${tipoExec === 'rotina' ? 'Blocos' : 'Nós'} com Falha</span>
+                        <span class="info-value text-danger">${dados.blocos_falha || dados.nodes_falha || (dados.logs?.filter(l => l.status !== 'sucesso').length || 0)}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Registros Processados</span>
                         <span class="info-value">${dados.registros_processados?.toLocaleString("pt-BR") || "-"}</span>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Arquivo CSV</span>
-                        <span class="info-value">${dados.caminho_csv ? 
-                            `<a href="${baseUrl}/api/download-csv/${dados.id}" class="btn btn-sm btn-success"><i class="bi bi-download me-1"></i>Download</a>` : 
-                            '<span class="text-muted">-</span>'}</span>
-                    </div>
+                    ${tipoExec === 'rotina' ? renderCsvRow(dados) : ''}
+                    ${tipoExec === 'workflow' && dados.triggered_by ? '<div class="info-row"><span class="info-label">Disparado por</span><span class="info-value">' + escapeHtml(dados.triggered_by) + '</span></div>' : ''}
                 </div>
             </div>
         </div>
@@ -1415,7 +1463,7 @@ function renderizarDetalhes(dados) {
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="section-title mb-0">
                     <i class="bi bi-layers-fill"></i>
-                    <span>Blocos Executados</span>
+                    <span>${tipoExec === 'rotina' ? 'Blocos Executados' : 'Nós Executados'}</span>
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-sm btn-outline-secondary" onclick="expandirTodosBlocos()">
@@ -1772,7 +1820,7 @@ $("#btnReexecutar").click(function() {
         cancelButtonText: "Cancelar"
     }).then(result => {
         if (result.isConfirmed) {
-            $.post(baseUrl + "/api/executar-rotina", { log_id: currentLogId }, function(res) {
+            $.post(baseUrl + "/api/executar-rotina", { log_id: currentLogId, _csrf_token: csrfToken }, function(res) {
                 if (res.sucesso) {
                     Swal.fire("Sucesso", "Rotina iniciada!", "success");
                     bootstrap.Modal.getInstance("#modalDetalhes").hide();
@@ -1802,7 +1850,18 @@ $(document).ready(function() {
         },
         columns: [
             { data: "id" },
-            { data: "nome_rotina" },
+            { 
+                data: "tipo_execucao",
+                render: function(data) {
+                    const badges = {
+                        rotina: '<span class="badge bg-primary"><i class="bi bi-arrow-repeat me-1"></i>Rotina</span>',
+                        pipeline: '<span class="badge bg-info text-dark"><i class="bi bi-lightning-fill me-1"></i>Pipeline</span>',
+                        workflow: '<span class="badge bg-purple text-white"><i class="bi bi-shuffle me-1"></i>Workflow</span>'
+                    };
+                    return badges[data] || `<span class="badge bg-secondary">${data}</span>`;
+                }
+            },
+            { data: "nome_origem", defaultContent: "-" },
             { 
                 data: "status",
                 render: function(data) {
@@ -1810,20 +1869,34 @@ $(document).ready(function() {
                         sucesso: "badge-success",
                         falha: "badge-danger",
                         erro: "badge-danger",
-                        executando: "badge-warning"
+                        executando: "badge-warning",
+                        pendente: "badge-info",
+                        cancelado: "badge-secondary",
+                        pausado: "badge-warning"
                     };
                     return `<span class="badge-status ${classes[data] || "badge-info"}">${data}</span>`;
                 }
             },
             { data: "data_inicio", render: d => d ? new Date(d).toLocaleString("pt-BR") : "-" },
-            { data: "data_fim", render: d => d ? new Date(d).toLocaleString("pt-BR") : "-" },
             { data: "duracao_ms", render: formatDuracao },
-            { data: "registros_processados", render: d => d?.toLocaleString("pt-BR") || "-" },
+            { 
+                data: null,
+                render: function(data) {
+                    const total = data.nodes_total || data.registros_processados || 0;
+                    const suc = data.nodes_sucesso || 0;
+                    const fail = data.nodes_falha || 0;
+                    if (data.tipo_execucao === 'rotina') {
+                        return data.registros_processados?.toLocaleString("pt-BR") || "-";
+                    }
+                    if (!total) return "-";
+                    return `<span title="${suc} sucesso / ${fail} falha">${suc}/${total}</span>`;
+                }
+            },
             {
                 data: null,
                 orderable: false,
                 render: function(data) {
-                    return `<button class="btn btn-sm btn-outline-info" onclick="verDetalhes(${data.id})">
+                    return `<button class="btn btn-sm btn-outline-info" onclick="verDetalhes('${data.tipo_execucao}', ${data.id})">
                         <i class="bi bi-eye"></i>
                     </button>`;
                 }

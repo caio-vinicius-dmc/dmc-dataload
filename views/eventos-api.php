@@ -2,6 +2,9 @@
 $pageTitle = 'Eventos de API';
 $currentPage = 'eventos-api';
 
+// Gerar CSRF token para proteção dos formulários
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
+
 ob_start();
 ?>
 
@@ -543,66 +546,39 @@ $content = ob_get_clean();
 $extraStyles = <<<STYLES
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>' . <<<'SCRIPTS'
 <script>
 let eventos = [];
 let apis = [];
 let workflows = [];
 
-// Funções auxiliares de UI
 function mostrarErro(mensagem) {
-    const toast = `
-        <div class="toast align-items-center text-white bg-danger border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-exclamation-triangle me-2"></i>${mensagem}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-    let container = $('#toast-container');
-    if (container.length === 0) {
-        $('body').append('<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999"></div>');
-        container = $('#toast-container');
-    }
-    const toastEl = $(toast);
-    container.append(toastEl);
-    new bootstrap.Toast(toastEl[0]).show();
-    toastEl.on('hidden.bs.toast', function() { $(this).remove(); });
+    Swal.fire({icon: 'error', title: 'Erro', text: mensagem, toast: true, position: 'top-end', timer: 4000, showConfirmButton: false});
 }
 
 function mostrarSucesso(mensagem) {
-    const toast = `
-        <div class="toast align-items-center text-white bg-success border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-check-circle me-2"></i>${mensagem}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-    let container = $('#toast-container');
-    if (container.length === 0) {
-        $('body').append('<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999"></div>');
-        container = $('#toast-container');
-    }
-    const toastEl = $(toast);
-    container.append(toastEl);
-    new bootstrap.Toast(toastEl[0]).show();
-    toastEl.on('hidden.bs.toast', function() { $(this).remove(); });
+    Swal.fire({icon: 'success', title: 'Sucesso', text: mensagem, toast: true, position: 'top-end', timer: 3000, showConfirmButton: false});
 }
 
-// Carregar dados
+// Carregar dados iniciais
 function carregarDados() {
+    // Carregar APIs para os selects
     $.getJSON(baseUrl + '/api/apis-externas/list', function(res) {
-        if (res.sucesso) apis = res.dados || [];
-        popularFiltroApi();
+        if (res.sucesso) {
+            apis = res.dados || [];
+            popularFiltroApi();
+            popularSelectApi();
+        }
     });
     
+    // Carregar workflows para o select
     $.getJSON(baseUrl + '/api/workflows/list', function(res) {
-        if (res.sucesso) workflows = res.dados || [];
+        if (res.sucesso) {
+            workflows = res.dados || [];
+            popularSelectWorkflow();
+        }
+    }).fail(function() {
+        // Workflows podem não existir, ignorar
     });
     
     carregarEventos();
@@ -624,36 +600,43 @@ function carregarEventos() {
     });
 }
 
-// Renderizar eventos
+// Renderizar eventos na tabela
 function renderizarEventos(lista) {
     const tbody = $('#listaEventos');
     
     if (!lista || lista.length === 0) {
-        tbody.html('<tr><td colspan="8" class="text-center py-5"><p class="text-muted">Nenhum evento configurado</p><button class="btn btn-primary btn-sm" onclick="abrirModalEvento()"><i class="bi bi-plus-lg me-1"></i>Criar Evento</button></td></tr>');
+        tbody.html('<tr><td colspan="8" class="text-center py-5"><p class="text-muted mb-2">Nenhum evento configurado</p><button class="btn btn-primary btn-sm" onclick="abrirModalEvento()"><i class="bi bi-plus-lg me-1"></i>Criar Evento</button></td></tr>');
         return;
     }
+    
+    const acaoLabels = {
+        'store_value': 'Armazenar',
+        'trigger_workflow': 'Disparar Workflow',
+        'store_and_trigger': 'Armazenar + Workflow',
+        'notify': 'Notificar'
+    };
     
     let html = '';
     lista.forEach(ev => {
         const badgeClass = ev.ativo ? 'bg-success' : 'bg-secondary';
-        const operador = '<span class="operator-badge">' + ev.operador + '</span>';
-        const acao = ev.acao === 'workflow' ? 'Disparar Workflow' : (ev.acao === 'notificacao' ? 'Notificação' : ev.acao);
+        const acaoLabel = acaoLabels[ev.acao] || ev.acao;
+        const workflowInfo = ev.workflow_nome ? ' <small class="text-muted">(' + ev.workflow_nome + ')</small>' : '';
         
         html += `
         <tr>
-            <td>\${ev.nome}</td>
-            <td>\${ev.api_nome || 'API #' + ev.id_api}</td>
-            <td><code class="small">\${ev.jsonpath}</code></td>
-            <td>\${operador} \${ev.valor_comparacao}</td>
-            <td>\${acao}</td>
-            <td>\${ev.total_matches || 0}</td>
-            <td><span class="badge \${badgeClass}">\${ev.ativo ? 'Ativo' : 'Inativo'}</span></td>
+            <td><strong>${ev.nome}</strong>${ev.descricao ? '<br><small class="text-muted">' + ev.descricao.substring(0, 50) + '</small>' : ''}</td>
+            <td>${ev.api_nome || 'API #' + ev.id_api}</td>
+            <td><code class="small">${ev.jsonpath || '-'}</code></td>
+            <td><span class="operator-badge">${ev.operador}</span> <small>${ev.valor_esperado || ''}</small></td>
+            <td>${acaoLabel}${workflowInfo}</td>
+            <td><span class="badge bg-info">${ev.total_matches || 0}</span></td>
+            <td><span class="badge ${badgeClass}">${ev.ativo ? 'Ativo' : 'Inativo'}</span></td>
             <td>
                 <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-warning" onclick="editarEvento(\${ev.id_evento})" title="Editar">
+                    <button class="btn btn-outline-warning" onclick="editarEvento(${ev.id})" title="Editar">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-outline-danger" onclick="excluirEvento(\${ev.id_evento})" title="Excluir">
+                    <button class="btn btn-outline-danger" onclick="excluirEvento(${ev.id})" title="Excluir">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -669,8 +652,8 @@ function renderizarEventos(lista) {
 function atualizarEstatisticas() {
     const total = eventos.length;
     const ativos = eventos.filter(e => e.ativo).length;
-    const comWorkflow = eventos.filter(e => e.acao === 'workflow' && e.id_workflow).length;
-    const totalMatches = eventos.reduce((sum, e) => sum + (e.total_matches || 0), 0);
+    const comWorkflow = eventos.filter(e => (e.acao === 'trigger_workflow' || e.acao === 'store_and_trigger') && e.id_workflow).length;
+    const totalMatches = eventos.reduce((sum, e) => sum + (parseInt(e.total_matches) || 0), 0);
     
     $('#totalEventos').text(total);
     $('#eventosAtivos').text(ativos);
@@ -678,102 +661,141 @@ function atualizarEstatisticas() {
     $('#totalMatches').text(totalMatches);
 }
 
-// Popular filtro API
+// Popular filtro API no header
 function popularFiltroApi() {
     const select = $('#filtroApi');
-   select.find('option:not(:first)').remove();
-    
+    select.find('option:not(:first)').remove();
     apis.forEach(api => {
-        select.append(`<option value="\${api.id_api}">\${api.nome}</option>`);
+        select.append(`<option value="${api.id}">${api.nome}</option>`);
+    });
+    
+    // Se veio com ?api=X na URL, selecionar
+    const urlParams = new URLSearchParams(window.location.search);
+    const apiParam = urlParams.get('api');
+    if (apiParam) {
+        select.val(apiParam);
+        carregarEventos();
+    }
+}
+
+// Popular select de API no modal
+function popularSelectApi() {
+    const select = $('#eventoApi');
+    select.find('option:not(:first)').remove();
+    apis.forEach(api => {
+        select.append(`<option value="${api.id}">${api.nome}${api.ativo ? '' : ' (Inativa)'}</option>`);
     });
 }
 
-// Abrir modal evento
-function abrirModalEvento(id = null) {
-    if (id) {
-        const ev = eventos.find(e => e.id_evento === id);
-        if (ev) {
-            $('#modalEventoLabel').text('Editar Evento');
-            $('#eventoId').val(ev.id_evento);
-            $('#eventoNome').val(ev.nome);
-            $('#eventoApi').val(ev.id_api);
-            $('#eventoJsonpath').val(ev.jsonpath);
-            $('#eventoOperador').val(ev.operador);
-            $('#eventoValor').val(ev.valor_comparacao);
-            $('#eventoAcao').val(ev.acao);
-            $('#eventoWorkflow').val(ev.id_workflow);
-            $('#eventoAtivo').prop('checked', ev.ativo);
-        }
+// Popular select de workflows no modal
+function popularSelectWorkflow() {
+    const select = $('#eventoWorkflow');
+    select.find('option:not(:first)').remove();
+    workflows.forEach(wf => {
+        select.append(`<option value="${wf.id}">${wf.nome}</option>`);
+    });
+}
+
+// Toggle workflow select visibility
+function toggleWorkflowSelect() {
+    const acao = $('#eventoAcao').val();
+    if (acao === 'trigger_workflow' || acao === 'store_and_trigger') {
+        $('#workflowSelectContainer').show();
     } else {
-        $('#modalEventoLabel').text('Novo Evento');
-        $('#formEvento')[0].reset();
-        $('#eventoId').val('');
-        $('#eventoAtivo').prop('checked', true);
+        $('#workflowSelectContainer').hide();
     }
-    new bootstrap.Modal('#modalEvento').show();
+}
+
+// Abrir modal evento
+function abrirModalEvento(id) {
+    $('#formEvento')[0].reset();
+    $('#eventoId').val('');
+    $('#eventoAtivo').prop('checked', true);
+    $('#eventoArmazenarValor').prop('checked', true);
+    toggleWorkflowSelect();
+    
+    if (id) {
+        $('#modalEventoTitulo').text('Editar Evento');
+        $.getJSON(baseUrl + '/api/eventos-api/get/' + id, function(res) {
+            if (res.sucesso && res.dados) {
+                const ev = res.dados;
+                $('#eventoId').val(ev.id);
+                $('#eventoNome').val(ev.nome);
+                $('#eventoDescricao').val(ev.descricao);
+                $('#eventoApi').val(ev.id_api);
+                $('#eventoJsonpath').val(ev.jsonpath);
+                $('#eventoTipoValor').val(ev.tipo_valor);
+                $('#eventoOperador').val(ev.operador);
+                $('#eventoValorEsperado').val(ev.valor_esperado);
+                $('#eventoAcao').val(ev.acao);
+                $('#eventoWorkflow').val(ev.id_workflow);
+                $('#eventoAtivo').prop('checked', ev.ativo);
+                $('#eventoArmazenarValor').prop('checked', ev.armazenar_valor);
+                toggleWorkflowSelect();
+                new bootstrap.Modal('#modalEvento').show();
+            } else {
+                mostrarErro('Erro ao carregar evento');
+            }
+        });
+    } else {
+        $('#modalEventoTitulo').text('Novo Evento');
+        new bootstrap.Modal('#modalEvento').show();
+    }
 }
 
 // Salvar evento
-function salvarEvento() {
-    // Validação
+function salvarEvento(e) {
+    if (e) e.preventDefault();
+    
     const nome = $('#eventoNome').val().trim();
     const idApi = parseInt($('#eventoApi').val());
     const jsonpath = $('#eventoJsonpath').val().trim();
     
-    if (!nome) {
-        mostrarErro('O campo Nome é obrigatório');
-        $('#eventoNome').focus();
-        return false;
-    }
-    
-    if (!idApi || isNaN(idApi)) {
-        mostrarErro('Selecione uma API');
-        $('#eventoApi').focus();
-        return false;
-    }
-    
-    if (!jsonpath) {
-        mostrarErro('O campo JSONPath é obrigatório');
-        $('#eventoJsonpath').focus();
-        return false;
-    }
+    if (!nome) { mostrarErro('O campo Nome é obrigatório'); $('#eventoNome').focus(); return false; }
+    if (!idApi || isNaN(idApi)) { mostrarErro('Selecione uma API'); $('#eventoApi').focus(); return false; }
+    if (!jsonpath) { mostrarErro('O campo JSONPath é obrigatório'); $('#eventoJsonpath').focus(); return false; }
     
     const data = {
-        id_evento: $('#eventoId').val() || null,
+        id: $('#eventoId').val() || null,
         id_api: idApi,
         nome: nome,
+        descricao: $('#eventoDescricao').val().trim(),
         jsonpath: jsonpath,
+        tipo_valor: $('#eventoTipoValor').val(),
         operador: $('#eventoOperador').val(),
-        valor_comparacao: $('#eventoValor').val(),
+        valor_esperado: $('#eventoValorEsperado').val(),
         acao: $('#eventoAcao').val(),
         id_workflow: $('#eventoWorkflow').val() || null,
-        ativo: $('#eventoAtivo').is(':checked')
+        armazenar_valor: $('#eventoArmazenarValor').is(':checked') ? '1' : '0',
+        ativo: $('#eventoAtivo').is(':checked') ? '1' : '0'
     };
     
-    const btnSalvar = $('#modalEvento .btn-primary');
+    const btnSalvar = $('#formEvento button[type="submit"]');
     btnSalvar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Salvando...');
     
     $.ajax({
         url: baseUrl + '/api/eventos-api/salvar',
         method: 'POST',
         contentType: 'application/json',
+        headers: {'X-CSRF-TOKEN': csrfToken},
         data: JSON.stringify(data),
         success: function(res) {
-            btnSalvar.prop('disabled', false).html('Salvar');
+            btnSalvar.prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Salvar');
             if (res.sucesso) {
-                mostrarSucesso(res.mensagem || 'Evento salvo com sucesso!');
+                mostrarSucesso(res.mensagem || 'Evento salvo!');
                 bootstrap.Modal.getInstance('#modalEvento').hide();
                 carregarEventos();
             } else {
-                mostrarErro('Erro: ' + (res.erro || 'Erro desconhecido'));
+                mostrarErro(res.erro || 'Erro ao salvar');
             }
         },
         error: function(xhr) {
-            btnSalvar.prop('disabled', false).html('Salvar');
-            const msg = xhr.responseJSON?.erro || 'Erro ao comunicar com servidor';
-            mostrarErro(msg);
+            btnSalvar.prop('disabled', false).html('<i class="bi bi-check-lg me-1"></i>Salvar');
+            mostrarErro(xhr.responseJSON?.erro || 'Erro ao comunicar com servidor');
         }
     });
+    
+    return false;
 }
 
 // Editar evento
@@ -783,14 +805,141 @@ function editarEvento(id) {
 
 // Excluir evento
 function excluirEvento(id) {
-    if (!confirm('Deseja realmente excluir este evento?')) return;
+    const ev = eventos.find(e => e.id === id);
+    Swal.fire({
+        title: 'Excluir Evento?',
+        text: 'Deseja excluir "' + (ev ? ev.nome : 'este evento') + '"?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Sim, excluir',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post(baseUrl + '/api/eventos-api/delete/' + id, {_csrf_token: csrfToken}, function(res) {
+                if (res.sucesso) {
+                    mostrarSucesso('Evento excluído!');
+                    carregarEventos();
+                } else {
+                    mostrarErro(res.erro || 'Erro ao excluir');
+                }
+            }).fail(function() {
+                mostrarErro('Erro ao comunicar com o servidor');
+            });
+        }
+    });
+}
+
+// Abrir modal de teste JSONPath
+function abrirTesteJsonPath() {
+    // Copiar valores do formulário de evento
+    const jsonpath = $('#eventoJsonpath').val();
+    const operador = $('#eventoOperador').val();
+    const valorEsperado = $('#eventoValorEsperado').val();
     
-    $.post(baseUrl + '/api/eventos-api/delete/' + id, function(res) {
-        if (res.sucesso) {
-            alert('Evento excluído!');
-            carregarEventos();
-        } else {
-            alert('Erro: ' + (res.erro || 'Erro desconhecido'));
+    if (jsonpath) $('#testeJsonPath').val(jsonpath);
+    if (operador) $('#testeOperador').val(operador);
+    if (valorEsperado) $('#testeValorEsperado').val(valorEsperado);
+    
+    // Pré-carregar JSON de exemplo da API selecionada
+    const apiId = $('#eventoApi').val();
+    if (apiId && !$('#testeJson').val()) {
+        $('#testeJson').val('Carregando resposta da API...');
+        $.ajax({
+            url: baseUrl + '/api/apis-externas/testar',
+            method: 'POST',
+            contentType: 'application/json',
+            headers: {'X-CSRF-TOKEN': csrfToken},
+            data: JSON.stringify({ url: '', metodo: 'GET' }), // Will get API data first
+            timeout: 10000
+        });
+        // Buscar dados da API e testar
+        $.getJSON(baseUrl + '/api/apis-externas/get/' + apiId, function(res) {
+            if (res.sucesso && res.dados) {
+                const apiData = res.dados;
+                $.ajax({
+                    url: baseUrl + '/api/apis-externas/testar',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    headers: {'X-CSRF-TOKEN': csrfToken},
+                    data: JSON.stringify({
+                        url: apiData.url,
+                        metodo: apiData.metodo,
+                        auth_tipo: apiData.auth_tipo,
+                        tipo_resposta: apiData.tipo_resposta,
+                        timeout: apiData.timeout,
+                        header_keys: apiData.headers ? Object.keys(apiData.headers) : [],
+                        header_values: apiData.headers ? Object.values(apiData.headers) : [],
+                        bearer_token: apiData.credenciais?.token,
+                        basic_username: apiData.credenciais?.username,
+                        basic_password: apiData.credenciais?.password,
+                        api_key: apiData.credenciais?.api_key,
+                        api_key_header: apiData.credenciais?.api_key_header
+                    }),
+                    success: function(testRes) {
+                        if (testRes.response) {
+                            const jsonStr = typeof testRes.response === 'object' ? JSON.stringify(testRes.response, null, 2) : testRes.response_raw;
+                            $('#testeJson').val(jsonStr);
+                        } else {
+                            $('#testeJson').val('{"exemplo": "cole aqui o JSON de resposta da API"}');
+                        }
+                    },
+                    error: function() {
+                        $('#testeJson').val('{"exemplo": "cole aqui o JSON de resposta da API"}');
+                    }
+                });
+            }
+        });
+    }
+    
+    $('#resultadoTeste').hide();
+    new bootstrap.Modal('#modalTesteJsonPath').show();
+}
+
+// Executar teste JSONPath
+function executarTesteJsonPath() {
+    const json = $('#testeJson').val().trim();
+    const jsonpath = $('#testeJsonPath').val().trim();
+    const operador = $('#testeOperador').val();
+    const valorEsperado = $('#testeValorEsperado').val();
+    
+    if (!json) { mostrarErro('Insira um JSON para testar'); return; }
+    if (!jsonpath) { mostrarErro('Insira um JSONPath'); return; }
+    
+    $.ajax({
+        url: baseUrl + '/api/eventos-api/testar-jsonpath',
+        method: 'POST',
+        contentType: 'application/json',
+        headers: {'X-CSRF-TOKEN': csrfToken},
+        data: JSON.stringify({
+            json: json,
+            jsonpath: jsonpath,
+            operador: operador,
+            valor_esperado: valorEsperado
+        }),
+        success: function(res) {
+            $('#resultadoTeste').show();
+            if (res.sucesso) {
+                const matchClass = res.match ? 'match-success' : 'match-fail';
+                const valorStr = typeof res.valor_extraido === 'object' ? JSON.stringify(res.valor_extraido) : String(res.valor_extraido);
+                $('#resultadoTesteConteudo').html(`
+                    <div class="p-3 rounded ${matchClass}">
+                        <h6><i class="bi bi-${res.match ? 'check-circle text-success' : 'x-circle text-danger'} me-2"></i>
+                            Condição ${res.match ? 'ATENDIDA' : 'NÃO atendida'}</h6>
+                        <div class="mt-2">
+                            <strong>Valor extraído:</strong> <code>${$('<span>').text(valorStr).html()}</code><br>
+                            <strong>Tipo:</strong> ${res.tipo_valor}<br>
+                            <strong>JSONPath:</strong> <code>${res.jsonpath}</code>
+                        </div>
+                    </div>
+                `);
+            } else {
+                $('#resultadoTesteConteudo').html('<div class="alert alert-danger">' + (res.erro || 'Erro no teste') + '</div>');
+            }
+        },
+        error: function(xhr) {
+            $('#resultadoTeste').show();
+            $('#resultadoTesteConteudo').html('<div class="alert alert-danger">Erro: ' + (xhr.responseJSON?.erro || xhr.statusText) + '</div>');
         }
     });
 }
@@ -801,6 +950,11 @@ $('#filtroApi').on('change', carregarEventos);
 // Inicializar
 $(document).ready(function() {
     carregarDados();
+    
+    // Form submit handler
+    $('#formEvento').on('submit', function(e) {
+        return salvarEvento(e);
+    });
 });
 </script>
 SCRIPTS;

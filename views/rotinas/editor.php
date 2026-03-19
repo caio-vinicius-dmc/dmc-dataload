@@ -5,6 +5,7 @@
  */
 $pageTitle = 'Editor de Rotina';
 $currentPage = 'rotinas';
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
 
 ob_start();
 ?>
@@ -22,6 +23,9 @@ ob_start();
         <a href="<?= defined('BASE_URL') ? BASE_URL : '' ?>/rotinas" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-2"></i>Voltar
         </a>
+        <button type="button" class="btn btn-outline-secondary" onclick="abrirModalCompartilhamento('rotina', $('#rotina_id').val())" title="Compartilhar">
+            <i class="bi bi-share me-2"></i>Compartilhar
+        </button>
         <button type="button" id="btnSalvar" class="btn-modern-primary">
             <i class="bi bi-check-lg me-2"></i>Salvar Rotina
         </button>
@@ -51,6 +55,8 @@ ob_start();
                     <label class="form-label-modern">Descrição</label>
                     <textarea class="form-control-modern" name="descricao" id="rotina_descricao" rows="2"></textarea>
                 </div>
+                
+                <?php include __DIR__ . '/../partials/recurso_empresa_projeto.php'; ?>
             </div>
         </form>
     </div>
@@ -93,6 +99,8 @@ ob_start();
         </div>
     </div>
 </div>
+
+<?php include __DIR__ . '/../partials/compartilhamento_modal.php'; ?>
 
 <?php
 $content = ob_get_clean();
@@ -373,11 +381,11 @@ textarea.form-control-modern {
 </style>
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>';
+$extraScripts .= <<<'SCRIPTS'
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/sql/sql.min.js"></script>
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 let blocoCounter = 0;
@@ -574,7 +582,12 @@ $("#btnSalvar").on("click", function() {
     const payload = {};
     
     formData.forEach(function(field) {
-        payload[field.name] = field.value;
+        if (field.name.endsWith('[]')) {
+            if (!payload[field.name]) payload[field.name] = [];
+            payload[field.name].push(field.value);
+        } else {
+            payload[field.name] = field.value;
+        }
     });
     
     // Coletar blocos manualmente (estão fora do form)
@@ -603,6 +616,9 @@ SCRIPTS;
 $extraScripts .= '    payload.id_usuario_criador = ' . ($_SESSION['usuario']['id'] ?? 1) . ';' . "\n";
 
 $extraScripts .= <<<'SCRIPTS'
+    
+    // Adicionar CSRF token ao payload
+    payload._csrf_token = csrfToken;
     
     // Salvar
     Swal.fire({
@@ -732,6 +748,13 @@ $(document).ready(function() {
                     }
                     
                     console.log("=== CARREGAMENTO CONCLUÍDO ===");
+                    
+                    // Preencher empresas/projetos RBAC
+                    var empIds = (res.empresas || []).map(function(e) { return e.id_empresa || e.id; });
+                    var projIds = (res.projetos || []).map(function(p) { return p.id_projeto || p.id; });
+                    if (typeof rbacCarregarOpcoes === 'function') {
+                        rbacCarregarOpcoes(function() { rbacPreencherSelects(empIds, projIds); });
+                    }
                 })
                 .fail(function(xhr, status, error) {
                     Swal.close();
@@ -756,6 +779,9 @@ $(document).ready(function() {
 });
 </script>
 SCRIPTS;
+
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-recurso.js"></script>';
+$extraScripts .= '<script src="' . (defined('BASE_URL') ? BASE_URL : '') . '/assets/js/rbac-compartilhamento.js"></script>';
 
 include __DIR__ . '/../layouts/base.php';
 ?>

@@ -2,12 +2,14 @@
 namespace App\Servicos;
 
 use App\Core\Database;
+use App\Servicos\ServicoNotificacao;
+use App\Utils\Crypto;
 use PDO;
 
 class ServicoExecucao
 {
     private string $storagePath;
-    private string $encryptionKey; // raw bytes
+    private string $encryptionKeyBase64;
 
     public function __construct()
     {
@@ -16,8 +18,7 @@ class ServicoExecucao
             mkdir($this->storagePath, 0775, true);
         }
 
-        $keyBase64 = getenv('ENCRYPTION_KEY') ?: getenv('APP_KEY');
-        $this->encryptionKey = $keyBase64 ? base64_decode($keyBase64) : str_repeat("0", 32);
+        $this->encryptionKeyBase64 = $_ENV['ENCRYPTION_KEY'] ?? $_SERVER['ENCRYPTION_KEY'] ?? getenv('ENCRYPTION_KEY') ?: '';
     }
 
     public function processarVariaveis(string $sql): string
@@ -36,40 +37,26 @@ class ServicoExecucao
     {
         if (empty($enc)) return '';
 
-        // Se não tiver formato iv:ct, pode ser armazenado como texto simples
-        if (strpos($enc, ':') === false) {
-            // tentar base64 decode (caso tenha sido gravado como base64 sem iv)
-            $maybe = base64_decode($enc, true);
-            if ($maybe !== false && strlen($maybe) > 0) return $maybe;
-            return $enc;
+        if (empty($this->encryptionKeyBase64)) {
+            error_log("ServicoExecucao: ENCRYPTION_KEY não configurada");
+            return '';
         }
 
-        $parts = explode(':', $enc);
-        if (count($parts) !== 2) {
-            return $enc;
+        try {
+            return Crypto::decrypt($enc, $this->encryptionKeyBase64);
+        } catch (\Exception $e) {
+            error_log("ServicoExecucao: Erro ao descriptografar senha: " . $e->getMessage());
+            return '';
         }
-
-        $iv = base64_decode($parts[0]);
-        $ct = base64_decode($parts[1]);
-
-        if ($this->encryptionKey === '') {
-            // sem chave, tentar retornar texto cifrado bruto
-            return $enc;
-        }
-
-        $plain = @openssl_decrypt($ct, 'AES-256-CBC', $this->encryptionKey, OPENSSL_RAW_DATA, $iv);
-        if ($plain === false || $plain === null || $plain === '') {
-            // tentativa fallback: talvez o valor armazenado seja texto plano
-            return $enc;
-        }
-
-        return $plain;
     }
 
     public function gerarAuditoriaDDL(string $tipoBanco): string
     {
         $tipo = strtolower($tipoBanco);
         switch ($tipo) {
+            case 'mysql':
+            case 'mariadb':
+                return "CREATE TABLE IF NOT EXISTS tb_auditoria_rotina (id BIGINT AUTO_INCREMENT PRIMARY KEY, id_rotina BIGINT, bloco_codigo VARCHAR(255), data_execucao DATETIME DEFAULT CURRENT_TIMESTAMP, resultado TEXT, caminho_csv TEXT)";
             case 'oracle':
                 return "CREATE TABLE tb_auditoria_rotina (id NUMBER(10) PRIMARY KEY, id_rotina NUMBER(10), bloco_codigo VARCHAR2(100), data_execucao TIMESTAMP, resultado CLOB, caminho_csv VARCHAR2(4000))";
             case 'sqlserver':
@@ -96,6 +83,7 @@ class ServicoExecucao
                     $dsn = "pgsql:host={$host};port={$port};dbname={$db}";
                     return new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                 case 'mysql':
+                case 'mariadb':
                     $port = $porta ?: 3306;
                     $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
                     return new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
@@ -105,16 +93,17 @@ class ServicoExecucao
                     return new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                 case 'oracle':
                     $port = $porta ?: 1521;
-                    // Tentativa de DSN para oci
                     $dsn = "oci:dbname=//{$host}:{$port}/{$db}";
                     return new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                 case 'odbc':
                     $dsn = "odbc:{$db}";
                     return new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                 default:
+                    error_log("ServicoExecucao: Tipo de banco desconhecido: {$tipo}");
                     return null;
             }
         } catch (\Exception $e) {
+            error_log("ServicoExecucao: Erro ao conectar {$tipo}://{$host}:{$porta}/{$db} como {$user}: " . $e->getMessage());
             return null;
         }
     }
@@ -298,6 +287,14 @@ class ServicoExecucao
             $insLog = $db->prepare('INSERT INTO tb_logs_execucao (id_rotina, data_inicio, data_fim, status, duracao_ms, blocos_executados, blocos_sucesso, blocos_falha, registros_processados, meta) VALUES (?, now(), now(), ?, ?, ?, ?, ?, ?, ?::jsonb)');
             $insLog->execute([$idRotina, 'sucesso', $duracaoTotal, $blocosExecutados, $blocosSucesso, $blocosFalha, $registrosTotal, json_encode($detalhesExecucao)]);
 
+            ServicoWebhook::notificarSucesso('rotina', $rotina['nome'] ?? "Rotina #{$idRotina}", $idRotina, [
+                'blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso,
+                'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal
+            ]);
+            ServicoCanalNotificacao::notificar('sucesso', "Sucesso: " . ($rotina['nome'] ?? "Rotina #{$idRotina}"), [
+                'blocos' => "{$blocosSucesso}/{$blocosExecutados}", 'registros' => $registrosTotal, 'duracao' => "{$duracaoTotal}ms"
+            ], 'rotina');
+
             return ['sucesso' => true, 'logs' => $logs, 'metricas' => ['blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso, 'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal]];
         } catch (\Throwable $e) {
             $fimExecucao = microtime(true);
@@ -305,6 +302,14 @@ class ServicoExecucao
             
             $db->prepare('INSERT INTO tb_logs_execucao (id_rotina, data_inicio, data_fim, status, mensagem_erro, duracao_ms, blocos_executados, blocos_sucesso, blocos_falha, registros_processados, meta) VALUES (?, now(), now(), ?, ?, ?, ?, ?, ?, ?, ?::jsonb)')
                ->execute([$idRotina, 'falha', $e->getMessage(), $duracaoTotal, $blocosExecutados, $blocosSucesso, $blocosFalha, $registrosTotal, json_encode($detalhesExecucao)]);
+
+            // Notificar falha
+            ServicoNotificacao::notificarFalhaRotina(
+                $idRotina,
+                $rotina['nome'] ?? "Rotina #{$idRotina}",
+                $e->getMessage(),
+                ['blocos_falha' => $blocosFalha, 'duracao_ms' => $duracaoTotal]
+            );
 
             return ['sucesso' => false, 'erro' => $e->getMessage(), 'logs' => $logs, 'metricas' => ['blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso, 'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal]];
         } finally {

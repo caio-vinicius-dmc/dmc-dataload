@@ -361,11 +361,9 @@ ob_start();
 $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 STYLES;
 
 $extraScripts = <<<SCRIPTS
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 const csrfToken = '{$csrfToken}';
 let allPipelines = [];

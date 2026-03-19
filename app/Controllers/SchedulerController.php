@@ -26,6 +26,7 @@ class SchedulerController
         header('Content-Type: application/json');
         
         try {
+            $filtroRot = \App\Servicos\ServicoPermissao::filtroVisibilidade('rotina', 'r', 'id_usuario_criador');
             $sql = "SELECT r.id, r.nome, r.agendamento_cron, r.ativa, 
                            r.ultima_execucao, r.proxima_execucao, r.data_inicio, r.data_fim,
                            c.nome_conexao as conexao
@@ -33,9 +34,11 @@ class SchedulerController
                     LEFT JOIN tb_perfis_conexao c ON r.id_conexao = c.id
                     WHERE r.agendamento_cron IS NOT NULL 
                       AND r.agendamento_cron != ''
+                      AND ({$filtroRot['where']})
                     ORDER BY r.nome";
             
-            $stmt = $this->db->query($sql);
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($filtroRot['params']);
             $rotinas = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             
             // Calcular próxima execução e status para cada rotina
@@ -56,7 +59,40 @@ class SchedulerController
                 }
             }
             
-            echo json_encode(['sucesso' => true, 'dados' => $rotinas]);
+            // Incluir pipelines com trigger cron
+            $filtroPip = \App\Servicos\ServicoPermissao::filtroVisibilidade('pipeline', 'p', 'criado_por');
+            $sqlPipelines = "SELECT p.id, p.nome, p.agendamento_cron, p.ativo as ativa,
+                                    p.trigger_tipo, p.data_atualizacao,
+                                    (SELECT MAX(data_inicio) FROM tb_pipeline_execucoes WHERE id_pipeline = p.id) as ultima_execucao
+                             FROM tb_pipelines p
+                             WHERE p.trigger_tipo = 'cron'
+                               AND p.agendamento_cron IS NOT NULL
+                               AND p.agendamento_cron != ''
+                               AND ({$filtroPip['where']})
+                             ORDER BY p.nome";
+            $stmtPip = $this->db->prepare($sqlPipelines);
+            $stmtPip->execute($filtroPip['params']);
+            $pipelines = $stmtPip->fetchAll(\PDO::FETCH_ASSOC);
+
+            foreach ($pipelines as &$pip) {
+                $pip['tipo'] = 'pipeline';
+                $pip['conexao'] = null;
+                $pip['data_inicio'] = null;
+                $pip['data_fim'] = null;
+                $pip['proxima_execucao'] = $this->calcularProximaExecucao($pip['agendamento_cron']);
+                $pip['status_calculado'] = $pip['ativa'] ? 'ativa' : 'inativa';
+            }
+            unset($pip);
+
+            // Marcar rotinas com tipo
+            foreach ($rotinas as &$rotina) {
+                $rotina['tipo'] = 'rotina';
+            }
+            unset($rotina);
+
+            $dados = array_merge($rotinas, $pipelines);
+
+            echo json_encode(['sucesso' => true, 'dados' => $dados]);
         } catch (\Exception $e) {
             echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
         }
@@ -84,6 +120,9 @@ class SchedulerController
                     $running = file_exists("/proc/$pid");
                 }
             }
+            
+            // Auto-cleanup: marcar execuções presas há mais de 1 hora como erro
+            $this->db->exec("UPDATE tb_logs_execucao SET status = 'erro', data_fim = NOW(), mensagem_erro = 'Timeout - execução interrompida automaticamente' WHERE status = 'executando' AND data_inicio < NOW() - INTERVAL '1 hour'");
             
             // Contar execuções em andamento
             $sql = "SELECT COUNT(*) FROM tb_logs_execucao WHERE status = 'executando'";
@@ -651,7 +690,7 @@ class SchedulerController
     private function registrarLog(string $mensagem, string $nivel = 'info'): void
     {
         try {
-            $sql = "INSERT INTO logs_sistema (nivel, categoria, mensagem, usuario_id, created_at)
+            $sql = "INSERT INTO tb_logs_sistema (nivel, canal, mensagem, id_usuario, criado_em)
                     VALUES (:nivel, 'scheduler', :mensagem, :usuario_id, NOW())";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([

@@ -595,6 +595,9 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         }
     </style>
     
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    
     <?php if (isset($extraStyles)) echo $extraStyles; ?>
 </head>
 <body>
@@ -625,6 +628,15 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 </a>
             </div>
 
+            <?php 
+            $nivelAcesso = $usuario['nivel_acesso'] ?? 'operador';
+            $ehSuperAdminSidebar = ($nivelAcesso === 'super_admin');
+            $ehAdminSidebar = in_array($nivelAcesso, ['admin', 'super_admin']);
+            $ehDevOuSuperior = in_array($nivelAcesso, ['desenvolvedor', 'admin', 'super_admin']);
+            $ehOperador = ($nivelAcesso === 'operador');
+            ?>
+
+            <?php if ($ehDevOuSuperior): ?>
             <div class="menu-label">ETL</div>
             
             <div class="menu-item">
@@ -640,6 +652,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                     <span>Rotinas</span>
                 </a>
             </div>
+            <?php endif; ?>
             
             <div class="menu-item">
                 <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>">
@@ -648,12 +661,14 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 </a>
             </div>
             
+            <?php if ($ehDevOuSuperior): ?>
             <div class="menu-item">
                 <a href="<?= $base ?>/sql-editor" class="menu-link <?= $currentPage === 'sql-editor' ? 'active' : '' ?>">
                     <i class="bi bi-terminal"></i>
                     <span>SQL Editor</span>
                 </a>
             </div>
+            <?php endif; ?>
             
             <div class="menu-item">
                 <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>">
@@ -662,6 +677,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 </a>
             </div>
 
+            <?php if ($ehDevOuSuperior): ?>
             <div class="menu-label">Automação</div>
             
             <div class="menu-item">
@@ -698,6 +714,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                     <span>Pipelines</span>
                 </a>
             </div>
+            <?php endif; ?>
 
             <div class="menu-label">Sistema</div>
             
@@ -716,14 +733,16 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 </a>
             </div>
             
+            <?php if ($ehDevOuSuperior): ?>
             <div class="menu-item">
                 <a href="<?= $base ?>/logs" class="menu-link <?= $currentPage === 'logs' ? 'active' : '' ?>">
                     <i class="bi bi-file-text-fill"></i>
                     <span>Logs do Sistema</span>
                 </a>
             </div>
+            <?php endif; ?>
 
-            <?php if (($usuario['nivel_acesso'] ?? '') === 'admin'): ?>
+            <?php if ($ehAdminSidebar): ?>
             <div class="menu-label">Administração</div>
             
             <div class="menu-item">
@@ -733,10 +752,61 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 </a>
             </div>
             
+            <?php if ($ehSuperAdminSidebar): ?>
+            <div class="menu-item">
+                <a href="<?= $base ?>/admin/empresas" class="menu-link <?= $currentPage === 'empresas' ? 'active' : '' ?>">
+                    <i class="bi bi-building"></i>
+                    <span>Empresas</span>
+                </a>
+            </div>
+            <?php endif; ?>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/admin/projetos" class="menu-link <?= $currentPage === 'projetos' ? 'active' : '' ?>">
+                    <i class="bi bi-folder-fill"></i>
+                    <span>Projetos</span>
+                </a>
+            </div>
+            
             <div class="menu-item">
                 <a href="<?= $base ?>/configuracoes" class="menu-link <?= $currentPage === 'configuracoes' ? 'active' : '' ?>">
                     <i class="bi bi-gear-fill"></i>
                     <span>Configurações</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/admin/auditoria" class="menu-link <?= $currentPage === 'auditoria' ? 'active' : '' ?>">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Auditoria</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/admin/webhooks" class="menu-link <?= $currentPage === 'webhooks' ? 'active' : '' ?>">
+                    <i class="bi bi-broadcast"></i>
+                    <span>Webhooks</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/admin/canais" class="menu-link <?= $currentPage === 'canais' ? 'active' : '' ?>">
+                    <i class="bi bi-chat-dots"></i>
+                    <span>Slack/Teams</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>">
+                    <i class="bi bi-collection"></i>
+                    <span>Fila Execução</span>
+                </a>
+            </div>
+            
+            <div class="menu-item">
+                <a href="<?= $base ?>/admin/backups" class="menu-link <?= $currentPage === 'backups' ? 'active' : '' ?>">
+                    <i class="bi bi-cloud-download"></i>
+                    <span>Backups</span>
                 </a>
             </div>
             <?php endif; ?>
@@ -749,7 +819,10 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 </div>
                 <div class="user-info">
                     <div class="user-name" id="userName"><?= htmlspecialchars($usuario['nome_usuario'] ?? 'Usuário') ?></div>
-                    <div class="user-role"><?= ucfirst($usuario['nivel_acesso'] ?? 'user') ?></div>
+                    <div class="user-role"><?php
+                        $labelsPapeis = ['super_admin' => 'Super Admin', 'admin' => 'Administrador', 'desenvolvedor' => 'Desenvolvedor', 'operador' => 'Operador'];
+                        echo $labelsPapeis[$usuario['nivel_acesso'] ?? 'operador'] ?? ucfirst($usuario['nivel_acesso'] ?? 'user');
+                    ?></div>
                 </div>
                 <div class="user-actions">
                     <button class="btn" id="btnLogout" title="Sair">
@@ -800,6 +873,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
     <!-- Scripts Base -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>
         const baseUrl = '<?= $base ?>';
@@ -842,9 +916,25 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             });
         }
 
+        // Load notification count
+        function loadNotificationBadge() {
+            $.getJSON(baseUrl + '/api/notificacoes/count', function(res) {
+                if (res.count > 0) {
+                    $('#notificationBadge').text(res.count).show();
+                } else {
+                    $('#notificationBadge').hide();
+                }
+            }).fail(function() {
+                $('#notificationBadge').hide();
+            });
+        }
+
         // Initialize
         $(document).ready(function() {
             loadSchedulerBadge();
+            loadNotificationBadge();
+            // Refresh notification count every 30 seconds
+            setInterval(loadNotificationBadge, 30000);
         });
     </script>
     

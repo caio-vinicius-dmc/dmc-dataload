@@ -141,6 +141,19 @@ while (true) {
             }
         }
         
+        // 3. Polling de APIs externas
+        try {
+            $pollingEngine = new \App\Core\ApiPollingEngine($db);
+            $pollingResult = $pollingEngine->executarPolling();
+            if (!empty($pollingResult)) {
+                $totalApis = count($pollingResult);
+                $totalMatches = array_sum(array_column($pollingResult, 'eventos_match'));
+                logMessage("Polling: {$totalApis} APIs verificadas, {$totalMatches} eventos acionados", 'info');
+            }
+        } catch (Exception $e) {
+            logMessage("Erro no polling de APIs: " . $e->getMessage(), 'error');
+        }
+        
     } catch (Exception $e) {
         logMessage("Erro no loop principal: " . $e->getMessage(), 'error');
     }

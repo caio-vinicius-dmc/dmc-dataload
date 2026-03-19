@@ -1,6 +1,7 @@
 ﻿<?php 
 $pageTitle = 'Workflows';
 $currentPage = 'workflows';
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
 
 ob_start();
 ?>
@@ -331,7 +332,8 @@ $content = ob_get_clean();
 $extraStyles = <<<STYLES
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>';
+$extraScripts .= <<<'SCRIPTS'
 <script>
 let workflows = [];
 let workflowParaExecutar = null;
@@ -381,19 +383,19 @@ function renderizarWorkflows(lista) {
                     </div>
                     <div class="d-flex justify-content-between text-muted small mb-3">
                         <span><i class="bi bi-play-circle me-1"></i>\${wf.total_execucoes || 0} exec.</span>
-                        <span><i class="bi bi-check-circle me-1"></i>\${wf.ultima_execucao_em ? new Date(wf.ultima_execucao_em).toLocaleDateString('pt-BR') : 'Nunca'}</span>
+                        <span><i class="bi bi-check-circle me-1"></i>\${wf.data_atualizacao ? new Date(wf.data_atualizacao).toLocaleDateString('pt-BR') : 'Nunca'}</span>
                     </div>
                     <div class="btn-group w-100 btn-group-sm">
-                        <button class="btn btn-outline-success" onclick="executarWorkflow(\${wf.id_workflow})" title="Executar">
+                        <button class="btn btn-outline-success" onclick="executarWorkflow(\${wf.id})" title="Executar">
                             <i class="bi bi-play-fill"></i>
                         </button>
-                        <a href="\${baseUrl}/workflow-builder?id=\${wf.id_workflow}" class="btn btn-outline-primary" title="Editar">
+                        <a href="\${baseUrl}/workflow-builder?id=\${wf.id}" class="btn btn-outline-primary" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </a>
-                        <button class="btn btn-outline-warning" onclick="toggleAtivo(\${wf.id_workflow}, \${!wf.ativo})" title="Ativar/Desativar">
+                        <button class="btn btn-outline-warning" onclick="toggleAtivo(\${wf.id}, \${!wf.ativo})" title="Ativar/Desativar">
                             <i class="bi bi-power"></i>
                         </button>
-                        <button class="btn btn-outline-danger" onclick="excluirWorkflow(\${wf.id_workflow})" title="Excluir">
+                        <button class="btn btn-outline-danger" onclick="excluirWorkflow(\${wf.id})" title="Excluir">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -412,11 +414,15 @@ function atualizarEstatisticas() {
     const ativos = workflows.filter(w => w.ativo).length;
     
     $.getJSON(baseUrl + '/api/workflows/stats', function(res) {
-        if (res.sucesso) {
+        if (res.sucesso && res.dados) {
+            const exec = res.dados.execucoes || {};
+            const totalExec = parseInt(exec.total_execucoes) || 0;
+            const sucesso = parseInt(exec.execucoes_sucesso) || 0;
+            const taxa = totalExec > 0 ? Math.round((sucesso / totalExec) * 100) + '%' : '0%';
             $('#totalWorkflows').text(total);
             $('#workflowsAtivos').text(ativos);
-            $('#totalExecucoes').text(res.total_execucoes || 0);
-            $('#taxaSucesso').text(res.taxa_sucesso || '0%');
+            $('#totalExecucoes').text(totalExec);
+            $('#taxaSucesso').text(taxa);
         }
     });
 }
@@ -430,7 +436,7 @@ function executarWorkflow(id) {
 function confirmarExecucao() {
     if (!workflowParaExecutar) return;
     
-    $.post(baseUrl + '/api/workflows/execute/' + workflowParaExecutar, function(res) {
+    $.post(baseUrl + '/api/workflows/executar/' + workflowParaExecutar, {_csrf_token: csrfToken}, function(res) {
         if (res.sucesso) {
             alert('Workflow iniciado! ID Execução: ' + res.id_execucao);
             bootstrap.Modal.getInstance('#modalExecutar').hide();
@@ -443,7 +449,7 @@ function confirmarExecucao() {
 
 // Toggle ativo
 function toggleAtivo(id, ativo) {
-    $.post(baseUrl + '/api/workflows/toggle/' + id, { ativo: ativo }, function(res) {
+    $.post(baseUrl + '/api/workflows/toggle/' + id, { ativo: ativo, _csrf_token: csrfToken }, function(res) {
         if (res.sucesso) {
             carregarWorkflows();
         } else {
@@ -456,7 +462,7 @@ function toggleAtivo(id, ativo) {
 function excluirWorkflow(id) {
     if (!confirm('Deseja realmente excluir este workflow?')) return;
     
-    $.post(baseUrl + '/api/workflows/delete/' + id, function(res) {
+    $.post(baseUrl + '/api/workflows/delete/' + id, {_csrf_token: csrfToken}, function(res) {
         if (res.sucesso) {
             alert('Workflow excluído!');
             carregarWorkflows();

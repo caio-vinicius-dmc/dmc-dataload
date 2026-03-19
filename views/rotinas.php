@@ -106,7 +106,6 @@ $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 :root {
     --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -369,10 +368,11 @@ $extraStyles = <<<'STYLES'
 </style>
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>';
+$extraScripts .= <<<'SCRIPTS'
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 let tabela;
@@ -465,29 +465,66 @@ function loadTable() {
 }
 
 function executarRotina(id) {
+    // Buscar detalhes da rotina para confirmação informada
+    $.getJSON(baseUrl + "/rotinas/get/" + id, function(rotina) {
+        const dados = rotina.dados || rotina;
+        const nome = dados.nome || "Rotina #" + id;
+        const tipo = dados.tipo_execucao || dados.tipo || "N/A";
+        const blocos = dados.blocos ? dados.blocos.length : "?";
+        
+        Swal.fire({
+            title: "Confirmar execução",
+            html: `<div class="text-start">
+                <p><strong>Rotina:</strong> ${nome}</p>
+                <p><strong>Tipo:</strong> ${tipo}</p>
+                <p><strong>Blocos SQL:</strong> ${blocos}</p>
+                <hr>
+                <p class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>
+                A rotina será executada <strong>imediatamente</strong> no banco de dados de destino.</p>
+            </div>`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#10b981",
+            cancelButtonText: "Cancelar",
+            confirmButtonText: "<i class='bi bi-play-fill me-1'></i>Executar agora"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                executarRotinaConfirmada(id);
+            }
+        });
+    }).fail(function() {
+        // Fallback: confirmação simples se não conseguir buscar detalhes
+        Swal.fire({
+            title: "Executar rotina?",
+            text: "A rotina será executada imediatamente.",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#10b981",
+            cancelButtonText: "Cancelar",
+            confirmButtonText: "Sim, executar"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                executarRotinaConfirmada(id);
+            }
+        });
+    });
+}
+
+function executarRotinaConfirmada(id) {
     Swal.fire({
-        title: "Executar rotina?",
-        text: "A rotina será executada imediatamente.",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonColor: "#10b981",
-        cancelButtonText: "Cancelar",
-        confirmButtonText: "Sim, executar"
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: "Executando...",
-                html: `<div class="my-3"><div class="spinner-border text-primary"></div></div>
-                       <p class="text-muted">Aguarde a conclusão da rotina</p>`,
-                allowOutsideClick: false,
-                showConfirmButton: false
-            });
-            
-            $.ajax({
-                url: baseUrl + "/rotinas/run/" + id,
-                type: "POST",
-                dataType: "json",
-                timeout: 120000, // 2 minutos
+        title: "Executando...",
+        html: `<div class="my-3"><div class="spinner-border text-primary"></div></div>
+               <p class="text-muted">Aguarde a conclusão da rotina</p>`,
+        allowOutsideClick: false,
+        showConfirmButton: false
+    });
+    
+    $.ajax({
+        url: baseUrl + "/rotinas/run/" + id,
+        type: "POST",
+        dataType: "json",
+        timeout: 120000, // 2 minutos
+        headers: {'X-CSRF-TOKEN': csrfToken},
                 success: function(res) {
                     console.log("Resposta da execução:", res);
                     if (res.sucesso) {
@@ -523,8 +560,6 @@ function executarRotina(id) {
                     });
                 }
             });
-        }
-    });
 }
 
 function duplicarRotina(id) {
@@ -537,7 +572,7 @@ function duplicarRotina(id) {
         confirmButtonText: "Sim, duplicar"
     }).then((result) => {
         if (result.isConfirmed) {
-            $.post(baseUrl + "/rotinas/duplicar/" + id, function(res) {
+            $.post(baseUrl + "/rotinas/duplicar/" + id, {_csrf_token: csrfToken}, function(res) {
                 if (res.sucesso) {
                     Swal.fire("Duplicada!", "Rotina duplicada com sucesso.", "success");
                     loadTable();
@@ -560,7 +595,7 @@ function excluirRotina(id) {
         confirmButtonText: "Sim, excluir"
     }).then((result) => {
         if (result.isConfirmed) {
-            $.post(baseUrl + "/rotinas/delete/" + id, function(res) {
+            $.post(baseUrl + "/rotinas/delete/" + id, {_csrf_token: csrfToken}, function(res) {
                 Swal.fire("Excluída!", "Rotina removida com sucesso.", "success");
                 loadTable();
             }, "json");

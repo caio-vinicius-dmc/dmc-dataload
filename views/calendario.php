@@ -12,7 +12,6 @@ $breadcrumb = [
 
 $extraStyles = <<<'STYLES'
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 :root {
     --primary: #667eea;
@@ -564,7 +563,6 @@ body {
 STYLES;
 
 $extraScripts = <<<'SCRIPTS'
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/locales/pt-br.global.js"></script>
 <script>
@@ -584,13 +582,32 @@ function carregarRotinas() {
         success: function(response) {
             if (response.sucesso && response.dados) {
                 rotinasData = response.dados.filter(r => r.agendamento_cron);
-                renderizarFiltros();
-                carregarEventos();
             } else if (response.sucesso && response.data) {
                 rotinasData = response.data.filter(r => r.agendamento_cron);
-                renderizarFiltros();
-                carregarEventos();
             }
+            // Buscar pipelines com cron e adicionar ao filtro
+            $.ajax({
+                url: baseUrl + '/pipelines/list',
+                method: 'GET',
+                success: function(pipRes) {
+                    if (pipRes.sucesso && pipRes.data) {
+                        pipRes.data.filter(p => p.trigger_tipo === 'cron' && p.agendamento_cron).forEach(p => {
+                            rotinasData.push({
+                                id: 'pip_' + p.id,
+                                nome: '[Pipeline] ' + p.nome,
+                                agendamento_cron: p.agendamento_cron,
+                                tipo: 'pipeline'
+                            });
+                        });
+                    }
+                    renderizarFiltros();
+                    carregarEventos();
+                },
+                error: function() {
+                    renderizarFiltros();
+                    carregarEventos();
+                }
+            });
         },
         error: function() {
             $('#filtrosRotinas').html(`
@@ -678,7 +695,8 @@ function carregarEventos() {
     });
     
     if (rotinasSelecionadas.length === 0) {
-        calendar.removeAllEvents();
+        calendar.getEventSources().forEach(s => s.remove());
+        currentEvents = [];
         return;
     }
     
@@ -694,7 +712,14 @@ function carregarEventos() {
             if (response.sucesso && response.eventos) {
                 currentEvents = response.eventos;
                 filtrarEventos();
+            } else {
+                console.error('Erro ao carregar eventos:', response.erro || 'Resposta inválida');
+                calendar.getEventSources().forEach(s => s.remove());
             }
+        },
+        error: function() {
+            console.error('Erro de rede ao carregar eventos');
+            calendar.getEventSources().forEach(s => s.remove());
         }
     });
 }
@@ -702,7 +727,8 @@ function carregarEventos() {
 function filtrarEventos() {
     if (!calendar) return;
     
-    calendar.removeAllEvents();
+    // Remover todas as fontes de eventos (não apenas events)
+    calendar.getEventSources().forEach(s => s.remove());
     
     const rotinasSelecionadas = [];
     const coresRotinas = {};
@@ -717,22 +743,28 @@ function filtrarEventos() {
         }
     });
     
-    const eventosFiltrados = currentEvents.filter(evento => 
-        rotinasSelecionadas.includes(evento.rotina_id.toString())
-    );
+    const eventosFiltrados = currentEvents.filter(evento => {
+        const rid = evento.rotina_id ? evento.rotina_id.toString() : '';
+        return rotinasSelecionadas.includes(rid);
+    });
     
-    const eventosFormatados = eventosFiltrados.map(evento => ({
-        id: evento.id,
-        title: evento.titulo,
-        start: evento.data,
-        backgroundColor: coresRotinas[evento.rotina_id],
-        borderColor: coresRotinas[evento.rotina_id],
-        extendedProps: {
-            rotina_id: evento.rotina_id,
-            cron: evento.cron,
-            descricao: evento.descricao
-        }
-    }));
+    const eventosFormatados = eventosFiltrados.map(evento => {
+        const rid = evento.rotina_id ? evento.rotina_id.toString() : '';
+        return {
+            id: evento.id,
+            title: evento.titulo,
+            start: evento.data,
+            backgroundColor: coresRotinas[rid] || evento.cor || '#6c757d',
+            borderColor: coresRotinas[rid] || evento.cor || '#6c757d',
+            extendedProps: {
+                rotina_id: evento.rotina_id,
+                cron: evento.cron,
+                descricao: evento.descricao,
+                tipo: evento.tipo || 'rotina',
+                status: evento.status || null
+            }
+        };
+    });
     
     calendar.addEventSource(eventosFormatados);
 }

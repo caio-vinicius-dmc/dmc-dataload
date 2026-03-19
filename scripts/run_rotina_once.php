@@ -2,7 +2,7 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\Database;
-use App\Controladores\ConexoesController;
+use App\Controllers\ConexoesController;
 use App\Servicos\ServicoExecucao;
 
 // Definir chave estável para este run

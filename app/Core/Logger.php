@@ -124,7 +124,7 @@ class Logger
             $db = Database::getConexao();
             
             $stmt = $db->prepare("INSERT INTO tb_logs_sistema 
-                (nivel, mensagem, contexto, ip, uri, user_agent, created_at) 
+                (nivel, mensagem, contexto, ip_address, request_uri, user_agent, criado_em) 
                 VALUES (?, ?, ?, ?, ?, ?, NOW())");
             
             $stmt->execute([

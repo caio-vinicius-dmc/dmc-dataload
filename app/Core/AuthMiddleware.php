@@ -64,9 +64,17 @@ class AuthMiddleware
         }
 
         $usuario = self::obterUsuario();
-        $nivel = $usuario['nivel_acesso'] ?? 'user';
+        $nivel = $usuario['nivel_acesso'] ?? 'operador';
 
-        $niveis = ['user' => 1, 'editor' => 2, 'admin' => 3];
+        $niveis = [
+            'operador' => 1,
+            'desenvolvedor' => 2,
+            'admin' => 3,
+            'super_admin' => 4,
+            // Aliases legados
+            'user' => 2,
+            'editor' => 2,
+        ];
         $nivelAtual = $niveis[$nivel] ?? 0;
         $nivelMin = $niveis[$nivelRequerido] ?? 999;
 

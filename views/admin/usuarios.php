@@ -1,10 +1,15 @@
 <?php
 /**
  * DMC DataLoad - Gestão de Usuários
- * Nova UI Moderna
+ * RBAC: Super Admin, Administrador, Desenvolvedor, Operador
  */
 $pageTitle = 'Usuários';
 $currentPage = 'usuarios';
+$csrfToken = \App\Core\AuthMiddleware::gerarTokenCSRF();
+
+$nivelAcessoLogado = $usuario['nivel_acesso'] ?? 'operador';
+$ehSuperAdmin = ($nivelAcessoLogado === 'super_admin');
+$ehAdmin = in_array($nivelAcessoLogado, ['admin', 'super_admin']);
 
 ob_start();
 ?>
@@ -17,11 +22,13 @@ ob_start();
         <h1 class="page-title-modern">Usuários</h1>
         <p class="page-subtitle-modern">Gerencie os usuários do sistema</p>
     </div>
+    <?php if ($ehAdmin): ?>
     <div class="ms-auto">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalUsuario" onclick="novoUsuario()">
+        <button class="btn btn-primary" onclick="novoUsuario()">
             <i class="bi bi-person-plus me-2"></i>Novo Usuário
         </button>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- Stats -->
@@ -49,9 +56,9 @@ ob_start();
     </div>
     <div class="col-6 col-lg-3">
         <div class="stat-card warning">
-            <div class="stat-icon"><i class="bi bi-key"></i></div>
-            <div class="stat-value" id="usuariosLdap">0</div>
-            <div class="stat-label">Usuários LDAP</div>
+            <div class="stat-icon"><i class="bi bi-code-slash"></i></div>
+            <div class="stat-value" id="usuariosDev">0</div>
+            <div class="stat-label">Desenvolvedores</div>
         </div>
     </div>
 </div>
@@ -65,13 +72,14 @@ ob_start();
                         <th>Usuário</th>
                         <th>Tipo</th>
                         <th>Nível de Acesso</th>
+                        <th>Empresas</th>
                         <th>Criado em</th>
                         <th width="120">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="5" class="text-center py-4">
+                        <td colspan="6" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm text-primary"></div>
                             <span class="ms-2">Carregando...</span>
                         </td>
@@ -84,7 +92,7 @@ ob_start();
 
 <!-- Modal Usuário -->
 <div class="modal fade" id="modalUsuario" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-person me-2"></i><span id="modalTitle">Novo Usuário</span></h5>
@@ -93,38 +101,62 @@ ob_start();
             <form id="formUsuario">
                 <input type="hidden" name="id" id="usuarioId">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nome de Usuário *</label>
-                        <input type="text" class="form-control" name="nome_usuario" id="nome_usuario" required 
-                               pattern="[a-zA-Z0-9_]+" title="Apenas letras, números e underscore">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Senha <span id="senhaObrig">*</span></label>
-                        <div class="input-group">
-                            <input type="password" class="form-control" name="senha" id="senha">
-                            <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
-                                <i class="bi bi-eye" id="iconSenha"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-primary" onclick="gerarSenha()" title="Gerar senha">
-                                <i class="bi bi-dice-5"></i>
-                            </button>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nome de Usuário *</label>
+                                <input type="text" class="form-control" name="nome_usuario" id="nome_usuario" required 
+                                       pattern="[a-zA-Z0-9_]+" title="Apenas letras, números e underscore">
+                            </div>
                         </div>
-                        <small class="text-muted" id="senhaHelp">Mínimo 6 caracteres</small>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Senha <span id="senhaObrig">*</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" name="senha" id="senha">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
+                                        <i class="bi bi-eye" id="iconSenha"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="gerarSenha()" title="Gerar senha">
+                                        <i class="bi bi-dice-5"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted" id="senhaHelp">Mínimo 6 caracteres</small>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nível de Acesso *</label>
-                        <select class="form-select" name="nivel_acesso" id="nivel_acesso" required>
-                            <option value="user">Usuário</option>
-                            <option value="operador">Operador</option>
-                            <option value="admin">Administrador</option>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nível de Acesso *</label>
+                                <select class="form-select" name="nivel_acesso" id="nivel_acesso" required>
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mt-4">
+                                <input type="checkbox" class="form-check-input" name="eh_ldap" id="eh_ldap" value="1">
+                                <label class="form-check-label" for="eh_ldap">
+                                    <i class="bi bi-key me-1"></i>Autenticação via LDAP
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" class="form-check-input" name="eh_ldap" id="eh_ldap" value="1">
-                        <label class="form-check-label" for="eh_ldap">
-                            <i class="bi bi-key me-1"></i>Autenticação via LDAP
-                        </label>
-                        <small class="d-block text-muted">Se marcado, a senha será validada pelo Active Directory</small>
+                    
+                    <hr>
+                    <h6 class="text-primary"><i class="bi bi-building me-2"></i>Empresas</h6>
+                    <div class="mb-3" id="empresasContainer">
+                        <div class="d-flex flex-wrap gap-2" id="empresasCheckboxes">
+                            <div class="text-muted small">Carregando empresas...</div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-primary"><i class="bi bi-folder me-2"></i>Projetos</h6>
+                    <div class="mb-3" id="projetosContainer">
+                        <div class="d-flex flex-wrap gap-2" id="projetosCheckboxes">
+                            <div class="text-muted small">Selecione empresas primeiro...</div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -143,67 +175,56 @@ $content = ob_get_clean();
 
 $extraStyles = '
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 .stat-card .stat-value { font-size: 1.75rem; }
 .page-header-modern {
-    background: white;
-    padding: 1.75rem 2rem;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+    background: white; padding: 1.75rem 2rem; border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
 }
 .page-icon-modern {
-    width: 70px;
-    height: 70px;
-    border-radius: 16px;
+    width: 70px; height: 70px; border-radius: 16px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    color: white;
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: white; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3); flex-shrink: 0;
 }
 .page-title-modern {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 0.25rem 0;
+    font-size: 2rem; font-weight: 700; margin: 0 0 0.25rem 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.page-subtitle-modern {
-    color: #64748b;
-    margin: 0;
-    font-size: 1rem;
+.page-subtitle-modern { color: #64748b; margin: 0; font-size: 1rem; }
+.empresa-check, .projeto-check {
+    border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.75rem;
+    transition: all 0.2s; cursor: pointer;
 }
+.empresa-check:hover, .projeto-check:hover { border-color: #667eea; background: #f8faff; }
+.empresa-check input:checked + label, .projeto-check input:checked + label { color: #667eea; font-weight: 600; }
 </style>
 ';
 
 $extraScripts = '
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 let tabela;
+const csrfToken = ' . json_encode($csrfToken) . ';
+const ehSuperAdmin = ' . json_encode($ehSuperAdmin) . ';
+const ehAdmin = ' . json_encode($ehAdmin) . ';
+const usuarioLogadoId = ' . json_encode(\App\Core\AuthMiddleware::obterUsuarioId()) . ';
+let empresasDisp = [];
+let projetosDisp = [];
 
 const nivelLabels = {
-    admin: `<span class="badge bg-danger"><i class="bi bi-shield-check me-1"></i>Admin</span>`,
-    operador: `<span class="badge bg-warning text-dark"><i class="bi bi-person-gear me-1"></i>Operador</span>`,
-    user: `<span class="badge bg-primary"><i class="bi bi-person me-1"></i>Usuário</span>`
+    super_admin: `<span class="badge bg-dark"><i class="bi bi-shield-fill-check me-1"></i>Super Admin</span>`,
+    admin: `<span class="badge bg-danger"><i class="bi bi-shield-check me-1"></i>Administrador</span>`,
+    desenvolvedor: `<span class="badge bg-primary"><i class="bi bi-code-slash me-1"></i>Desenvolvedor</span>`,
+    operador: `<span class="badge bg-warning text-dark"><i class="bi bi-eye me-1"></i>Operador</span>`
 };
 
 function loadTable() {
     $.getJSON(baseUrl + "/admin/usuarios/list", function(res) {
-        // Destruir DataTable se já existir
         if ($.fn.DataTable.isDataTable("#tblUsuarios")) {
             $("#tblUsuarios").DataTable().destroy();
         }
@@ -211,19 +232,39 @@ function loadTable() {
         const tbody = $("#tblUsuarios tbody");
         tbody.empty();
         
-        let total = 0, ativos = 0, admins = 0, ldap = 0;
+        let total = 0, ativos = 0, admins = 0, devs = 0;
         
         (res.dados || []).forEach(function(r) {
             total++;
-            ativos++; // Todos são considerados ativos por enquanto
-            if (r.nivel_acesso === "admin") admins++;
-            if (r.eh_ldap) ldap++;
+            ativos++;
+            if (r.nivel_acesso === "admin" || r.nivel_acesso === "super_admin") admins++;
+            if (r.nivel_acesso === "desenvolvedor") devs++;
             
             const tipoAuth = r.eh_ldap 
                 ? `<span class="badge bg-warning text-dark"><i class="bi bi-key me-1"></i>LDAP</span>`
                 : `<span class="badge bg-secondary"><i class="bi bi-lock me-1"></i>Local</span>`;
             
             const dataCriacao = r.data_criacao ? new Date(r.data_criacao).toLocaleDateString("pt-BR") : "-";
+            
+            // Empresas do usuário
+            let empresasHtml = "-";
+            if (r.empresas && r.empresas.length > 0) {
+                empresasHtml = r.empresas.map(e => `<span class="badge bg-info me-1">${e.nome}</span>`).join("");
+            }
+            
+            // Ações baseadas em permissão
+            let acoes = "";
+            const podeGerenciar = r.nivel_acesso !== "super_admin" && (ehSuperAdmin || (ehAdmin && r.nivel_acesso !== "admin"));
+            
+            if (podeGerenciar) {
+                acoes = `<div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="editarUsuario(${r.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-warning" onclick="resetarSenha(${r.id})" title="Resetar Senha"><i class="bi bi-key"></i></button>
+                    <button class="btn btn-outline-danger" onclick="excluirUsuario(${r.id})" title="Excluir"><i class="bi bi-trash"></i></button>
+                </div>`;
+            } else if (r.id == usuarioLogadoId) {
+                acoes = `<span class="badge bg-secondary">Você</span>`;
+            }
             
             tbody.append(`<tr>
                 <td>
@@ -236,34 +277,80 @@ function loadTable() {
                 </td>
                 <td>${tipoAuth}</td>
                 <td>${nivelLabels[r.nivel_acesso] || r.nivel_acesso}</td>
+                <td>${empresasHtml}</td>
                 <td>${dataCriacao}</td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="editarUsuario(${r.id})" title="Editar">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-outline-warning" onclick="resetarSenha(${r.id})" title="Resetar Senha">
-                            <i class="bi bi-key"></i>
-                        </button>
-                        <button class="btn btn-outline-danger" onclick="excluirUsuario(${r.id})" title="Excluir">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
+                <td>${acoes}</td>
             </tr>`);
         });
         
-        // Inicializar DataTable após popular
         tabela = $("#tblUsuarios").DataTable({
             language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json" },
             order: [[0, "asc"]]
         });
         
-        // Atualizar stats
         $("#totalUsuarios").text(total);
         $("#usuariosAtivos").text(ativos);
         $("#usuariosAdmin").text(admins);
-        $("#usuariosLdap").text(ldap);
+        $("#usuariosDev").text(devs);
+    });
+}
+
+function carregarEmpresas() {
+    $.getJSON(baseUrl + "/api/permissoes/empresas-usuario", function(res) {
+        empresasDisp = res.dados || [];
+        renderizarEmpresas();
+    });
+}
+
+function renderizarEmpresas(selecionadas) {
+    const container = document.getElementById("empresasCheckboxes");
+    if (empresasDisp.length === 0) {
+        container.innerHTML = `<div class="text-muted small">Nenhuma empresa disponível</div>`;
+        return;
+    }
+    container.innerHTML = empresasDisp.map(e => `
+        <div class="empresa-check">
+            <input type="checkbox" class="form-check-input empresa-cb" id="emp_${e.id}" 
+                   name="empresas[]" value="${e.id}" ${(selecionadas||[]).includes(e.id) ? "checked" : ""}>
+            <label class="form-check-label ms-1" for="emp_${e.id}">${e.nome}</label>
+        </div>
+    `).join("");
+    
+    // Atualizar projetos quando empresas mudam
+    document.querySelectorAll(".empresa-cb").forEach(cb => {
+        cb.addEventListener("change", carregarProjetosParaEmpresas);
+    });
+    
+    if (selecionadas && selecionadas.length > 0) {
+        carregarProjetosParaEmpresas();
+    }
+}
+
+function carregarProjetosParaEmpresas(projetosSelecionados) {
+    const empresasSel = Array.from(document.querySelectorAll(".empresa-cb:checked")).map(cb => cb.value);
+    const container = document.getElementById("projetosCheckboxes");
+    
+    if (empresasSel.length === 0) {
+        container.innerHTML = `<div class="text-muted small">Selecione empresas primeiro...</div>`;
+        return;
+    }
+    
+    $.getJSON(baseUrl + "/api/permissoes/projetos-usuario?empresas=" + empresasSel.join(","), function(res) {
+        projetosDisp = res.dados || [];
+        if (projetosDisp.length === 0) {
+            container.innerHTML = `<div class="text-muted small">Nenhum projeto disponível nestas empresas</div>`;
+            return;
+        }
+        const selIds = Array.isArray(projetosSelecionados) ? projetosSelecionados : [];
+        container.innerHTML = projetosDisp.map(p => `
+            <div class="projeto-check">
+                <input type="checkbox" class="form-check-input" id="proj_${p.id}" 
+                       name="projetos[]" value="${p.id}" ${selIds.includes(p.id) ? "checked" : ""}>
+                <label class="form-check-label ms-1" for="proj_${p.id}">
+                    ${p.nome} <small class="text-muted">(${p.empresa_nome})</small>
+                </label>
+            </div>
+        `).join("");
     });
 }
 
@@ -274,20 +361,49 @@ function novoUsuario() {
     document.getElementById("senha").required = true;
     document.getElementById("senhaObrig").style.display = "";
     document.getElementById("senhaHelp").textContent = "Mínimo 6 caracteres";
+    
+    // Preencher opções de nível de acesso
+    carregarOpcoesNivel();
+    carregarEmpresas();
+    document.getElementById("projetosCheckboxes").innerHTML = `<div class="text-muted small">Selecione empresas primeiro...</div>`;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById("modalUsuario")).show();
+}
+
+function carregarOpcoesNivel() {
+    $.getJSON(baseUrl + "/api/permissoes/papeis-disponiveis", function(res) {
+        const sel = document.getElementById("nivel_acesso");
+        const labels = {admin: "Administrador", desenvolvedor: "Desenvolvedor", operador: "Operador"};
+        sel.innerHTML = (res.dados || []).map(p => `<option value="${p}">${labels[p] || p}</option>`).join("");
+    });
 }
 
 function editarUsuario(id) {
     $.getJSON(baseUrl + "/admin/usuarios/get/" + id, function(r) {
         document.getElementById("usuarioId").value = r.id;
         document.getElementById("nome_usuario").value = r.nome_usuario;
-        document.getElementById("nivel_acesso").value = r.nivel_acesso;
         document.getElementById("eh_ldap").checked = r.eh_ldap;
         document.getElementById("senha").value = "";
         document.getElementById("senha").required = false;
         document.getElementById("senhaObrig").style.display = "none";
         document.getElementById("senhaHelp").textContent = "Deixe vazio para manter a senha atual";
         document.getElementById("modalTitle").textContent = "Editar Usuário";
-        new bootstrap.Modal("#modalUsuario").show();
+        
+        carregarOpcoesNivel();
+        setTimeout(() => {
+            document.getElementById("nivel_acesso").value = r.nivel_acesso;
+        }, 200);
+        
+        carregarEmpresas();
+        setTimeout(() => {
+            const empIds = (r.empresas || []).map(e => e.id);
+            renderizarEmpresas(empIds);
+            setTimeout(() => {
+                const projIds = (r.projetos || []).map(p => p.id);
+                carregarProjetosParaEmpresas(projIds);
+            }, 300);
+        }, 200);
+        
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("modalUsuario")).show();
     });
 }
 
@@ -302,7 +418,7 @@ function excluirUsuario(id) {
         confirmButtonText: "Sim, excluir"
     }).then((result) => {
         if (result.isConfirmed) {
-            $.post(baseUrl + "/admin/usuarios/delete/" + id, function(res) {
+            $.post(baseUrl + "/admin/usuarios/delete/" + id, {_csrf_token: csrfToken}, function(res) {
                 if (res.sucesso) {
                     Swal.fire("Excluído!", "Usuário removido com sucesso.", "success");
                     loadTable();
@@ -325,13 +441,11 @@ function resetarSenha(id) {
         cancelButtonText: "Cancelar",
         confirmButtonText: "Resetar",
         inputValidator: (value) => {
-            if (!value || value.length < 6) {
-                return "A senha deve ter no mínimo 6 caracteres";
-            }
+            if (!value || value.length < 6) return "A senha deve ter no mínimo 6 caracteres";
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            $.post(baseUrl + "/admin/usuarios/reset-senha", { id: id, senha: result.value }, function(res) {
+            $.post(baseUrl + "/admin/usuarios/reset-senha", { id: id, senha: result.value, _csrf_token: csrfToken }, function(res) {
                 if (res.sucesso) {
                     Swal.fire("Senha alterada!", "A nova senha foi definida.", "success");
                 } else {
@@ -345,21 +459,14 @@ function resetarSenha(id) {
 function toggleSenha() {
     const input = document.getElementById("senha");
     const icon = document.getElementById("iconSenha");
-    if (input.type === "password") {
-        input.type = "text";
-        icon.className = "bi bi-eye-slash";
-    } else {
-        input.type = "password";
-        icon.className = "bi bi-eye";
-    }
+    if (input.type === "password") { input.type = "text"; icon.className = "bi bi-eye-slash"; }
+    else { input.type = "password"; icon.className = "bi bi-eye"; }
 }
 
 function gerarSenha() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
     let senha = "";
-    for (let i = 0; i < 12; i++) {
-        senha += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    for (let i = 0; i < 12; i++) senha += chars.charAt(Math.floor(Math.random() * chars.length));
     document.getElementById("senha").value = senha;
     document.getElementById("senha").type = "text";
     document.getElementById("iconSenha").className = "bi bi-eye-slash";
@@ -372,9 +479,7 @@ document.getElementById("eh_ldap").addEventListener("change", function() {
         senhaField.required = false;
         senhaField.placeholder = "Senha será validada pelo LDAP";
     } else {
-        if (!document.getElementById("usuarioId").value) {
-            senhaField.required = true;
-        }
+        if (!document.getElementById("usuarioId").value) senhaField.required = true;
         senhaField.placeholder = "";
     }
 });
@@ -382,12 +487,13 @@ document.getElementById("eh_ldap").addEventListener("change", function() {
 // Submit form
 document.getElementById("formUsuario").addEventListener("submit", function(e) {
     e.preventDefault();
-    
     const btn = document.getElementById("btnSalvar");
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Salvando...`;
     
-    $.post(baseUrl + "/admin/usuarios/salvar", $(this).serialize(), function(res) {
+    const data = $(this).serialize() + "&_csrf_token=" + encodeURIComponent(csrfToken);
+    
+    $.post(baseUrl + "/admin/usuarios/salvar", data, function(res) {
         if (res.sucesso) {
             bootstrap.Modal.getInstance("#modalUsuario").hide();
             Swal.fire("Salvo!", res.mensagem || "Usuário salvo com sucesso.", "success");

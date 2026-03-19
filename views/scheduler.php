@@ -5,6 +5,7 @@
  */
 $pageTitle = 'Agendamentos';
 $currentPage = 'scheduler';
+$csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
 
 ob_start();
 ?>
@@ -490,7 +491,6 @@ ob_start();
 $content = ob_get_clean();
 
 $extraStyles = <<<'STYLES'
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
 :root {
     --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -687,8 +687,8 @@ $extraStyles = <<<'STYLES'
 </style>
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>';
+$extraScripts .= <<<'SCRIPTS'
 
 <script>
 let workerRunning = false;
@@ -743,26 +743,34 @@ function carregarAgendamentos() {
             const statusBadge = r.ativa 
                 ? `<span class="badge-status badge-success"><i class="bi bi-check-circle me-1"></i>Ativa</span>`
                 : `<span class="badge-status badge-secondary"><i class="bi bi-pause-circle me-1"></i>Inativa</span>`;
+            const isPipeline = r.tipo === 'pipeline';
+            const tipoBadge = isPipeline 
+                ? `<span class="badge bg-info text-white ms-1" style="font-size:0.7rem;">Pipeline</span>` 
+                : '';
+            
+            const acoesPipeline = isPipeline 
+                ? `<a class="btn btn-outline-primary btn-sm" href="${baseUrl}/pipelines/builder/${r.id}" title="Editar Pipeline">
+                       <i class="bi bi-diagram-3-fill"></i>
+                   </a>`
+                : `<div class="btn-group btn-group-sm">
+                       <button class="btn btn-outline-${r.ativa ? "warning" : "success"}" onclick="toggleAtiva(${r.id}, ${!r.ativa})" title="${r.ativa ? "Desativar" : "Ativar"}">
+                           <i class="bi bi-${r.ativa ? "pause" : "play"}-fill"></i>
+                       </button>
+                       <button class="btn btn-outline-primary" onclick="editarAgendamento(${r.id})" title="Editar Agendamento">
+                           <i class="bi bi-pencil-fill"></i>
+                       </button>
+                       <button class="btn btn-outline-danger" onclick="excluirAgendamento(${r.id}, '${r.nome}')" title="Excluir Agendamento">
+                           <i class="bi bi-trash-fill"></i>
+                       </button>
+                   </div>`;
             
             tbody.append(`<tr>
-                <td><strong>${r.nome}</strong></td>
+                <td><strong>${r.nome}</strong>${tipoBadge}</td>
                 <td><code>${r.agendamento_cron}</code></td>
                 <td><small class="text-muted">${descricaoCron(r.agendamento_cron)}</small></td>
                 <td>${proxExec}</td>
                 <td>${statusBadge}</td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-${r.ativa ? "warning" : "success"}" onclick="toggleAtiva(${r.id}, ${!r.ativa})" title="${r.ativa ? "Desativar" : "Ativar"}">
-                            <i class="bi bi-${r.ativa ? "pause" : "play"}-fill"></i>
-                        </button>
-                        <button class="btn btn-outline-primary" onclick="editarAgendamento(${r.id})" title="Editar Agendamento">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-outline-danger" onclick="excluirAgendamento(${r.id}, '${r.nome}')" title="Excluir Agendamento">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
-                    </div>
-                </td>
+                <td>${acoesPipeline}</td>
             </tr>`);
         });
         
@@ -817,7 +825,7 @@ function verificarWorker() {
 }
 
 function toggleAtiva(id, ativar) {
-    $.post(baseUrl + "/api/scheduler/toggle", { id: id, ativa: ativar ? 1 : 0 }, function(res) {
+    $.post(baseUrl + "/api/scheduler/toggle", { id: id, ativa: ativar ? 1 : 0, _csrf_token: csrfToken }, function(res) {
         if (res.sucesso) {
             Swal.fire("Sucesso!", ativar ? "Rotina ativada." : "Rotina desativada.", "success");
             carregarAgendamentos();
@@ -853,7 +861,7 @@ function editarAgendamento(id) {
             }
         }).then(result => {
             if (result.isConfirmed) {
-                $.post(baseUrl + "/api/scheduler/atualizar", { id: id, cron: result.value }, function(res) {
+                $.post(baseUrl + "/api/scheduler/atualizar", { id: id, cron: result.value, _csrf_token: csrfToken }, function(res) {
                     if (res.sucesso) {
                         Swal.fire("Salvo!", "Agendamento atualizado.", "success");
                         carregarAgendamentos();
@@ -888,7 +896,7 @@ function adicionarLog(msg, tipo = "info") {
 $("#btnStartWorker").click(function() {
     $(this).prop("disabled", true).html(`<span class="spinner-border spinner-border-sm me-2"></span>Iniciando...`);
     
-    $.post(baseUrl + "/api/scheduler/start", function(res) {
+    $.post(baseUrl + "/api/scheduler/start", {_csrf_token: csrfToken}, function(res) {
         if (res.sucesso) {
             adicionarLog("Worker iniciado com sucesso!", "success");
             verificarWorker();
@@ -905,7 +913,7 @@ $("#btnStartWorker").click(function() {
 $("#btnStopWorker").click(function() {
     $(this).prop("disabled", true);
     
-    $.post(baseUrl + "/api/scheduler/stop", function(res) {
+    $.post(baseUrl + "/api/scheduler/stop", {_csrf_token: csrfToken}, function(res) {
         if (res.sucesso) {
             adicionarLog("Worker parado.", "warning");
             verificarWorker();
@@ -1087,7 +1095,7 @@ function excluirAgendamento(id, nome) {
         cancelButtonText: "Cancelar"
     }).then((result) => {
         if (result.isConfirmed) {
-            $.post(baseUrl + "/api/scheduler/excluir", { id_rotina: id }, function(res) {
+            $.post(baseUrl + "/api/scheduler/excluir", { id_rotina: id, _csrf_token: csrfToken }, function(res) {
                 if (res.sucesso) {
                     Swal.fire("Excluído!", "Agendamento removido com sucesso.", "success");
                     carregarAgendamentos();
@@ -1270,6 +1278,7 @@ function salvarAgendamento() {
         ativa: ativaStatus
     };
     
+    dados._csrf_token = csrfToken;
     $.post(baseUrl + "/api/scheduler/salvar", dados, function(res) {
         if (res.sucesso) {
             Swal.fire("Sucesso!", "Agendamento configurado com sucesso!", "success");

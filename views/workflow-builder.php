@@ -280,11 +280,26 @@ ob_start();
         </p>
     </div>
     <div class="ms-auto d-flex gap-2">
+        <?php
+        $nivelWf = \App\Core\AuthMiddleware::obterUsuario()['nivel_acesso'] ?? 'operador';
+        if (in_array($nivelWf, ['super_admin', 'admin'])): ?>
+        <div class="dropdown">
+            <button class="btn btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Empresas / Projetos">
+                <i class="bi bi-building"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:280px">
+                <?php include __DIR__ . '/partials/recurso_empresa_projeto.php'; ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>/workflows" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-2"></i>Voltar
         </a>
         <button class="btn btn-success" id="btnSalvar">
             <i class="bi bi-save me-2"></i>Salvar
+        </button>
+        <button class="btn btn-outline-secondary" onclick="abrirModalCompartilhamento('workflow', <?= $workflowId ?? 'null' ?>)" title="Compartilhar">
+            <i class="bi bi-share me-2"></i>Compartilhar
         </button>
         <button class="btn-modern-primary" id="btnExecutar">
             <i class="bi bi-play-fill me-2"></i>Executar
@@ -399,13 +414,16 @@ ob_start();
     </div>
 </div>
 
+<?php include __DIR__ . '/partials/compartilhamento_modal.php'; ?>
+
 <?php
 $content = ob_get_clean();
 
 $extraStyles = <<<STYLES
 STYLES;
 
-$extraScripts = <<<'SCRIPTS'
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>';
+$extraScripts .= <<<'SCRIPTS'
 <script>
 // Estado do workflow
 let nodes = [];
@@ -802,13 +820,19 @@ function salvarWorkflow() {
         ativo: true
     };
     
+    // Empresas/Projetos RBAC
+    var empSel = document.getElementById('rbac_empresas');
+    var projSel = document.getElementById('rbac_projetos');
+    if (empSel) data.empresas = Array.from(empSel.selectedOptions).map(function(o) { return parseInt(o.value); });
+    if (projSel) data.projetos = Array.from(projSel.selectedOptions).map(function(o) { return parseInt(o.value); });
+    
     const url = workflowId ? baseUrl + '/api/workflows/update/' + workflowId : baseUrl + '/api/workflows/create';
     
     $.ajax({
         url: url,
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify(data),
+        data: JSON.stringify(Object.assign({}, data, {_csrf_token: csrfToken})),
         success: function(res) {
             if (res.sucesso) {
                 alert('Workflow salvo com sucesso!');
@@ -843,6 +867,13 @@ function carregarWorkflow(id) {
                 edges = wf.edges;
                 renderizarEdges();
             }
+            
+            // Preencher empresas/projetos RBAC
+            var empIds = (res.empresas || []).map(function(e) { return e.id_empresa || e.id; });
+            var projIds = (res.projetos || []).map(function(p) { return p.id_projeto || p.id; });
+            if (typeof rbacCarregarOpcoes === 'function') {
+                rbacCarregarOpcoes(function() { rbacPreencherSelects(empIds, projIds); });
+            }
         }
     });
 }
@@ -856,7 +887,7 @@ function executarWorkflow() {
     
     if (!confirm('Deseja executar este workflow agora?')) return;
     
-    $.post(baseUrl + '/api/workflows/execute/' + workflowId, function(res) {
+    $.post(baseUrl + '/api/workflows/execute/' + workflowId, {_csrf_token: csrfToken}, function(res) {
         if (res.sucesso) {
             alert('Workflow iniciado! ID de execução: ' + res.id_execucao);
         } else {
@@ -866,6 +897,9 @@ function executarWorkflow() {
 }
 </script>
 SCRIPTS;
+
+$extraScripts .= '<script src="' . BASE_URL . '/assets/js/rbac-recurso.js"></script>';
+$extraScripts .= '<script src="' . BASE_URL . '/assets/js/rbac-compartilhamento.js"></script>';
 
 include __DIR__ . '/layouts/base.php';
 ?>
