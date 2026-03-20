@@ -22,7 +22,7 @@ ob_start();
         <p class="page-subtitle-modern">Gerencie as conexões com bancos de dados externos</p>
     </div>
     <div class="ms-auto d-flex gap-2">
-        <a href="<?= $baseUrl ?>/drivers-status" class="btn btn-outline-secondary" target="_blank">
+        <a href="<?= BASE_URL ?>/drivers-status" class="btn btn-outline-secondary" target="_blank">
             <i class="bi bi-plugin me-2"></i>Status dos Drivers
         </a>
         <button class="btn-modern-primary" onclick="novaConexao()">
@@ -33,18 +33,18 @@ ob_start();
 
 <!-- Stat Cards -->
 <div class="row g-3 mb-4" id="statsCards">
-    <div class="col-md-3">
+    <div class="col-6 col-lg">
         <div class="stat-card-modern info-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-hdd-network"></i>
             </div>
             <div class="stat-content">
                 <div class="stat-value-modern" id="totalConexoes">0</div>
-                <div class="stat-label-modern">Total de Conexões</div>
+                <div class="stat-label-modern">Total</div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-lg">
         <div class="stat-card-modern success-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-filetype-sql"></i>
@@ -55,7 +55,7 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-lg">
         <div class="stat-card-modern primary-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-database"></i>
@@ -66,7 +66,18 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-lg">
+        <div class="stat-card-modern warning-card">
+            <div class="stat-icon-modern">
+                <i class="bi bi-database-fill"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="totalMariaDB">0</div>
+                <div class="stat-label-modern">MariaDB</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
         <div class="stat-card-modern danger-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-microsoft"></i>
@@ -74,6 +85,28 @@ ob_start();
             <div class="stat-content">
                 <div class="stat-value-modern" id="totalSQLServer">0</div>
                 <div class="stat-label-modern">SQL Server</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card-modern oracle-card">
+            <div class="stat-icon-modern">
+                <i class="bi bi-database-gear"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="totalOracle">0</div>
+                <div class="stat-label-modern">Oracle</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
+        <div class="stat-card-modern secondary-card">
+            <div class="stat-icon-modern">
+                <i class="bi bi-file-earmark-binary"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="totalSQLite">0</div>
+                <div class="stat-label-modern">SQLite</div>
             </div>
         </div>
     </div>
@@ -301,6 +334,9 @@ $extraStyles = <<<'STYLES'
 .success-card .stat-icon-modern { background: var(--gradient-success); }
 .primary-card .stat-icon-modern { background: var(--gradient-primary); }
 .danger-card .stat-icon-modern { background: var(--gradient-danger); }
+.warning-card .stat-icon-modern { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.oracle-card .stat-icon-modern { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); }
+.secondary-card .stat-icon-modern { background: linear-gradient(135deg, #64748b 0%, #475569 100%); }
 
 .stat-content {
     flex: 1;
@@ -594,20 +630,29 @@ function atualizarStats(data) {
         total: 0,
         postgres: 0,
         mysql: 0,
-        sqlserver: 0
+        mariadb: 0,
+        sqlserver: 0,
+        oracle: 0,
+        sqlite: 0
     };
     
     (data || []).forEach(r => {
         stats.total++;
         if (r.tipo_banco === 'postgres') stats.postgres++;
         else if (r.tipo_banco === 'mysql') stats.mysql++;
+        else if (r.tipo_banco === 'mariadb') stats.mariadb++;
         else if (r.tipo_banco === 'sqlserver') stats.sqlserver++;
+        else if (r.tipo_banco === 'oracle') stats.oracle++;
+        else if (r.tipo_banco === 'sqlite') stats.sqlite++;
     });
     
     document.getElementById('totalConexoes').textContent = stats.total;
     document.getElementById('totalPostgres').textContent = stats.postgres;
     document.getElementById('totalMySQL').textContent = stats.mysql;
+    document.getElementById('totalMariaDB').textContent = stats.mariadb;
     document.getElementById('totalSQLServer').textContent = stats.sqlserver;
+    document.getElementById('totalOracle').textContent = stats.oracle;
+    document.getElementById('totalSQLite').textContent = stats.sqlite;
 }
 
 function loadTable() {
@@ -699,9 +744,9 @@ function editarConexao(id) {
         document.getElementById("modalTitle").textContent = "Editar Conexão";
         document.getElementById("resultadoTeste").style.display = "none";
         
-        // Preencher empresas/projetos
-        var empIds = (r.empresas || []).map(function(e) { return e.id_empresa || e.id; });
-        var projIds = (r.projetos || []).map(function(p) { return p.id_projeto || p.id; });
+        // Preencher empresas/projetos (API retorna array plano de IDs via FETCH_COLUMN)
+        var empIds = (r.empresas || []).map(function(e) { return parseInt(e.id_empresa || e.id || e, 10); });
+        var projIds = (r.projetos || []).map(function(p) { return parseInt(p.id_projeto || p.id || p, 10); });
         if (typeof rbacCarregarOpcoes === 'function') {
             rbacCarregarOpcoes(function() { if (typeof rbacPreencherSelects === 'function') rbacPreencherSelects(empIds, projIds); });
         }

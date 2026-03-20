@@ -111,11 +111,11 @@ class PipelineController
                          $tags, $id]);
 
             // Associar empresas/projetos
-            if (isset($data['empresas']) && is_array($data['empresas'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', (int)$id, array_map('intval', $data['empresas']));
-            }
-            if (isset($data['projetos']) && is_array($data['projetos'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', (int)$id, array_map('intval', $data['projetos']));
+            if (!empty($data['_rbac_presente'])) {
+                $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+                $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', (int)$id, $idsEmpresas);
+                \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', (int)$id, $idsProjetos);
             }
 
             return ['sucesso' => true, 'mensagem' => 'Pipeline atualizado', 'id' => (int)$id];
@@ -137,11 +137,11 @@ class PipelineController
         $newId = (int)$s->fetchColumn();
 
         // Associar empresas/projetos
-        if (isset($data['empresas']) && is_array($data['empresas'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', $newId, array_map('intval', $data['empresas']));
-        }
-        if (isset($data['projetos']) && is_array($data['projetos'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', $newId, array_map('intval', $data['projetos']));
+        if (!empty($data['_rbac_presente'])) {
+            $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+            $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', $newId, $idsEmpresas);
+            \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', $newId, $idsProjetos);
         }
 
         return ['sucesso' => true, 'mensagem' => 'Pipeline criado', 'id' => $newId];
@@ -245,16 +245,21 @@ class PipelineController
     }
 
     /**
-     * Lista conexões disponíveis 
+     * Lista conexões disponíveis (com RBAC)
      */
     public function listarConexoes(): array
     {
         $db = Database::getConexao();
-        $rows = $db->query("
-            SELECT id, nome_conexao, tipo_banco, host, porta, nome_banco
-            FROM tb_perfis_conexao 
-            ORDER BY nome_conexao
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('conexao', 'c', 'criado_por');
+        $sql = "
+            SELECT c.id, c.nome_conexao, c.tipo_banco, c.host, c.porta, c.nome_banco
+            FROM tb_perfis_conexao c
+            WHERE ({$filtro['where']})
+            ORDER BY c.nome_conexao
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($filtro['params']);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return ['sucesso' => true, 'data' => $rows];
     }
@@ -1187,17 +1192,24 @@ class PipelineController
     }
 
     /**
-     * Estatísticas gerais dos pipelines
+     * Estatísticas gerais dos pipelines (com RBAC)
      */
     public function estatisticas(): array
     {
         $db = Database::getConexao();
 
-        $total = $db->query("SELECT COUNT(*) FROM tb_pipelines")->fetchColumn();
-        $ativos = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE ativo = true")->fetchColumn();
-        $execHoje = $db->query("SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE")->fetchColumn();
-        $successHoje = $db->query("SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE AND status = 'success'")->fetchColumn();
-        $errorHoje = $db->query("SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE AND status = 'error'")->fetchColumn();
+        // RBAC: pré-computar IDs visíveis
+        $f = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
+        $st = $db->prepare("SELECT p.id FROM tb_pipelines p WHERE ({$f['where']})");
+        $st->execute($f['params']);
+        $ids = $st->fetchAll(PDO::FETCH_COLUMN);
+        $inSql = empty($ids) ? '(0)' : '(' . implode(',', array_map('intval', $ids)) . ')';
+
+        $total = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE id IN {$inSql}")->fetchColumn();
+        $ativos = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE ativo = true AND id IN {$inSql}")->fetchColumn();
+        $execHoje = $db->query("SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE AND id_pipeline IN {$inSql}")->fetchColumn();
+        $successHoje = $db->query("SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE AND status = 'success' AND id_pipeline IN {$inSql}")->fetchColumn();
+        $errorHoje = $db->query("SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE AND status = 'error' AND id_pipeline IN {$inSql}")->fetchColumn();
 
         return [
             'sucesso' => true,
@@ -1210,18 +1222,23 @@ class PipelineController
     }
 
     /**
-     * Lista APIs externas disponíveis para uso em nodes HTTP
+     * Lista APIs externas disponíveis para uso em nodes HTTP (com RBAC)
      */
     public function listarApisExternas(): array
     {
         $db = Database::getConexao();
-        $rows = $db->query("
-            SELECT id, nome, descricao, url, metodo, headers, auth_tipo,
-                   body_template, tipo_resposta, timeout, ativo,
-                   ultimo_status, ultima_verificacao
-            FROM tb_api_externas
-            ORDER BY nome
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('api_externa', 'a', 'criado_por');
+        $sql = "
+            SELECT a.id, a.nome, a.descricao, a.url, a.metodo, a.headers, a.auth_tipo,
+                   a.body_template, a.tipo_resposta, a.timeout, a.ativo,
+                   a.ultimo_status, a.ultima_verificacao
+            FROM tb_api_externas a
+            WHERE ({$filtro['where']})
+            ORDER BY a.nome
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($filtro['params']);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as &$r) {
             $r['headers'] = json_decode($r['headers'] ?? '{}', true);
@@ -1231,37 +1248,46 @@ class PipelineController
     }
 
     /**
-     * Lista eventos de API disponíveis para triggers
+     * Lista eventos de API disponíveis para triggers (com RBAC via API pai)
      */
     public function listarEventosApi(): array
     {
         $db = Database::getConexao();
-        $rows = $db->query("
+        $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('api_externa', 'a', 'criado_por');
+        $sql = "
             SELECT e.id, e.nome, e.descricao, e.jsonpath, e.operador, 
                    e.valor_esperado, e.acao, e.ativo, e.total_matches,
                    a.nome as api_nome, a.url as api_url
             FROM tb_eventos_api e
             JOIN tb_api_externas a ON a.id = e.id_api
-            WHERE e.ativo = true
+            WHERE e.ativo = true AND ({$filtro['where']})
             ORDER BY e.nome
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($filtro['params']);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return ['sucesso' => true, 'data' => $rows];
     }
 
     /**
-     * Lista rotinas disponíveis para uso em pipelines
+     * Lista rotinas disponíveis para uso em pipelines (com RBAC)
      */
     public function listarRotinas(): array
     {
         $db = Database::getConexao();
-        $rows = $db->query("
+        $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('rotina', 'r', 'id_usuario_criador');
+        $sql = "
             SELECT r.id, r.nome, r.descricao, r.ativa, r.agendamento_cron,
                    c.nome_conexao, c.tipo_banco
             FROM tb_rotinas r
             LEFT JOIN tb_perfis_conexao c ON c.id = r.id_conexao
+            WHERE ({$filtro['where']})
             ORDER BY r.nome
-        ")->fetchAll(PDO::FETCH_ASSOC);
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($filtro['params']);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return ['sucesso' => true, 'data' => $rows];
     }

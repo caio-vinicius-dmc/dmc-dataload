@@ -33,12 +33,12 @@ class UsersController
         try {
             if ($this->nivelLogado === 'super_admin') {
                 // Super admin vê todos
-                $sql = "SELECT id, nome_usuario, eh_ldap, nivel_acesso, data_criacao
+                $sql = "SELECT id, nome_usuario, eh_ldap, nivel_acesso, data_criacao, bloqueado_ate
                         FROM tb_usuarios ORDER BY nome_usuario";
                 $stmt = $this->db->query($sql);
             } else {
                 // Admin vê apenas usuários de suas empresas
-                $sql = "SELECT DISTINCT u.id, u.nome_usuario, u.eh_ldap, u.nivel_acesso, u.data_criacao
+                $sql = "SELECT DISTINCT u.id, u.nome_usuario, u.eh_ldap, u.nivel_acesso, u.data_criacao, u.bloqueado_ate
                         FROM tb_usuarios u
                         INNER JOIN tb_usuario_empresas ue ON u.id = ue.id_usuario
                         WHERE ue.id_empresa IN (
@@ -82,7 +82,7 @@ class UsersController
             }
             
             $stmt = $this->db->prepare(
-                "SELECT id, nome_usuario, eh_ldap, nivel_acesso, data_criacao
+                "SELECT id, nome_usuario, nome, email, cpf, eh_ldap, nivel_acesso, data_criacao, bloqueado_ate
                  FROM tb_usuarios WHERE id = :id"
             );
             $stmt->execute([':id' => $id]);
@@ -132,6 +132,16 @@ class UsersController
             $ehLdap = isset($_POST['eh_ldap']) ? 1 : 0;
             $empresas = $_POST['empresas'] ?? [];
             $projetos = $_POST['projetos'] ?? [];
+            $nome = trim($_POST['nome'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $cpf = trim($_POST['cpf'] ?? '');
+            
+            if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new \Exception('E-mail inválido');
+            }
+            if ($cpf && !preg_match('/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/', $cpf)) {
+                throw new \Exception('CPF inválido');
+            }
             
             // Validar nível de acesso permitido
             $papeisPermitidos = ServicoPermissao::papeisDisponiveis();
@@ -201,10 +211,16 @@ class UsersController
                 // Atualizar
                 $sql = "UPDATE tb_usuarios SET 
                         nome_usuario = :nome_usuario,
+                        nome = :nome,
+                        email = :email,
+                        cpf = :cpf,
                         nivel_acesso = :nivel_acesso,
                         eh_ldap = :eh_ldap";
                 $params = [
                     ':nome_usuario' => $nomeUsuario,
+                    ':nome' => $nome ?: null,
+                    ':email' => $email ?: null,
+                    ':cpf' => $cpf ?: null,
                     ':nivel_acesso' => $nivelAcesso,
                     ':eh_ldap' => $ehLdap,
                     ':id' => $id
@@ -221,11 +237,14 @@ class UsersController
                 // Criar
                 $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
                 $stmt = $this->db->prepare(
-                    "INSERT INTO tb_usuarios (nome_usuario, senha_hash, nivel_acesso, eh_ldap) 
-                     VALUES (:nome_usuario, :senha_hash, :nivel_acesso, :eh_ldap) RETURNING id"
+                    "INSERT INTO tb_usuarios (nome_usuario, nome, email, cpf, senha_hash, nivel_acesso, eh_ldap) 
+                     VALUES (:nome_usuario, :nome, :email, :cpf, :senha_hash, :nivel_acesso, :eh_ldap) RETURNING id"
                 );
                 $stmt->execute([
                     ':nome_usuario' => $nomeUsuario,
+                    ':nome' => $nome ?: null,
+                    ':email' => $email ?: null,
+                    ':cpf' => $cpf ?: null,
                     ':senha_hash' => $senhaHash,
                     ':nivel_acesso' => $nivelAcesso,
                     ':eh_ldap' => $ehLdap
@@ -357,6 +376,59 @@ class UsersController
             echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Resetar senha via e-mail (admin envia link de redefinição)
+     */
+    public function resetSenhaEmail(): void
+    {
+        header('Content-Type: application/json');
+        
+        try {
+            $id = $_POST['id'] ?? null;
+            if (!$id) {
+                throw new \Exception('ID de usuário não fornecido');
+            }
+            if (!$this->podeGerenciarUsuario((int)$id)) {
+                throw new \Exception('Sem permissão para resetar senha deste usuário');
+            }
+            
+            $svc = new \App\Servicos\ServicoRecuperacaoSenha();
+            $resultado = $svc->solicitarPorAdmin((int)$id);
+            echo json_encode($resultado);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Desbloquear usuário (admin)
+     */
+    public function desbloquearUsuario(): void
+    {
+        header('Content-Type: application/json');
+        
+        try {
+            $id = $_POST['id'] ?? null;
+            if (!$id) {
+                throw new \Exception('ID de usuário não fornecido');
+            }
+            if (!$this->podeGerenciarUsuario((int)$id)) {
+                throw new \Exception('Sem permissão para desbloquear este usuário');
+            }
+            
+            $stmt = $this->db->prepare("UPDATE tb_usuarios SET bloqueado_ate = NULL WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+            
+            // Limpar rate limits do usuário
+            $stmtClear = $this->db->prepare("DELETE FROM tb_rate_limits WHERE chave = :chave");
+            $stmtClear->execute([':chave' => 'login_user:' . $id]);
+            
+            echo json_encode(['sucesso' => true, 'mensagem' => 'Usuário desbloqueado com sucesso']);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
     
     /**
      * Verifica se o usuário logado pode gerenciar o usuário alvo
@@ -382,5 +454,130 @@ class UsersController
         );
         $stmt->execute([':admin' => $this->usuarioLogadoId, ':alvo' => $idAlvo]);
         return (int)$stmt->fetchColumn() > 0;
+    }
+
+    // ================================================================
+    // Perfil do Usuário Logado
+    // ================================================================
+
+    /**
+     * Retorna dados do perfil do usuário logado
+     */
+    public function meuPerfil(): void
+    {
+        header('Content-Type: application/json');
+
+        try {
+            $id = $this->usuarioLogadoId;
+
+            $stmt = $this->db->prepare(
+                "SELECT id, nome_usuario, nome, email, cpf, eh_ldap, nivel_acesso, data_criacao
+                 FROM tb_usuarios WHERE id = :id"
+            );
+            $stmt->execute([':id' => $id]);
+            $usuario = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$usuario) {
+                throw new \Exception('Usuário não encontrado');
+            }
+
+            // Empresas
+            $stmtEmp = $this->db->prepare(
+                "SELECT e.id, e.nome FROM tb_empresas e
+                 INNER JOIN tb_usuario_empresas ue ON e.id = ue.id_empresa
+                 WHERE ue.id_usuario = :uid ORDER BY e.nome"
+            );
+            $stmtEmp->execute([':uid' => $id]);
+            $usuario['empresas'] = $stmtEmp->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Projetos
+            $stmtProj = $this->db->prepare(
+                "SELECT p.id, p.nome, e.nome as empresa_nome FROM tb_projetos p
+                 INNER JOIN tb_usuario_projetos up ON p.id = up.id_projeto
+                 INNER JOIN tb_empresas e ON p.id_empresa = e.id
+                 WHERE up.id_usuario = :uid ORDER BY e.nome, p.nome"
+            );
+            $stmtProj->execute([':uid' => $id]);
+            $usuario['projetos'] = $stmtProj->fetchAll(\PDO::FETCH_ASSOC);
+
+            echo json_encode(['sucesso' => true, 'dados' => $usuario]);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Atualizar perfil do próprio usuário (campos permitidos: nome, email)
+     */
+    public function atualizarPerfil(): void
+    {
+        header('Content-Type: application/json');
+
+        try {
+            $id = $this->usuarioLogadoId;
+            $nome = trim($_POST['nome'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+
+            if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new \Exception('E-mail inválido');
+            }
+
+            $stmt = $this->db->prepare(
+                "UPDATE tb_usuarios SET nome = :nome, email = :email WHERE id = :id"
+            );
+            $stmt->execute([
+                ':nome'  => $nome ?: null,
+                ':email' => $email ?: null,
+                ':id'    => $id
+            ]);
+
+            echo json_encode(['sucesso' => true, 'mensagem' => 'Perfil atualizado com sucesso']);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Alterar própria senha
+     */
+    public function alterarMinhaSenha(): void
+    {
+        header('Content-Type: application/json');
+
+        try {
+            $id = $this->usuarioLogadoId;
+            $senhaAtual  = $_POST['senha_atual'] ?? '';
+            $senhaNova   = $_POST['senha_nova'] ?? '';
+            $senhaConfirm = $_POST['senha_confirmar'] ?? '';
+
+            if (empty($senhaAtual) || empty($senhaNova)) {
+                throw new \Exception('Preencha todos os campos de senha');
+            }
+            if ($senhaNova !== $senhaConfirm) {
+                throw new \Exception('A nova senha e a confirmação não coincidem');
+            }
+            if (strlen($senhaNova) < 6) {
+                throw new \Exception('A nova senha deve ter no mínimo 6 caracteres');
+            }
+
+            // Verificar senha atual
+            $stmt = $this->db->prepare("SELECT senha_hash FROM tb_usuarios WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+            $hash = $stmt->fetchColumn();
+
+            if (!$hash || !password_verify($senhaAtual, $hash)) {
+                throw new \Exception('Senha atual incorreta');
+            }
+
+            $stmt = $this->db->prepare("UPDATE tb_usuarios SET senha_hash = :hash WHERE id = :id");
+            $stmt->execute([
+                ':hash' => password_hash($senhaNova, PASSWORD_DEFAULT),
+                ':id'   => $id
+            ]);
+
+            echo json_encode(['sucesso' => true, 'mensagem' => 'Senha alterada com sucesso']);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
     }
 }

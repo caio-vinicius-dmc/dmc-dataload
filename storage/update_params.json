@@ -1,11 +1,11 @@
 {
-    "nome": "PG_Teste_01_Chamados_Recentes",
-    "descricao": "SELECT nos chamados mais recentes do Helpdesk",
+    "nome": "PG_Teste_03_Configuracoes",
+    "descricao": "Listar configuracoes do sistema Helpdesk",
     "id_conexao": "15",
     "webhook_sucesso": null,
     "webhook_falha": null,
-    "ativa": true,
+    "ativa": false,
     "agendamento_cron": null,
     "max_tentativas": 3,
-    "id": "32"
+    "id": "34"
 }

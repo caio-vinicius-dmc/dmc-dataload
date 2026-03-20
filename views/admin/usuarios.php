@@ -72,14 +72,15 @@ ob_start();
                         <th>Usuário</th>
                         <th>Tipo</th>
                         <th>Nível de Acesso</th>
+                        <th>Status</th>
                         <th>Empresas</th>
                         <th>Criado em</th>
-                        <th width="120">Ações</th>
+                        <th width="160">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="6" class="text-center py-4">
+                        <td colspan="7" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm text-primary"></div>
                             <span class="ms-2">Carregando...</span>
                         </td>
@@ -111,6 +112,28 @@ ob_start();
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label class="form-label">Nome Completo</label>
+                                <input type="text" class="form-control" name="nome" id="nome" placeholder="Nome completo do usuário">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">E-mail</label>
+                                <input type="email" class="form-control" name="email" id="email" placeholder="usuario@email.com">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">CPF</label>
+                                <input type="text" class="form-control" name="cpf" id="cpf" placeholder="000.000.000-00" maxlength="14">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
                                 <label class="form-label">Senha <span id="senhaObrig">*</span></label>
                                 <div class="input-group">
                                     <input type="password" class="form-control" name="senha" id="senha">
@@ -124,8 +147,6 @@ ob_start();
                                 <small class="text-muted" id="senhaHelp">Mínimo 6 caracteres</small>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Nível de Acesso *</label>
@@ -134,12 +155,22 @@ ob_start();
                                 </select>
                             </div>
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6">
-                            <div class="form-check mt-4">
+                            <div class="form-check mt-2">
                                 <input type="checkbox" class="form-check-input" name="eh_ldap" id="eh_ldap" value="1">
                                 <label class="form-check-label" for="eh_ldap">
                                     <i class="bi bi-key me-1"></i>Autenticação via LDAP
                                 </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="bloqueioContainer" style="display:none;">
+                            <div class="alert alert-warning py-2 px-3 mb-0 d-flex align-items-center justify-content-between">
+                                <span><i class="bi bi-lock-fill me-2"></i><strong>Usuário bloqueado</strong> <small id="bloqueioAteLabel"></small></span>
+                                <button type="button" class="btn btn-sm btn-success" onclick="desbloquearNoModal()">
+                                    <i class="bi bi-unlock me-1"></i>Desbloquear
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -246,6 +277,16 @@ function loadTable() {
             
             const dataCriacao = r.data_criacao ? new Date(r.data_criacao).toLocaleDateString("pt-BR") : "-";
             
+            // Status de bloqueio
+            let statusBloqueio = "";
+            if (r.bloqueado_ate) {
+                const bloqueadoAte = new Date(r.bloqueado_ate);
+                const agora = new Date();
+                if (bloqueadoAte > agora) {
+                    statusBloqueio = `<span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>Bloqueado</span>`;
+                }
+            }
+            
             // Empresas do usuário
             let empresasHtml = "-";
             if (r.empresas && r.empresas.length > 0) {
@@ -257,9 +298,15 @@ function loadTable() {
             const podeGerenciar = r.nivel_acesso !== "super_admin" && (ehSuperAdmin || (ehAdmin && r.nivel_acesso !== "admin"));
             
             if (podeGerenciar) {
+                let bloqueioBtn = "";
+                if (r.bloqueado_ate && new Date(r.bloqueado_ate) > new Date()) {
+                    bloqueioBtn = `<button class="btn btn-outline-success" onclick="desbloquearUsuario(${r.id})" title="Desbloquear"><i class="bi bi-unlock"></i></button>`;
+                }
                 acoes = `<div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-primary" onclick="editarUsuario(${r.id})" title="Editar"><i class="bi bi-pencil"></i></button>
                     <button class="btn btn-outline-warning" onclick="resetarSenha(${r.id})" title="Resetar Senha"><i class="bi bi-key"></i></button>
+                    <button class="btn btn-outline-info" onclick="resetarSenhaEmail(${r.id})" title="Enviar Reset por E-mail"><i class="bi bi-envelope"></i></button>
+                    ${bloqueioBtn}
                     <button class="btn btn-outline-danger" onclick="excluirUsuario(${r.id})" title="Excluir"><i class="bi bi-trash"></i></button>
                 </div>`;
             } else if (r.id == usuarioLogadoId) {
@@ -277,6 +324,7 @@ function loadTable() {
                 </td>
                 <td>${tipoAuth}</td>
                 <td>${nivelLabels[r.nivel_acesso] || r.nivel_acesso}</td>
+                <td>${statusBloqueio || "<span class=\\"badge bg-success\\"><i class=\\"bi bi-check-circle me-1\\"></i>Ativo</span>"}</td>
                 <td>${empresasHtml}</td>
                 <td>${dataCriacao}</td>
                 <td>${acoes}</td>
@@ -361,6 +409,7 @@ function novoUsuario() {
     document.getElementById("senha").required = true;
     document.getElementById("senhaObrig").style.display = "";
     document.getElementById("senhaHelp").textContent = "Mínimo 6 caracteres";
+    document.getElementById("bloqueioContainer").style.display = "none";
     
     // Preencher opções de nível de acesso
     carregarOpcoesNivel();
@@ -381,12 +430,23 @@ function editarUsuario(id) {
     $.getJSON(baseUrl + "/admin/usuarios/get/" + id, function(r) {
         document.getElementById("usuarioId").value = r.id;
         document.getElementById("nome_usuario").value = r.nome_usuario;
+        document.getElementById("nome").value = r.nome || "";
+        document.getElementById("email").value = r.email || "";
+        document.getElementById("cpf").value = r.cpf || "";
         document.getElementById("eh_ldap").checked = r.eh_ldap;
         document.getElementById("senha").value = "";
         document.getElementById("senha").required = false;
         document.getElementById("senhaObrig").style.display = "none";
         document.getElementById("senhaHelp").textContent = "Deixe vazio para manter a senha atual";
         document.getElementById("modalTitle").textContent = "Editar Usuário";
+        
+        // Bloqueio
+        if (r.bloqueado_ate && new Date(r.bloqueado_ate) > new Date()) {
+            document.getElementById("bloqueioContainer").style.display = "";
+            document.getElementById("bloqueioAteLabel").textContent = "até " + new Date(r.bloqueado_ate).toLocaleString("pt-BR");
+        } else {
+            document.getElementById("bloqueioContainer").style.display = "none";
+        }
         
         carregarOpcoesNivel();
         setTimeout(() => {
@@ -456,6 +516,51 @@ function resetarSenha(id) {
     });
 }
 
+function resetarSenhaEmail(id) {
+    Swal.fire({
+        title: "Enviar reset por e-mail?",
+        text: "O usuário receberá um link para redefinir a senha no e-mail cadastrado.",
+        icon: "question",
+        showCancelButton: true,
+        cancelButtonText: "Cancelar",
+        confirmButtonText: "Enviar E-mail",
+        confirmButtonColor: "#0dcaf0"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post(baseUrl + "/admin/usuarios/reset-senha-email", { id: id, _csrf_token: csrfToken }, function(res) {
+                if (res.sucesso) {
+                    Swal.fire("E-mail enviado!", res.mensagem || "Link de redefinição enviado com sucesso.", "success");
+                } else {
+                    Swal.fire("Erro!", res.erro || "Falha ao enviar e-mail de reset.", "error");
+                }
+            }, "json");
+        }
+    });
+}
+
+function desbloquearUsuario(id) {
+    Swal.fire({
+        title: "Desbloquear usuário?",
+        text: "O usuário poderá fazer login novamente.",
+        icon: "warning",
+        showCancelButton: true,
+        cancelButtonText: "Cancelar",
+        confirmButtonText: "Desbloquear",
+        confirmButtonColor: "#198754"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post(baseUrl + "/admin/usuarios/desbloquear", { id: id, _csrf_token: csrfToken }, function(res) {
+                if (res.sucesso) {
+                    Swal.fire("Desbloqueado!", res.mensagem, "success");
+                    loadTable();
+                } else {
+                    Swal.fire("Erro!", res.erro || res.mensagem, "error");
+                }
+            }, "json");
+        }
+    });
+}
+
 function toggleSenha() {
     const input = document.getElementById("senha");
     const icon = document.getElementById("iconSenha");
@@ -483,6 +588,30 @@ document.getElementById("eh_ldap").addEventListener("change", function() {
         senhaField.placeholder = "";
     }
 });
+
+// CPF mask
+document.getElementById("cpf").addEventListener("input", function() {
+    let v = this.value.replace(/\\D/g, "").substring(0, 11);
+    if (v.length > 9) v = v.replace(/(\\d{3})(\\d{3})(\\d{3})(\\d{1,2})/, "$1.$2.$3-$4");
+    else if (v.length > 6) v = v.replace(/(\\d{3})(\\d{3})(\\d{1,3})/, "$1.$2.$3");
+    else if (v.length > 3) v = v.replace(/(\\d{3})(\\d{1,3})/, "$1.$2");
+    this.value = v;
+});
+
+// Desbloquear usuário dentro do modal
+function desbloquearNoModal() {
+    const id = document.getElementById("usuarioId").value;
+    if (!id) return;
+    $.post(baseUrl + "/admin/usuarios/desbloquear", { id: id, _csrf_token: csrfToken }, function(res) {
+        if (res.sucesso) {
+            document.getElementById("bloqueioContainer").style.display = "none";
+            Swal.fire("Desbloqueado!", res.mensagem, "success");
+            loadTable();
+        } else {
+            Swal.fire("Erro!", res.erro || res.mensagem, "error");
+        }
+    }, "json");
+}
 
 // Submit form
 document.getElementById("formUsuario").addEventListener("submit", function(e) {

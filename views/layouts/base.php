@@ -82,6 +82,9 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         .sidebar-header {
             padding: 1.5rem;
             border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .sidebar-brand {
@@ -90,6 +93,8 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             gap: 12px;
             text-decoration: none;
             color: white;
+            flex: 1;
+            min-width: 0;
         }
 
         .sidebar-brand-icon {
@@ -583,6 +588,722 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             }
         }
 
+        /* ========== SIDEBAR COLLAPSE (DESKTOP) ========== */
+        .sidebar-collapse-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: rgba(255,255,255,0.08);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .sidebar-collapse-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: var(--text-light);
+        }
+
+        .sidebar-collapse-btn i {
+            font-size: 0.9rem;
+            transition: transform 0.3s ease;
+        }
+
+        @media (min-width: 1200px) {
+            body.sidebar-collapsed .sidebar {
+                width: var(--sidebar-collapsed-width);
+            }
+
+            body.sidebar-collapsed .sidebar-brand-text,
+            body.sidebar-collapsed .menu-label,
+            body.sidebar-collapsed .menu-link span,
+            body.sidebar-collapsed .menu-badge,
+            body.sidebar-collapsed .user-info,
+            body.sidebar-collapsed .user-actions {
+                opacity: 0;
+                width: 0;
+                overflow: hidden;
+                white-space: nowrap;
+                pointer-events: none;
+                transition: opacity 0.2s ease, width 0.2s ease;
+            }
+
+            body.sidebar-collapsed .sidebar-header {
+                padding: 1.5rem 0.5rem;
+                justify-content: center;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            body.sidebar-collapsed .sidebar-brand {
+                justify-content: center;
+            }
+
+            body.sidebar-collapsed .sidebar-brand-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                font-size: 1.3rem;
+            }
+
+            body.sidebar-collapsed .menu-item {
+                padding: 0 0.5rem;
+            }
+
+            body.sidebar-collapsed .menu-link {
+                justify-content: center;
+                padding: 0.85rem 0.5rem;
+            }
+
+            body.sidebar-collapsed .menu-link i {
+                font-size: 1.3rem;
+                margin: 0;
+            }
+
+            body.sidebar-collapsed .sidebar-footer {
+                padding: 0.75rem 0.5rem;
+            }
+
+            body.sidebar-collapsed .user-card {
+                justify-content: center;
+                padding: 0;
+                background: transparent;
+                gap: 0;
+            }
+
+            body.sidebar-collapsed .user-avatar {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                min-height: 40px;
+                font-size: 0.95rem;
+                flex-shrink: 0;
+            }
+
+            body.sidebar-collapsed .topbar {
+                left: var(--sidebar-collapsed-width);
+            }
+
+            body.sidebar-collapsed .main-content {
+                margin-left: var(--sidebar-collapsed-width);
+            }
+
+            body.sidebar-collapsed .sidebar-collapse-btn i {
+                transform: rotate(180deg);
+            }
+
+            body.sidebar-collapsed .sidebar-collapse-btn {
+                width: 36px;
+                height: 36px;
+                background: rgba(255,255,255,0.12);
+                border-radius: 10px;
+                position: static;
+                transform: none;
+            }
+
+            body.sidebar-collapsed .sidebar-collapse-btn:hover {
+                background: rgba(255,255,255,0.22);
+            }
+
+            /* Tooltip on hover for collapsed items */
+            body.sidebar-collapsed .menu-link {
+                position: relative;
+            }
+
+            body.sidebar-collapsed .menu-link::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                left: calc(100% + 12px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: var(--dark);
+                color: white;
+                padding: 0.4rem 0.8rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                font-weight: 500;
+                white-space: nowrap;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s ease;
+                z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+
+            body.sidebar-collapsed .menu-link:hover::after {
+                opacity: 1;
+            }
+        }
+
+        /* Hide collapse button on mobile (mobile uses its own toggle) */
+        @media (max-width: 1199px) {
+            .sidebar-collapse-btn {
+                display: none !important;
+            }
+        }
+
+        /* ========== DARK MODE ========== */
+        body.dark-mode {
+            --dm-bg: #0f1117;
+            --dm-bg-secondary: #1a1d2e;
+            --dm-bg-card: #1e2235;
+            --dm-bg-card-hover: #252a40;
+            --dm-bg-input: #252a40;
+            --dm-border: #2d3348;
+            --dm-border-light: #363d54;
+            --dm-text: #e2e8f0;
+            --dm-text-secondary: #94a3b8;
+            --dm-text-muted: #64748b;
+            --dm-shadow: rgba(0,0,0,0.4);
+            background: var(--dm-bg) !important;
+            color: var(--dm-text);
+        }
+
+        /* Topbar dark */
+        body.dark-mode .topbar {
+            background: var(--dm-bg-secondary);
+            box-shadow: 0 2px 15px var(--dm-shadow);
+            border-bottom: 1px solid var(--dm-border);
+        }
+
+        body.dark-mode .page-title {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .breadcrumb-item,
+        body.dark-mode .breadcrumb-item a {
+            color: var(--dm-text-secondary);
+        }
+
+        body.dark-mode .breadcrumb-item.active {
+            color: var(--dm-text-muted);
+        }
+
+        body.dark-mode .topbar-btn {
+            background: var(--dm-bg-card);
+            border: 1px solid var(--dm-border);
+        }
+
+        body.dark-mode .topbar-btn:hover {
+            background: var(--dm-bg-card-hover);
+        }
+
+        body.dark-mode .topbar-btn i {
+            color: var(--dm-text-secondary);
+        }
+
+        body.dark-mode .menu-toggle {
+            background: var(--dm-bg-card);
+            border: 1px solid var(--dm-border);
+        }
+
+        body.dark-mode .menu-toggle:hover {
+            background: var(--dm-bg-card-hover);
+        }
+
+        body.dark-mode .menu-toggle i {
+            color: var(--dm-text-secondary);
+        }
+
+        /* Sidebar dark (already dark, just subtle adjustments) */
+        body.dark-mode .sidebar {
+            background: linear-gradient(180deg, #0d0f18 0%, #080a11 100%);
+            box-shadow: 4px 0 25px rgba(0,0,0,0.5);
+        }
+
+        body.dark-mode .sidebar-header {
+            border-bottom-color: rgba(255,255,255,0.03);
+        }
+
+        body.dark-mode .sidebar-footer {
+            border-top-color: rgba(255,255,255,0.03);
+        }
+
+        /* Cards dark */
+        body.dark-mode .card {
+            background: var(--dm-bg-card);
+            border: 1px solid var(--dm-border);
+            box-shadow: 0 2px 12px var(--dm-shadow);
+        }
+
+        body.dark-mode .card-header {
+            background: var(--dm-bg-secondary);
+            border-bottom-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .card-body {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .card-footer {
+            background: var(--dm-bg-secondary);
+            border-top-color: var(--dm-border);
+            color: var(--dm-text-secondary);
+        }
+
+        /* Card-modern dark */
+        body.dark-mode .card-modern {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border);
+            box-shadow: 0 2px 12px var(--dm-shadow);
+        }
+
+        body.dark-mode .card-modern-header {
+            background: linear-gradient(to right, var(--dm-bg-secondary), var(--dm-bg-card));
+            border-bottom-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .card-modern-body {
+            color: var(--dm-text);
+        }
+
+        /* Tables dark */
+        body.dark-mode .table {
+            color: var(--dm-text);
+            --bs-table-bg: transparent;
+            --bs-table-striped-bg: rgba(255,255,255,0.02);
+            --bs-table-hover-bg: rgba(255,255,255,0.04);
+        }
+
+        body.dark-mode .table th {
+            color: var(--dm-text-secondary);
+            border-color: var(--dm-border);
+        }
+
+        body.dark-mode .table td {
+            border-color: var(--dm-border);
+        }
+
+        body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > * {
+            --bs-table-bg-type: rgba(255,255,255,0.02);
+        }
+
+        body.dark-mode .table-hover > tbody > tr:hover > * {
+            --bs-table-bg-state: rgba(255,255,255,0.04);
+        }
+
+        /* Forms dark */
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: var(--dm-bg-input);
+            border-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .form-control:focus,
+        body.dark-mode .form-select:focus {
+            background-color: var(--dm-bg-card-hover);
+            border-color: var(--primary);
+            color: var(--dm-text);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+        }
+
+        body.dark-mode .form-control::placeholder {
+            color: var(--dm-text-muted);
+        }
+
+        body.dark-mode .form-control-modern,
+        body.dark-mode .form-select-modern {
+            background-color: var(--dm-bg-input);
+            border-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .form-control-modern:focus,
+        body.dark-mode .form-select-modern:focus {
+            background-color: var(--dm-bg-card-hover);
+            border-color: var(--primary);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .form-label,
+        body.dark-mode .form-label-modern,
+        body.dark-mode .form-check-label,
+        body.dark-mode label {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .form-check-input {
+            background-color: var(--dm-bg-input);
+            border-color: var(--dm-border-light);
+        }
+
+        body.dark-mode .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        body.dark-mode .input-group-text {
+            background-color: var(--dm-bg-secondary);
+            border-color: var(--dm-border);
+            color: var(--dm-text-secondary);
+        }
+
+        /* Text helpers dark */
+        body.dark-mode .text-muted {
+            color: var(--dm-text-muted) !important;
+        }
+
+        body.dark-mode .text-dark {
+            color: var(--dm-text) !important;
+        }
+
+        body.dark-mode .text-secondary {
+            color: var(--dm-text-secondary) !important;
+        }
+
+        body.dark-mode h1, body.dark-mode h2, body.dark-mode h3,
+        body.dark-mode h4, body.dark-mode h5, body.dark-mode h6 {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode p {
+            color: var(--dm-text-secondary);
+        }
+
+        body.dark-mode a:not(.btn):not(.menu-link):not(.sidebar-brand):not(.nav-link):not(.list-group-item):not(.page-link) {
+            color: var(--primary-light);
+        }
+
+        /* Modals dark */
+        body.dark-mode .modal-content {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border);
+        }
+
+        body.dark-mode .modal-header {
+            border-bottom-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .modal-header .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        body.dark-mode .modal-footer {
+            border-top-color: var(--dm-border);
+        }
+
+        body.dark-mode .modal-title {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .modal-body {
+            color: var(--dm-text);
+        }
+
+        /* Dropdowns dark */
+        body.dark-mode .dropdown-menu {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border);
+            box-shadow: 0 8px 24px var(--dm-shadow);
+        }
+
+        body.dark-mode .dropdown-item {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .dropdown-item:hover,
+        body.dark-mode .dropdown-item:focus {
+            background: var(--dm-bg-card-hover);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .dropdown-divider {
+            border-color: var(--dm-border);
+        }
+
+        /* Alerts dark */
+        body.dark-mode .alert-info {
+            background: rgba(14,165,233,0.1);
+            border-color: rgba(14,165,233,0.2);
+            color: #7dd3fc;
+        }
+
+        body.dark-mode .alert-success {
+            background: rgba(16,185,129,0.1);
+            border-color: rgba(16,185,129,0.2);
+            color: #6ee7b7;
+        }
+
+        body.dark-mode .alert-warning {
+            background: rgba(245,158,11,0.1);
+            border-color: rgba(245,158,11,0.2);
+            color: #fcd34d;
+        }
+
+        body.dark-mode .alert-danger {
+            background: rgba(239,68,68,0.1);
+            border-color: rgba(239,68,68,0.2);
+            color: #fca5a5;
+        }
+
+        /* List group dark */
+        body.dark-mode .list-group-item {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .list-group-item:hover {
+            background: var(--dm-bg-card-hover);
+        }
+
+        body.dark-mode .list-group-item.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-color: var(--primary);
+            color: white;
+        }
+
+        body.dark-mode .list-group-item-action {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .list-group-item-action:hover {
+            background: var(--dm-bg-card-hover);
+            color: var(--dm-text);
+        }
+
+        /* Pagination dark */
+        body.dark-mode .page-item .page-link {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .page-item .page-link:hover {
+            background: var(--dm-bg-card-hover);
+        }
+
+        body.dark-mode .page-item.active .page-link {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        body.dark-mode .page-item.disabled .page-link {
+            background: var(--dm-bg-secondary);
+            color: var(--dm-text-muted);
+        }
+
+        /* Nav tabs & pills dark */
+        body.dark-mode .nav-tabs {
+            border-bottom-color: var(--dm-border);
+        }
+
+        body.dark-mode .nav-tabs .nav-link {
+            color: var(--dm-text-secondary);
+        }
+
+        body.dark-mode .nav-tabs .nav-link:hover {
+            border-color: var(--dm-border) var(--dm-border) transparent;
+        }
+
+        body.dark-mode .nav-tabs .nav-link.active {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border) var(--dm-border) var(--dm-bg-card);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .nav-pills .nav-link {
+            color: var(--dm-text-secondary);
+        }
+
+        body.dark-mode .nav-pills .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Buttons dark (outline variants) */
+        body.dark-mode .btn-outline-primary {
+            color: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        body.dark-mode .btn-outline-secondary {
+            color: var(--dm-text-secondary);
+            border-color: var(--dm-border-light);
+        }
+
+        body.dark-mode .btn-outline-secondary:hover {
+            background: var(--dm-bg-card-hover);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .btn-outline-info {
+            color: #38bdf8;
+            border-color: #0ea5e9;
+        }
+
+        body.dark-mode .btn-outline-warning {
+            color: #fbbf24;
+            border-color: #f59e0b;
+        }
+
+        body.dark-mode .btn-outline-danger {
+            color: #f87171;
+            border-color: #ef4444;
+        }
+
+        body.dark-mode .btn-light {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .btn-light:hover {
+            background: var(--dm-bg-card-hover);
+        }
+
+        /* Page header modern dark */
+        body.dark-mode .page-header-modern {
+            background: var(--dm-bg-card);
+            box-shadow: 0 2px 12px var(--dm-shadow);
+            border: 1px solid var(--dm-border);
+        }
+
+        /* Stat cards - keep gradient backgrounds, adjust overlays */
+        body.dark-mode .stat-card {
+            box-shadow: 0 4px 16px var(--dm-shadow);
+        }
+
+        /* Badges dark */
+        body.dark-mode .badge.bg-light {
+            background: var(--dm-bg-card-hover) !important;
+            color: var(--dm-text) !important;
+        }
+
+        /* HR dark */
+        body.dark-mode hr {
+            border-color: var(--dm-border);
+            opacity: 0.5;
+        }
+
+        /* Close button dark */
+        body.dark-mode .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* Accordion dark */
+        body.dark-mode .accordion-item {
+            background: var(--dm-bg-card);
+            border-color: var(--dm-border);
+        }
+
+        body.dark-mode .accordion-button {
+            background: var(--dm-bg-card);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .accordion-button:not(.collapsed) {
+            background: var(--dm-bg-card-hover);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .accordion-button::after {
+            filter: invert(1) brightness(2);
+        }
+
+        body.dark-mode .accordion-body {
+            background: var(--dm-bg-card);
+            color: var(--dm-text);
+        }
+
+        /* Tooltip & Popover dark */
+        body.dark-mode .tooltip-inner {
+            background: var(--dm-bg-card);
+            color: var(--dm-text);
+            border: 1px solid var(--dm-border);
+        }
+
+        /* CodeMirror / Code blocks */
+        body.dark-mode pre, body.dark-mode code {
+            background: var(--dm-bg-secondary);
+            color: #e2e8f0;
+            border-color: var(--dm-border);
+        }
+
+        /* Scrollbar dark */
+        body.dark-mode ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-track {
+            background: var(--dm-bg);
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb {
+            background: var(--dm-border-light);
+            border-radius: 4px;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+
+        /* SweetAlert2 dark overrides */
+        body.dark-mode .swal2-popup {
+            background: var(--dm-bg-card) !important;
+            color: var(--dm-text) !important;
+        }
+
+        body.dark-mode .swal2-title {
+            color: var(--dm-text) !important;
+        }
+
+        body.dark-mode .swal2-html-container {
+            color: var(--dm-text-secondary) !important;
+        }
+
+        body.dark-mode .swal2-input,
+        body.dark-mode .swal2-select,
+        body.dark-mode .swal2-textarea {
+            background: var(--dm-bg-input) !important;
+            border-color: var(--dm-border) !important;
+            color: var(--dm-text) !important;
+        }
+
+        body.dark-mode .swal2-validation-message {
+            background: var(--dm-bg-secondary) !important;
+            color: var(--dm-text) !important;
+        }
+
+        /* Selection color */
+        body.dark-mode ::selection {
+            background: rgba(99,102,241,0.3);
+            color: white;
+        }
+
+        /* Dark mode theme button active state */
+        body.dark-mode #btnTheme {
+            background: rgba(99,102,241,0.15);
+            border: 1px solid rgba(99,102,241,0.3);
+        }
+
+        body.dark-mode #btnTheme i {
+            color: #fbbf24;
+        }
+
+        /* Notification badge in dark mode */
+        body.dark-mode .notification-badge {
+            border-color: var(--dm-bg-secondary);
+        }
+
+        /* Dark mode transition for smooth toggle */
+        body.dark-mode-transition,
+        body.dark-mode-transition *,
+        body.dark-mode-transition *::before,
+        body.dark-mode-transition *::after {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+        }
+
         /* ========== UTILITIES ========== */
         .text-gradient {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
@@ -612,17 +1333,20 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                     <i class="bi bi-database"></i>
                 </div>
                 <div class="sidebar-brand-text">
-                    DMC DataLoad
-                    <small>ETL System</small>
+                    DMC - DataLoad
+                    <small>Database system</small>
                 </div>
             </a>
+            <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Recolher menu">
+                <i class="bi bi-chevron-left"></i>
+            </button>
         </div>
 
         <nav class="sidebar-menu">
             <div class="menu-label">Principal</div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/dashboard" class="menu-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/dashboard" class="menu-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>" data-tooltip="Dashboard">
                     <i class="bi bi-grid-1x2-fill"></i>
                     <span>Dashboard</span>
                 </a>
@@ -640,14 +1364,14 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <div class="menu-label">ETL</div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/conexoes" class="menu-link <?= $currentPage === 'conexoes' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/conexoes" class="menu-link <?= $currentPage === 'conexoes' ? 'active' : '' ?>" data-tooltip="Conexões">
                     <i class="bi bi-hdd-network-fill"></i>
                     <span>Conexões</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/rotinas" class="menu-link <?= $currentPage === 'rotinas' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/rotinas" class="menu-link <?= $currentPage === 'rotinas' ? 'active' : '' ?>" data-tooltip="Rotinas">
                     <i class="bi bi-play-circle-fill"></i>
                     <span>Rotinas</span>
                 </a>
@@ -655,7 +1379,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <?php endif; ?>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>" data-tooltip="Histórico">
                     <i class="bi bi-clock-history"></i>
                     <span>Histórico</span>
                 </a>
@@ -663,7 +1387,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             
             <?php if ($ehDevOuSuperior): ?>
             <div class="menu-item">
-                <a href="<?= $base ?>/sql-editor" class="menu-link <?= $currentPage === 'sql-editor' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/sql-editor" class="menu-link <?= $currentPage === 'sql-editor' ? 'active' : '' ?>" data-tooltip="SQL Editor">
                     <i class="bi bi-terminal"></i>
                     <span>SQL Editor</span>
                 </a>
@@ -671,7 +1395,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <?php endif; ?>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>" data-tooltip="Diagrama ER">
                     <i class="bi bi-diagram-3"></i>
                     <span>Diagrama ER</span>
                 </a>
@@ -681,35 +1405,35 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <div class="menu-label">Automação</div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/apis-externas" class="menu-link <?= $currentPage === 'apis-externas' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/apis-externas" class="menu-link <?= $currentPage === 'apis-externas' ? 'active' : '' ?>" data-tooltip="APIs Externas">
                     <i class="bi bi-cloud-arrow-up-fill"></i>
                     <span>APIs Externas</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/eventos-api" class="menu-link <?= $currentPage === 'eventos-api' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/eventos-api" class="menu-link <?= $currentPage === 'eventos-api' ? 'active' : '' ?>" data-tooltip="Eventos de API">
                     <i class="bi bi-lightning-charge-fill"></i>
                     <span>Eventos de API</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/workflows" class="menu-link <?= $currentPage === 'workflows' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/workflows" class="menu-link <?= $currentPage === 'workflows' ? 'active' : '' ?>" data-tooltip="Workflows">
                     <i class="bi bi-diagram-3-fill"></i>
                     <span>Workflows</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/workflow-execucoes" class="menu-link <?= $currentPage === 'workflow-execucoes' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/workflow-execucoes" class="menu-link <?= $currentPage === 'workflow-execucoes' ? 'active' : '' ?>" data-tooltip="Execuções">
                     <i class="bi bi-play-btn-fill"></i>
                     <span>Execuções</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/pipelines" class="menu-link <?= $currentPage === 'pipelines' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/pipelines" class="menu-link <?= $currentPage === 'pipelines' ? 'active' : '' ?>" data-tooltip="Pipelines">
                     <i class="bi bi-bezier2"></i>
                     <span>Pipelines</span>
                 </a>
@@ -719,7 +1443,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <div class="menu-label">Sistema</div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/scheduler" class="menu-link <?= $currentPage === 'scheduler' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/scheduler" class="menu-link <?= $currentPage === 'scheduler' ? 'active' : '' ?>" data-tooltip="Agendamentos">
                     <i class="bi bi-calendar-check-fill"></i>
                     <span>Agendamentos</span>
                     <span class="menu-badge" id="schedulerBadge">0</span>
@@ -727,7 +1451,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/calendario" class="menu-link <?= $currentPage === 'calendario' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/calendario" class="menu-link <?= $currentPage === 'calendario' ? 'active' : '' ?>" data-tooltip="Calendário">
                     <i class="bi bi-calendar3"></i>
                     <span>Calendário</span>
                 </a>
@@ -735,7 +1459,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             
             <?php if ($ehDevOuSuperior): ?>
             <div class="menu-item">
-                <a href="<?= $base ?>/logs" class="menu-link <?= $currentPage === 'logs' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/logs" class="menu-link <?= $currentPage === 'logs' ? 'active' : '' ?>" data-tooltip="Logs do Sistema">
                     <i class="bi bi-file-text-fill"></i>
                     <span>Logs do Sistema</span>
                 </a>
@@ -746,7 +1470,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <div class="menu-label">Administração</div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/usuarios" class="menu-link <?= $currentPage === 'usuarios' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/usuarios" class="menu-link <?= $currentPage === 'usuarios' ? 'active' : '' ?>" data-tooltip="Usuários">
                     <i class="bi bi-people-fill"></i>
                     <span>Usuários</span>
                 </a>
@@ -754,7 +1478,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             
             <?php if ($ehSuperAdminSidebar): ?>
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/empresas" class="menu-link <?= $currentPage === 'empresas' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/empresas" class="menu-link <?= $currentPage === 'empresas' ? 'active' : '' ?>" data-tooltip="Empresas">
                     <i class="bi bi-building"></i>
                     <span>Empresas</span>
                 </a>
@@ -762,58 +1486,62 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <?php endif; ?>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/projetos" class="menu-link <?= $currentPage === 'projetos' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/projetos" class="menu-link <?= $currentPage === 'projetos' ? 'active' : '' ?>" data-tooltip="Projetos">
                     <i class="bi bi-folder-fill"></i>
                     <span>Projetos</span>
                 </a>
             </div>
             
+            <?php if ($ehSuperAdminSidebar): ?>
             <div class="menu-item">
-                <a href="<?= $base ?>/configuracoes" class="menu-link <?= $currentPage === 'configuracoes' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/configuracoes" class="menu-link <?= $currentPage === 'configuracoes' ? 'active' : '' ?>" data-tooltip="Configurações">
                     <i class="bi bi-gear-fill"></i>
                     <span>Configurações</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/auditoria" class="menu-link <?= $currentPage === 'auditoria' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/auditoria" class="menu-link <?= $currentPage === 'auditoria' ? 'active' : '' ?>" data-tooltip="Auditoria">
                     <i class="bi bi-shield-check"></i>
                     <span>Auditoria</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/webhooks" class="menu-link <?= $currentPage === 'webhooks' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/webhooks" class="menu-link <?= $currentPage === 'webhooks' ? 'active' : '' ?>" data-tooltip="Webhooks">
                     <i class="bi bi-broadcast"></i>
                     <span>Webhooks</span>
                 </a>
             </div>
+            <?php endif; ?>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/canais" class="menu-link <?= $currentPage === 'canais' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/canais" class="menu-link <?= $currentPage === 'canais' ? 'active' : '' ?>" data-tooltip="Slack/Teams">
                     <i class="bi bi-chat-dots"></i>
                     <span>Slack/Teams</span>
                 </a>
             </div>
             
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>" data-tooltip="Fila Execução">
                     <i class="bi bi-collection"></i>
                     <span>Fila Execução</span>
                 </a>
             </div>
             
+            <?php if ($ehSuperAdminSidebar): ?>
             <div class="menu-item">
-                <a href="<?= $base ?>/admin/backups" class="menu-link <?= $currentPage === 'backups' ? 'active' : '' ?>">
+                <a href="<?= $base ?>/admin/backups" class="menu-link <?= $currentPage === 'backups' ? 'active' : '' ?>" data-tooltip="Backups">
                     <i class="bi bi-cloud-download"></i>
                     <span>Backups</span>
                 </a>
             </div>
             <?php endif; ?>
+            <?php endif; ?>
         </nav>
 
         <div class="sidebar-footer">
-            <div class="user-card" id="userCard">
+            <div class="user-card" id="userCard" style="cursor:pointer" title="Meu Perfil">
                 <div class="user-avatar" id="userAvatar">
                     <?= strtoupper(substr($usuario['nome_usuario'] ?? 'U', 0, 1)) ?>
                 </div>
@@ -858,7 +1586,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 <span class="notification-badge" id="notificationBadge" style="display: none;"></span>
             </button>
             <button class="topbar-btn" title="Modo Escuro" id="btnTheme">
-                <i class="bi bi-moon"></i>
+                <i class="bi bi-moon" id="themeIcon"></i>
             </button>
         </div>
     </header>
@@ -893,14 +1621,67 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             overlay.classList.remove('active');
         });
 
+        // Toggle Sidebar Collapse (Desktop)
+        const collapseBtn = document.getElementById('sidebarCollapseBtn');
+        
+        // Restore collapsed state from localStorage
+        if (localStorage.getItem('sidebarCollapsed') === '1') {
+            document.body.classList.add('sidebar-collapsed');
+        }
+
+        collapseBtn?.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-collapsed');
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '0');
+            collapseBtn.title = isCollapsed ? 'Expandir menu' : 'Recolher menu';
+        });
+
+        // Dark Mode Toggle
+        const btnTheme = document.getElementById('btnTheme');
+        const themeIcon = document.getElementById('themeIcon');
+
+        function applyDarkMode(enabled) {
+            if (enabled) {
+                document.body.classList.add('dark-mode');
+                themeIcon.classList.remove('bi-moon');
+                themeIcon.classList.add('bi-sun');
+                btnTheme.title = 'Modo Claro';
+            } else {
+                document.body.classList.remove('dark-mode');
+                themeIcon.classList.remove('bi-sun');
+                themeIcon.classList.add('bi-moon');
+                btnTheme.title = 'Modo Escuro';
+            }
+        }
+
+        // Restore dark mode from localStorage
+        if (localStorage.getItem('darkMode') === '1') {
+            applyDarkMode(true);
+        }
+
+        btnTheme?.addEventListener('click', () => {
+            document.body.classList.add('dark-mode-transition');
+            const enabling = !document.body.classList.contains('dark-mode');
+            applyDarkMode(enabling);
+            localStorage.setItem('darkMode', enabling ? '1' : '0');
+            setTimeout(() => document.body.classList.remove('dark-mode-transition'), 400);
+        });
+
         // Logout
         document.getElementById('btnLogout')?.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             if (confirm('Deseja realmente sair?')) {
                 $.post(baseUrl + '/logout', function() {
                     window.location.href = baseUrl + '/login';
                 });
             }
+        });
+
+        // User card → Meu Perfil
+        document.getElementById('userCard')?.addEventListener('click', function(e) {
+            if (e.target.closest('#btnLogout')) return;
+            window.location.href = baseUrl + '/meu-perfil';
         });
 
         // Load active schedules count

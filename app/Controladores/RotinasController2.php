@@ -24,12 +24,15 @@ class RotinasController2
     public function listar(): array
     {
         $db = Database::getConexao();
-        $s = $db->query("SELECT r.id, r.nome, r.descricao, r.esta_executando, r.ativa, r.agendamento_cron, 
+        $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('rotina', 'r', 'id_usuario_criador');
+        $s = $db->prepare("SELECT r.id, r.nome, r.descricao, r.esta_executando, r.ativa, r.agendamento_cron, 
                                 r.proxima_execucao, r.ultima_execucao, r.tentativas_falha,
                                 p.nome_conexao 
                          FROM tb_rotinas r 
                          JOIN tb_perfis_conexao p ON r.id_conexao = p.id 
+                         WHERE ({$filtro['where']})
                          ORDER BY r.id DESC");
+        $s->execute($filtro['params']);
         $rows = $s->fetchAll(PDO::FETCH_ASSOC);
         return ['sucesso' => true, 'dados' => $rows, 'data' => $rows];
     }

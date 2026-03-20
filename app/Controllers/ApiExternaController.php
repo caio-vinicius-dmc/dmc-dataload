@@ -146,11 +146,11 @@ class ApiExternaController
                 Logger::logToDatabase('INFO', "API atualizada: {$nome}", ['id' => $id]);
                 
                 // Associar empresas/projetos
-                if (isset($data['empresas']) && is_array($data['empresas'])) {
-                    \App\Servicos\ServicoPermissao::associarRecursoEmpresas('api', (int)$id, array_map('intval', $data['empresas']));
-                }
-                if (isset($data['projetos']) && is_array($data['projetos'])) {
-                    \App\Servicos\ServicoPermissao::associarRecursoProjetos('api', (int)$id, array_map('intval', $data['projetos']));
+                if (!empty($data['_rbac_presente'])) {
+                    $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+                    $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+                    \App\Servicos\ServicoPermissao::associarRecursoEmpresas('api', (int)$id, $idsEmpresas);
+                    \App\Servicos\ServicoPermissao::associarRecursoProjetos('api', (int)$id, $idsProjetos);
                 }
                 
                 return ['sucesso' => true, 'mensagem' => 'API atualizada com sucesso', 'id' => $id];
@@ -168,11 +168,11 @@ class ApiExternaController
                 Logger::logToDatabase('INFO', "API criada: {$nome}", ['id' => $novoId]);
                 
                 // Associar empresas/projetos
-                if (isset($data['empresas']) && is_array($data['empresas'])) {
-                    \App\Servicos\ServicoPermissao::associarRecursoEmpresas('api', (int)$novoId, array_map('intval', $data['empresas']));
-                }
-                if (isset($data['projetos']) && is_array($data['projetos'])) {
-                    \App\Servicos\ServicoPermissao::associarRecursoProjetos('api', (int)$novoId, array_map('intval', $data['projetos']));
+                if (!empty($data['_rbac_presente'])) {
+                    $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+                    $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+                    \App\Servicos\ServicoPermissao::associarRecursoEmpresas('api', (int)$novoId, $idsEmpresas);
+                    \App\Servicos\ServicoPermissao::associarRecursoProjetos('api', (int)$novoId, $idsProjetos);
                 }
                 
                 return ['sucesso' => true, 'mensagem' => 'API criada com sucesso', 'id' => $novoId];
@@ -307,6 +307,7 @@ class ApiExternaController
     public function listarEventos(int $idApi = null): array
     {
         try {
+            $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('api_externa', 'a', 'criado_por');
             $sql = "
                 SELECT 
                     e.*,
@@ -315,11 +316,12 @@ class ApiExternaController
                 FROM tb_eventos_api e
                 JOIN tb_api_externas a ON a.id = e.id_api
                 LEFT JOIN tb_workflows w ON w.id = e.id_workflow
+                WHERE ({$filtro['where']})
             ";
             
-            $params = [];
+            $params = $filtro['params'];
             if ($idApi) {
-                $sql .= " WHERE e.id_api = ?";
+                $sql .= " AND e.id_api = ?";
                 $params[] = $idApi;
             }
             

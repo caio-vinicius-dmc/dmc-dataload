@@ -6,6 +6,7 @@
 $pageTitle = 'Agendamentos';
 $currentPage = 'scheduler';
 $csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
+$isOperador = \App\Servicos\ServicoPermissao::ehOperador();
 
 ob_start();
 ?>
@@ -17,8 +18,9 @@ ob_start();
     </div>
     <div>
         <h1 class="page-title-modern">Agendamentos</h1>
-        <p class="page-subtitle-modern">Gerencie os agendamentos de execução das rotinas</p>
+        <p class="page-subtitle-modern"><?= $isOperador ? 'Visualize os agendamentos de execução das rotinas' : 'Gerencie os agendamentos de execução das rotinas' ?></p>
     </div>
+    <?php if (!$isOperador): ?>
     <div class="d-flex gap-2 ms-auto">
         <button class="btn-modern-primary" onclick="novoAgendamento()">
             <i class="bi bi-plus-circle me-2"></i>Novo Agendamento
@@ -33,6 +35,7 @@ ob_start();
             <i class="bi bi-stop-fill me-2"></i>Parar Worker
         </button>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- Worker Status -->
@@ -91,7 +94,9 @@ ob_start();
                         <th><i class="bi bi-card-text me-2"></i>Descrição</th>
                         <th><i class="bi bi-calendar me-2"></i>Próxima Execução</th>
                         <th><i class="bi bi-check-circle me-2"></i>Status</th>
+                        <?php if (!$isOperador): ?>
                         <th><i class="bi bi-tools me-2"></i>Ações</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -108,6 +113,7 @@ ob_start();
 </div>
 
 <!-- Log de Execuções do Scheduler -->
+<?php if (!$isOperador): ?>
 <div class="card-modern mt-4">
     <div class="card-modern-header">
         <i class="bi bi-terminal me-2"></i>Log do Scheduler
@@ -118,8 +124,10 @@ ob_start();
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Modal de Configuração de Agendamento -->
+<?php if (!$isOperador): ?>
 <div class="modal fade" id="modalAgendamento" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
@@ -487,6 +495,7 @@ ob_start();
                     <i class="bi bi-check-lg me-2"></i>Salvar Agendamento
                 </button>
             </div>
+<?php endif; /* !$isOperador modal */ ?>
         <?php
 $content = ob_get_clean();
 
@@ -687,7 +696,7 @@ $extraStyles = <<<'STYLES'
 </style>
 STYLES;
 
-$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\';</script>';
+$extraScripts = '<script>const csrfToken = \'' . htmlspecialchars($csrfToken, ENT_QUOTES) . '\'; const isOperador = ' . ($isOperador ? 'true' : 'false') . ';</script>';
 $extraScripts .= <<<'SCRIPTS'
 
 <script>
@@ -723,15 +732,16 @@ function carregarAgendamentos() {
         tbody.empty();
         
         if (!res.dados || res.dados.length === 0) {
-            tbody.html(`<tr><td colspan="6" class="text-center py-5">
+            const colSpan = isOperador ? 5 : 6;
+            tbody.html(`<tr><td colspan="${colSpan}" class="text-center py-5">
                 <div class="d-flex flex-column align-items-center gap-3">
                     <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
                     <div>
                         <h5 class="text-muted mb-2">Nenhuma rotina com agendamento</h5>
-                        <p class="text-muted mb-3">Configure o agendamento CRON nas rotinas para executá-las automaticamente</p>
+                        ${isOperador ? '' : `<p class="text-muted mb-3">Configure o agendamento CRON nas rotinas para executá-las automaticamente</p>
                         <a href="${baseUrl}/rotinas" class="btn btn-primary">
                             <i class="bi bi-gear me-2"></i>Configurar Rotinas
-                        </a>
+                        </a>`}
                     </div>
                 </div>
             </td></tr>`);
@@ -764,13 +774,15 @@ function carregarAgendamentos() {
                        </button>
                    </div>`;
             
+            const acoesCol = isOperador ? '' : `<td>${acoesPipeline}</td>`;
+            
             tbody.append(`<tr>
                 <td><strong>${r.nome}</strong>${tipoBadge}</td>
                 <td><code>${r.agendamento_cron}</code></td>
                 <td><small class="text-muted">${descricaoCron(r.agendamento_cron)}</small></td>
                 <td>${proxExec}</td>
                 <td>${statusBadge}</td>
-                <td>${acoesPipeline}</td>
+                ${acoesCol}
             </tr>`);
         });
         

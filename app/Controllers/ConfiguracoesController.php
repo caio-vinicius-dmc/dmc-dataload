@@ -6,6 +6,7 @@ use App\Core\Database;
 use App\Core\AuthMiddleware;
 use App\Servicos\ServicoAuditoria;
 use App\Servicos\ServicoEmail;
+use App\Servicos\ServicoBackup;
 
 class ConfiguracoesController
 {
@@ -189,8 +190,8 @@ class ConfiguracoesController
             $stmt->execute();
             $total += $stmt->rowCount();
 
-            // Limpar rate limits
-            $this->db->exec("DELETE FROM tb_rate_limits WHERE expires_at < NOW()");
+            // Limpar rate limits expirados
+            $this->db->exec("DELETE FROM tb_rate_limits WHERE ultima_tentativa < NOW() - INTERVAL '1 day'");
 
             // Limpar auditoria muito antiga (> 1 ano)
             if ($dias >= 365) {
@@ -207,17 +208,121 @@ class ConfiguracoesController
     }
 
     /**
+     * Testar conexão LDAP
+     */
+    public function testarLdap(): void
+    {
+        header('Content-Type: application/json');
+
+        try {
+            if (!extension_loaded('ldap')) {
+                throw new \Exception('Extensão PHP LDAP não está instalada');
+            }
+
+            // Carregar configs LDAP do banco
+            $stmt = $this->db->prepare("SELECT chave, valor FROM tb_configuracoes WHERE grupo = 'ldap'");
+            $stmt->execute();
+            $configs = [];
+            foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $configs[$row['chave']] = $row['valor'];
+            }
+
+            $host = $configs['ldap_host'] ?? '';
+            $port = (int) ($configs['ldap_port'] ?? 389);
+            $ssl = $configs['ldap_ssl'] ?? '0';
+
+            if (empty($host)) {
+                throw new \Exception('Servidor LDAP não configurado');
+            }
+
+            $uri = ($ssl === '1') ? "ldaps://$host:$port" : "ldap://$host:$port";
+            $conn = @ldap_connect($uri);
+            if (!$conn) {
+                throw new \Exception('Não foi possível conectar ao servidor LDAP');
+            }
+
+            ldap_set_option($conn, LDAP_OPT_PROTOCOL_VERSION, 3);
+            ldap_set_option($conn, LDAP_OPT_REFERRALS, 0);
+            ldap_set_option($conn, LDAP_OPT_NETWORK_TIMEOUT, 5);
+
+            if ($ssl === '2') {
+                if (!@ldap_start_tls($conn)) {
+                    throw new \Exception('Falha ao iniciar STARTTLS');
+                }
+            }
+
+            // Tentar bind com credenciais fornecidas ou admin
+            $user = $_POST['user'] ?? '';
+            $pass = $_POST['pass'] ?? '';
+
+            if (!empty($user) && !empty($pass)) {
+                $bindDn = $configs['ldap_bind_dn'] ?? '';
+                $baseDn = $configs['ldap_base_dn'] ?? '';
+                $filter = $configs['ldap_filter'] ?? '(sAMAccountName={username})';
+                $filter = str_replace('{username}', ldap_escape($user, '', LDAP_ESCAPE_FILTER), $filter);
+
+                // Primeiro bind com admin para buscar
+                if (!empty($bindDn)) {
+                    $adminPass = $configs['ldap_bind_password'] ?? '';
+                    $bind = @ldap_bind($conn, $bindDn, $adminPass);
+                    if (!$bind) {
+                        throw new \Exception('Falha no bind administrativo: ' . ldap_error($conn));
+                    }
+                }
+
+                echo json_encode(['sucesso' => true, 'mensagem' => 'Conexão LDAP bem sucedida']);
+            } else {
+                // Teste anônimo ou com bind admin
+                $bindDn = $configs['ldap_bind_dn'] ?? '';
+                $bindPass = $configs['ldap_bind_password'] ?? '';
+
+                if (!empty($bindDn) && !empty($bindPass)) {
+                    $bind = @ldap_bind($conn, $bindDn, $bindPass);
+                    if (!$bind) {
+                        throw new \Exception('Falha no bind: ' . ldap_error($conn));
+                    }
+                    echo json_encode(['sucesso' => true, 'mensagem' => 'Conexão LDAP bem sucedida (bind admin)']);
+                } else {
+                    $bind = @ldap_bind($conn);
+                    if (!$bind) {
+                        throw new \Exception('Falha no bind anônimo: ' . ldap_error($conn));
+                    }
+                    echo json_encode(['sucesso' => true, 'mensagem' => 'Conexão LDAP bem sucedida (anônimo)']);
+                }
+            }
+
+            @ldap_close($conn);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Criar backup do banco de dados
+     */
+    public function backupBD(): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $result = ServicoBackup::criar('completo');
+            echo json_encode($result);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Campos permitidos por grupo (whitelist)
      */
     private function camposPorGrupo(string $grupo): ?array
     {
         return match ($grupo) {
-            'geral' => ['app_nome', 'app_url', 'app_timezone', 'app_idioma', 'app_manutencao'],
+            'geral' => ['app_nome', 'app_url', 'app_timezone', 'app_idioma', 'app_descricao', 'modo_manutencao', 'login_bg_imagem'],
             'email' => ['smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_user', 'smtp_password', 'smtp_from_email', 'smtp_from_name'],
-            'ldap' => ['ldap_host', 'ldap_port', 'ldap_ssl', 'ldap_base_dn', 'ldap_filtro', 'ldap_bind_dn', 'ldap_bind_password'],
-            'scheduler' => ['scheduler_intervalo', 'scheduler_max_paralelo', 'scheduler_timeout', 'scheduler_retry'],
-            'seguranca' => ['seguranca_timeout_sessao', 'seguranca_tentativas_login', 'seguranca_tempo_bloqueio'],
-            'notificacoes' => ['notif_email_falha', 'notif_webhook_ativo', 'notif_webhook_url', 'notif_email_sucesso'],
+            'ldap' => ['ldap_ativo', 'ldap_host', 'ldap_port', 'ldap_ssl', 'ldap_base_dn', 'ldap_filter', 'ldap_bind_dn', 'ldap_bind_password'],
+            'scheduler' => ['scheduler_ativo', 'scheduler_intervalo', 'scheduler_max_paralelo', 'scheduler_timeout', 'scheduler_retry', 'scheduler_max_tentativas', 'scheduler_intervalo_retry'],
+            'seguranca' => ['sessao_tempo', 'login_tentativas', 'login_bloqueio', 'senha_min', 'senha_maiuscula', 'senha_minuscula', 'senha_numero', 'senha_especial', '2fa_ativo', 'ip_tentativas', 'ip_bloqueio'],
+            'notificacoes' => ['notif_falha', 'notif_sucesso', 'notif_agendamento', 'notif_conexao', 'notif_sistema', 'notif_emails'],
             default => null,
         };
     }

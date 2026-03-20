@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Database;
+use App\Core\AuthMiddleware;
 use PDO;
 use Exception;
 
@@ -12,7 +13,7 @@ use Exception;
 class LogsController
 {
     /**
-     * Listar logs com filtros e paginação
+     * Listar logs com filtros e paginação (com RBAC)
      */
     public function listar()
     {
@@ -26,10 +27,19 @@ class LogsController
             $filtros = [];
             $params = [];
             
+            // RBAC: não-admins só veem seus próprios logs
+            $usuario = AuthMiddleware::obterUsuario();
+            $idUsuario = AuthMiddleware::obterUsuarioId();
+            $nivel = $usuario['nivel_acesso'] ?? 'operador';
+            if (!in_array($nivel, ['super_admin', 'admin'])) {
+                $filtros[] = "id_usuario = ?";
+                $params[] = $idUsuario;
+            }
+            
             // Filtros
             if (!empty($_GET['nivel'])) {
                 $filtros[] = "nivel = ?";
-                $params[] = strtoupper($_GET['nivel']); // PostgreSQL é case-sensitive
+                $params[] = strtoupper($_GET['nivel']);
             }
             
             if (!empty($_GET['canal'])) {
@@ -79,15 +89,23 @@ class LogsController
             $stmtCount->execute($params);
             $total = $stmtCount->fetchColumn();
             
-            // Estatísticas
-            $stats = $db->query("SELECT 
+            // Estatísticas (com mesmo filtro RBAC)
+            $statsWhere = '';
+            $statsParams = [];
+            if (!in_array($nivel, ['super_admin', 'admin'])) {
+                $statsWhere = 'WHERE id_usuario = ?';
+                $statsParams[] = $idUsuario;
+            }
+            $stmtStats = $db->prepare("SELECT 
                 COUNT(*) as total,
                 SUM(CASE WHEN nivel = 'DEBUG' THEN 1 ELSE 0 END) as debug,
                 SUM(CASE WHEN nivel = 'INFO' THEN 1 ELSE 0 END) as info,
                 SUM(CASE WHEN nivel = 'WARNING' THEN 1 ELSE 0 END) as warning,
                 SUM(CASE WHEN nivel = 'ERROR' THEN 1 ELSE 0 END) as error,
                 SUM(CASE WHEN nivel = 'CRITICAL' THEN 1 ELSE 0 END) as critical
-                FROM tb_logs_sistema")->fetch(PDO::FETCH_ASSOC);
+                FROM tb_logs_sistema {$statsWhere}");
+            $stmtStats->execute($statsParams);
+            $stats = $stmtStats->fetch(PDO::FETCH_ASSOC);
             
             header('Content-Type: application/json');
             echo json_encode([
@@ -141,7 +159,7 @@ class LogsController
     }
     
     /**
-     * Exportar logs
+     * Exportar logs (com RBAC)
      */
     public function exportar()
     {
@@ -150,6 +168,15 @@ class LogsController
             
             $filtros = [];
             $params = [];
+            
+            // RBAC: não-admins só veem seus próprios logs
+            $usuario = AuthMiddleware::obterUsuario();
+            $idUsuario = AuthMiddleware::obterUsuarioId();
+            $nivel = $usuario['nivel_acesso'] ?? 'operador';
+            if (!in_array($nivel, ['super_admin', 'admin'])) {
+                $filtros[] = "id_usuario = ?";
+                $params[] = $idUsuario;
+            }
             
             if (!empty($_GET['nivel'])) {
                 $filtros[] = "nivel = ?";

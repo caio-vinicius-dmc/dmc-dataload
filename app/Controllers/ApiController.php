@@ -82,7 +82,7 @@ class ApiController
     }
     
     /**
-     * Retorna logs do sistema
+     * Retorna logs do sistema (com RBAC)
      */
     public static function logs(): void
     {
@@ -99,6 +99,15 @@ class ApiController
                     FROM tb_logs_sistema 
                     WHERE 1=1";
             $params = [];
+            
+            // RBAC: não-admins só veem seus próprios logs
+            $usuario = \App\Core\AuthMiddleware::obterUsuario();
+            $idUsuario = \App\Core\AuthMiddleware::obterUsuarioId();
+            $nivelAcesso = $usuario['nivel_acesso'] ?? 'operador';
+            if (!in_array($nivelAcesso, ['super_admin', 'admin'])) {
+                $sql .= " AND id_usuario = :rbac_uid";
+                $params[':rbac_uid'] = $idUsuario;
+            }
             
             if ($nivel) {
                 $sql .= " AND nivel = :nivel";
@@ -143,7 +152,7 @@ class ApiController
     }
     
     /**
-     * Estatísticas de logs
+     * Estatísticas de logs (com RBAC)
      */
     public static function estatisticasLogs(): void
     {
@@ -152,28 +161,42 @@ class ApiController
         try {
             $db = Database::getConexao();
             
+            // RBAC: não-admins só veem seus próprios logs
+            $usuario = \App\Core\AuthMiddleware::obterUsuario();
+            $idUsuario = \App\Core\AuthMiddleware::obterUsuarioId();
+            $nivelAcesso = $usuario['nivel_acesso'] ?? 'operador';
+            $rbacWhere = '';
+            $rbacParams = [];
+            if (!in_array($nivelAcesso, ['super_admin', 'admin'])) {
+                $rbacWhere = ' AND id_usuario = ?';
+                $rbacParams = [$idUsuario];
+            }
+            
             // Contagem por nível nas últimas 24h
-            $stmt = $db->query("
+            $stmt = $db->prepare("
                 SELECT nivel, COUNT(*) as total
                 FROM tb_logs_sistema
-                WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'{$rbacWhere}
                 GROUP BY nivel
             ");
+            $stmt->execute($rbacParams);
             $porNivel = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             
             // Contagem por canal nas últimas 24h
-            $stmt = $db->query("
+            $stmt = $db->prepare("
                 SELECT canal, COUNT(*) as total
                 FROM tb_logs_sistema
-                WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'{$rbacWhere}
                 GROUP BY canal
                 ORDER BY total DESC
                 LIMIT 10
             ");
+            $stmt->execute($rbacParams);
             $porCanal = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             
             // Total geral
-            $stmt = $db->query("SELECT COUNT(*) FROM tb_logs_sistema");
+            $stmt = $db->prepare("SELECT COUNT(*) FROM tb_logs_sistema WHERE 1=1{$rbacWhere}");
+            $stmt->execute($rbacParams);
             $total = $stmt->fetchColumn();
             
             echo json_encode([

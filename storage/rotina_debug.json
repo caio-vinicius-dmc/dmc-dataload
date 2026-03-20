@@ -1,6 +1,23 @@
 {
-    "nome": "TESTE_Nova_Conexao_MySQL",
-    "descricao": "Rotina teste",
-    "id_conexao": "18",
-    "blocos": "[{\"codigo_bloco\":\"bloco_1\",\"ordem\":1,\"script_sql\":\"SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() LIMIT 5\",\"tipo_bloco\":\"sql\"}]"
+    "id": "34",
+    "nome": "PG_Teste_03_Configuracoes",
+    "id_conexao": "15",
+    "descricao": "Listar configuracoes do sistema Helpdesk",
+    "_rbac_presente": "1",
+    "empresas": [
+        "1"
+    ],
+    "projetos": [
+        "1"
+    ],
+    "bloco_codigo": [
+        "bloco_1"
+    ],
+    "tipo_bloco": [
+        "SELECT"
+    ],
+    "script_sql": [
+        "SELECT * FROM cfg_configuracoes LIMIT 20"
+    ],
+    "id_usuario_criador": "1"
 }

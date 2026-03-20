@@ -30,6 +30,7 @@ class ServicoPermissao
         '/diagrama',
         '/scheduler',
         '/calendario',
+        '/meu-perfil',
     ];
 
     // Tipos de recurso válidos
@@ -125,7 +126,13 @@ class ServicoPermissao
      */
     public static function operadorPodeAcessarApi(string $path, string $method): bool
     {
-        // Operador só pode fazer GET
+        // APIs de perfil do próprio usuário: permitidas para todos (GET e POST)
+        $apisPerfil = ['/api/perfil', '/api/perfil/atualizar', '/api/perfil/alterar-senha'];
+        if (in_array($path, $apisPerfil, true)) {
+            return true;
+        }
+
+        // Operador só pode fazer GET nas demais rotas
         if ($method !== 'GET') {
             return false;
         }
@@ -145,6 +152,24 @@ class ServicoPermissao
             '/calendario/',
             '/scheduler/',
             '/diagrama/',
+            '/conexoes/list',
+            '/conexoes/get/',
+            '/rotinas/list',
+            '/rotinas/get/',
+            '/rotinas/stats/',
+            '/pipelines/list',
+            '/pipelines/get/',
+            '/pipelines/stats',
+            '/pipelines/historico/',
+            '/pipelines/execucao/',
+            '/api/workflows/list',
+            '/api/workflows/get/',
+            '/api/workflows/stats',
+            '/api/workflow-execucoes/',
+            '/api/apis-externas/list',
+            '/api/apis-externas/get/',
+            '/api/eventos-api/list',
+            '/api/eventos-api/get/',
         ];
 
         foreach ($apisPermitidas as $api) {
@@ -271,7 +296,7 @@ class ServicoPermissao
             ];
         }
 
-        // Desenvolvedor: vê o que criou + o que compartilharam com ele
+        // Desenvolvedor: vê o que criou + o que compartilharam com ele + recursos dos projetos dele
         if ($nivel === 'desenvolvedor') {
             return [
                 'where' => "({$aliasTabela}.{$colunaCriador} = :filtro_uid 
@@ -282,9 +307,9 @@ class ServicoPermissao
                         AND (c.id_recurso = {$aliasTabela}.id OR c.id_recurso IS NULL)
                     )
                     OR {$aliasTabela}.id IN (
-                        SELECT re.id_recurso FROM tb_recurso_empresas re
-                        WHERE re.tipo_recurso = :filtro_tipo2
-                        AND re.id_empresa IN (SELECT ue.id_empresa FROM tb_usuario_empresas ue WHERE ue.id_usuario = :filtro_uid3)
+                        SELECT rp.id_recurso FROM tb_recurso_projetos rp
+                        WHERE rp.tipo_recurso = :filtro_tipo2
+                        AND rp.id_projeto IN (SELECT up.id_projeto FROM tb_usuario_projetos up WHERE up.id_usuario = :filtro_uid3)
                     ))",
                 'params' => [
                     ':filtro_uid' => $idUsuario,
@@ -296,16 +321,18 @@ class ServicoPermissao
             ];
         }
 
-        // Operador: vê recursos das empresas/projetos dele (somente leitura)
+        // Operador: vê recursos dos projetos dele (somente leitura, mesma visibilidade que desenvolvedor)
         if ($nivel === 'operador') {
             return [
-                'where' => "{$aliasTabela}.id IN (
-                    SELECT re.id_recurso FROM tb_recurso_empresas re
-                    WHERE re.tipo_recurso = :filtro_tipo
-                    AND re.id_empresa IN (SELECT ue.id_empresa FROM tb_usuario_empresas ue WHERE ue.id_usuario = :filtro_uid)
-                )",
+                'where' => "({$aliasTabela}.{$colunaCriador} = :filtro_uid 
+                    OR {$aliasTabela}.id IN (
+                        SELECT rp.id_recurso FROM tb_recurso_projetos rp
+                        WHERE rp.tipo_recurso = :filtro_tipo
+                        AND rp.id_projeto IN (SELECT up.id_projeto FROM tb_usuario_projetos up WHERE up.id_usuario = :filtro_uid2)
+                    ))",
                 'params' => [
                     ':filtro_uid' => $idUsuario,
+                    ':filtro_uid2' => $idUsuario,
                     ':filtro_tipo' => $tipoRecurso,
                 ]
             ];
@@ -348,22 +375,23 @@ class ServicoPermissao
                         WHERE c.tipo_recurso = ? AND c.id_usuario_destino = ?
                     )
                     OR {$aliasTabela}.id IN (
-                        SELECT re.id_recurso FROM tb_recurso_empresas re
-                        WHERE re.tipo_recurso = ?
-                        AND re.id_empresa IN (SELECT ue.id_empresa FROM tb_usuario_empresas ue WHERE ue.id_usuario = ?)
+                        SELECT rp.id_recurso FROM tb_recurso_projetos rp
+                        WHERE rp.tipo_recurso = ?
+                        AND rp.id_projeto IN (SELECT up.id_projeto FROM tb_usuario_projetos up WHERE up.id_usuario = ?)
                     ))",
                 'params' => [$idUsuario, $tipoRecurso, $idUsuario, $tipoRecurso, $idUsuario]
             ];
         }
 
-        // operador
+        // operador: vê recursos dos projetos dele (somente leitura)
         return [
-            'where' => "{$aliasTabela}.id IN (
-                SELECT re.id_recurso FROM tb_recurso_empresas re
-                WHERE re.tipo_recurso = ?
-                AND re.id_empresa IN (SELECT ue.id_empresa FROM tb_usuario_empresas ue WHERE ue.id_usuario = ?)
-            )",
-            'params' => [$tipoRecurso, $idUsuario]
+            'where' => "({$aliasTabela}.{$colunaCriador} = ? 
+                OR {$aliasTabela}.id IN (
+                    SELECT rp.id_recurso FROM tb_recurso_projetos rp
+                    WHERE rp.tipo_recurso = ?
+                    AND rp.id_projeto IN (SELECT up.id_projeto FROM tb_usuario_projetos up WHERE up.id_usuario = ?)
+                ))",
+            'params' => [$idUsuario, $tipoRecurso, $idUsuario]
         ];
     }
 
@@ -414,23 +442,23 @@ class ServicoPermissao
             $stmt->execute([':tipo' => $tipoRecurso, ':uid' => $idUsuario, ':rid' => $idRecurso]);
             if ($stmt->fetchColumn()) return true;
 
-            // Verifica se pertence a empresa/projeto do desenvolvedor
+            // Verifica se pertence a algum projeto do desenvolvedor
             $stmt2 = $db->prepare("
-                SELECT 1 FROM tb_recurso_empresas re
-                JOIN tb_usuario_empresas ue ON ue.id_empresa = re.id_empresa AND ue.id_usuario = :uid
-                WHERE re.tipo_recurso = :tipo AND re.id_recurso = :rid
+                SELECT 1 FROM tb_recurso_projetos rp
+                JOIN tb_usuario_projetos up ON up.id_projeto = rp.id_projeto AND up.id_usuario = :uid
+                WHERE rp.tipo_recurso = :tipo AND rp.id_recurso = :rid
             ");
             $stmt2->execute([':uid' => $idUsuario, ':tipo' => $tipoRecurso, ':rid' => $idRecurso]);
             return (bool)$stmt2->fetchColumn();
         }
 
-        // Operador: verifica se pertence à empresa/projeto dele
+        // Operador: verifica se pertence a algum projeto dele (mesma visibilidade que desenvolvedor)
         if ($nivel === 'operador') {
             $db = Database::getConexao();
             $stmt = $db->prepare("
-                SELECT 1 FROM tb_recurso_empresas re
-                JOIN tb_usuario_empresas ue ON ue.id_empresa = re.id_empresa AND ue.id_usuario = :uid
-                WHERE re.tipo_recurso = :tipo AND re.id_recurso = :rid
+                SELECT 1 FROM tb_recurso_projetos rp
+                JOIN tb_usuario_projetos up ON up.id_projeto = rp.id_projeto AND up.id_usuario = :uid
+                WHERE rp.tipo_recurso = :tipo AND rp.id_recurso = :rid
             ");
             $stmt->execute([':uid' => $idUsuario, ':tipo' => $tipoRecurso, ':rid' => $idRecurso]);
             return (bool)$stmt->fetchColumn();
@@ -732,7 +760,7 @@ class ServicoPermissao
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         }
 
-        // Admin: apenas as empresas que ele faz parte
+        // Admin e desenvolvedor: apenas as empresas que ele faz parte
         $stmt = $db->prepare("
             SELECT e.id, e.nome FROM tb_empresas e
             JOIN tb_usuario_empresas ue ON ue.id_empresa = e.id AND ue.id_usuario = :uid
@@ -757,17 +785,49 @@ class ServicoPermissao
         if (self::ehSuperAdmin()) {
             if ($idsEmpresas) {
                 $placeholders = implode(',', array_fill(0, count($idsEmpresas), '?'));
-                $stmt = $db->prepare("SELECT p.id, p.nome, e.nome as empresa_nome FROM tb_projetos p JOIN tb_empresas e ON e.id = p.id_empresa WHERE p.ativo = true AND p.id_empresa IN ($placeholders) ORDER BY e.nome, p.nome");
+                $stmt = $db->prepare("SELECT p.id, p.nome, p.id_empresa, e.nome as empresa_nome FROM tb_projetos p JOIN tb_empresas e ON e.id = p.id_empresa WHERE p.ativo = true AND p.id_empresa IN ($placeholders) ORDER BY e.nome, p.nome");
                 $stmt->execute($idsEmpresas);
             } else {
-                $stmt = $db->query("SELECT p.id, p.nome, e.nome as empresa_nome FROM tb_projetos p JOIN tb_empresas e ON e.id = p.id_empresa WHERE p.ativo = true ORDER BY e.nome, p.nome");
+                $stmt = $db->query("SELECT p.id, p.nome, p.id_empresa, e.nome as empresa_nome FROM tb_projetos p JOIN tb_empresas e ON e.id = p.id_empresa WHERE p.ativo = true ORDER BY e.nome, p.nome");
             }
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         }
 
-        // Admin: projetos das empresas dele (criados por ele ou visíveis)
+        $nivel = $usuario['nivel_acesso'] ?? 'operador';
+
+        // Desenvolvedor: apenas seus projetos específicos (via tb_usuario_projetos)
+        if ($nivel === 'desenvolvedor') {
+            $sql = "
+                SELECT p.id, p.nome, p.id_empresa, e.nome as empresa_nome 
+                FROM tb_projetos p
+                JOIN tb_empresas e ON e.id = p.id_empresa
+                JOIN tb_usuario_projetos up ON up.id_projeto = p.id AND up.id_usuario = :uid
+                WHERE p.ativo = true";
+            $params = [':uid' => $idUsuario];
+            if ($idsEmpresas) {
+                $placeholders = implode(',', array_fill(0, count($idsEmpresas), '?'));
+                // Rebuild with positional for empresa filter
+                $sql = "
+                    SELECT p.id, p.nome, p.id_empresa, e.nome as empresa_nome 
+                    FROM tb_projetos p
+                    JOIN tb_empresas e ON e.id = p.id_empresa
+                    JOIN tb_usuario_projetos up ON up.id_projeto = p.id AND up.id_usuario = ?
+                    WHERE p.ativo = true AND p.id_empresa IN ($placeholders)";
+                $params = array_merge([$idUsuario], $idsEmpresas);
+                $sql .= " ORDER BY e.nome, p.nome";
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+            } else {
+                $sql .= " ORDER BY e.nome, p.nome";
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+            }
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        }
+
+        // Admin: todos os projetos das empresas dele
         $stmt = $db->prepare("
-            SELECT p.id, p.nome, e.nome as empresa_nome 
+            SELECT p.id, p.nome, p.id_empresa, e.nome as empresa_nome 
             FROM tb_projetos p
             JOIN tb_empresas e ON e.id = p.id_empresa
             JOIN tb_usuario_empresas ue ON ue.id_empresa = p.id_empresa AND ue.id_usuario = :uid

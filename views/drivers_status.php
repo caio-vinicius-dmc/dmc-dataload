@@ -77,12 +77,13 @@ $pageTitle = 'Status dos Drivers';
                             <th>Banco de Dados</th>
                             <th>Driver PDO</th>
                             <th>Status</th>
+                            <th>Versões Suportadas</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="driversTable">
                         <tr>
-                            <td colspan="4" class="text-center">
+                            <td colspan="5" class="text-center">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Carregando...</span>
                                 </div>
@@ -282,6 +283,24 @@ $extraStyles = <<<'STYLES'
     color: white;
 }
 
+.version-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.version-chip {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: linear-gradient(135deg, #f0f4ff, #e8ecff);
+    color: #4338ca;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid #c7d2fe;
+    white-space: nowrap;
+}
+
 .install-steps {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -424,6 +443,23 @@ function carregarStatus() {
                 }
             }
 
+            // Versões suportadas
+            let versoesHtml = '';
+            if (driver.versoes_suportadas && driver.versoes_suportadas.length) {
+                const chips = driver.versoes_suportadas.map(v =>
+                    `<span class="version-chip">${v}</span>`
+                ).join(' ');
+                versoesHtml = `<div class="version-chips">${chips}</div>`;
+                if (driver.nota_versao) {
+                    versoesHtml += `<small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>${driver.nota_versao}</small>`;
+                }
+                if (driver.driver_version) {
+                    versoesHtml += `<small class="text-muted d-block"><i class="bi bi-tag me-1"></i>Driver: ${driver.driver_version}</small>`;
+                }
+            } else {
+                versoesHtml = '<span class="text-muted">—</span>';
+            }
+
             tbody.innerHTML += `
                 <tr>
                     <td>
@@ -434,6 +470,7 @@ function carregarStatus() {
                     </td>
                     <td><code>${driver.driver}</code></td>
                     <td>${statusBadge}</td>
+                    <td>${versoesHtml}</td>
                     <td>${actionBtn}</td>
                 </tr>
             `;

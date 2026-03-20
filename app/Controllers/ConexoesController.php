@@ -162,11 +162,13 @@ class ConexoesController
         }
 
         // Associar empresas/projetos
-        if (isset($data['empresas']) && is_array($data['empresas'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('conexao', $idRecurso, array_map('intval', $data['empresas']));
-        }
-        if (isset($data['projetos']) && is_array($data['projetos'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoProjetos('conexao', $idRecurso, array_map('intval', $data['projetos']));
+        // _rbac_presente indica que os selects estavam visíveis no form
+        $rbacPresente = !empty($data['_rbac_presente']);
+        if ($rbacPresente) {
+            $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+            $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('conexao', $idRecurso, $idsEmpresas);
+            \App\Servicos\ServicoPermissao::associarRecursoProjetos('conexao', $idRecurso, $idsProjetos);
         }
 
         return ['sucesso' => true, 'mensagem' => $isEdit ? 'Atualizado' : 'Criado', 'id' => $idRecurso];

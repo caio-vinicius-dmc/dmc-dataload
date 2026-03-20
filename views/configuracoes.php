@@ -98,6 +98,14 @@ ob_start();
                                     <small class="text-muted d-block">Somente administradores poderão acessar o sistema</small>
                                 </div>
                             </div>
+                            <div class="col-12">
+                                <label class="form-label-modern">Imagem de Fundo do Login</label>
+                                <input type="text" class="form-control-modern" name="login_bg_imagem" placeholder="URL da imagem (ex: https://images.unsplash.com/... ou caminho relativo)">
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Cole a URL de uma imagem para personalizar o fundo da tela de login. Deixe vazio para usar o gradiente padrão.
+                                </small>
+                            </div>
                         </div>
                         <hr>
                         <button type="submit" class="btn-modern-primary">
@@ -297,6 +305,16 @@ ob_start();
                             <div class="col-md-6">
                                 <label class="form-label">Bloqueio após Tentativas (min)</label>
                                 <input type="number" class="form-control" name="login_bloqueio" value="15" min="1">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tentativas por IP antes de bloquear</label>
+                                <input type="number" class="form-control" name="ip_tentativas" value="10" min="1">
+                                <small class="form-text text-muted">Número de tentativas falhas por IP antes do bloqueio</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Bloqueio de IP (min)</label>
+                                <input type="number" class="form-control" name="ip_bloqueio" value="15" min="1">
+                                <small class="form-text text-muted">Tempo de bloqueio de IP após exceder tentativas</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Tamanho Mínimo de Senha</label>

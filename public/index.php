@@ -54,7 +54,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 define('BASE_URL', $basePath);
 
 // Rotas públicas (sem autenticação)
-$rotasPublicas = ['/', '/login', '/api/health', '/api/versao', '/api/metrics'];
+$rotasPublicas = ['/', '/login', '/esqueci-senha', '/redefinir-senha', '/api/health', '/api/versao', '/api/metrics'];
 $requerAutenticacao = !in_array($path, $rotasPublicas);
 
 // Health check
@@ -100,6 +100,54 @@ if ($path === '/login' && $method === 'POST') {
     } catch (Exception $e) {
         header('Content-Type: application/json');
         echo json_encode(ErrorHandler::tratarErro($e, 'Erro ao autenticar'));
+    }
+    exit;
+}
+
+// Esqueci minha senha
+if ($path === '/esqueci-senha' && $method === 'GET') {
+    include __DIR__ . '/../views/esqueci-senha.php';
+    exit;
+}
+
+if ($path === '/esqueci-senha' && $method === 'POST') {
+    header('Content-Type: application/json');
+    try {
+        $identificador = trim($_POST['identificador'] ?? '');
+        if (empty($identificador)) {
+            echo json_encode(['sucesso' => false, 'erro' => 'Informe usuário ou e-mail']);
+            exit;
+        }
+        $svc = new \App\Servicos\ServicoRecuperacaoSenha();
+        $resultado = $svc->solicitar($identificador);
+        echo json_encode($resultado);
+    } catch (\Exception $e) {
+        echo json_encode(['sucesso' => false, 'erro' => 'Erro ao processar solicitação']);
+    }
+    exit;
+}
+
+// Redefinir senha
+if ($path === '/redefinir-senha' && $method === 'GET') {
+    include __DIR__ . '/../views/redefinir-senha.php';
+    exit;
+}
+
+if ($path === '/redefinir-senha' && $method === 'POST') {
+    header('Content-Type: application/json');
+    try {
+        $token = $_POST['token'] ?? '';
+        $chaveHex = $_POST['chave_hex'] ?? '';
+        $novaSenha = $_POST['nova_senha'] ?? '';
+        if (empty($token) || empty($chaveHex) || empty($novaSenha)) {
+            echo json_encode(['sucesso' => false, 'erro' => 'Todos os campos são obrigatórios']);
+            exit;
+        }
+        $svc = new \App\Servicos\ServicoRecuperacaoSenha();
+        $resultado = $svc->redefinirSenha($token, $chaveHex, $novaSenha);
+        echo json_encode($resultado);
+    } catch (\Exception $e) {
+        echo json_encode(['sucesso' => false, 'erro' => 'Erro ao redefinir senha']);
     }
     exit;
 }
@@ -190,47 +238,72 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
     try {
         $db = Database::getConexao();
         
-        // Total de rotinas
-        $total = $db->query("SELECT COUNT(*) FROM tb_rotinas")->fetchColumn();
+        // ========= RBAC: pré-computar IDs visíveis por tipo de recurso =========
+        $fRot = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('rotina', 'r', 'id_usuario_criador');
+        $stmt = $db->prepare("SELECT r.id FROM tb_rotinas r WHERE ({$fRot['where']})");
+        $stmt->execute($fRot['params']);
+        $rotIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $fPip = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
+        $stmt = $db->prepare("SELECT p.id FROM tb_pipelines p WHERE ({$fPip['where']})");
+        $stmt->execute($fPip['params']);
+        $pipIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $fWf = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
+        $stmt = $db->prepare("SELECT w.id FROM tb_workflows w WHERE ({$fWf['where']})");
+        $stmt->execute($fWf['params']);
+        $wfIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Helper: cria cláusula IN segura (intval previne injection)
+        $inSql = function(array $ids): string {
+            if (empty($ids)) return '(0)';
+            return '(' . implode(',', array_map('intval', $ids)) . ')';
+        };
+        $rotIn = $inSql($rotIds);
+        $pipIn = $inSql($pipIds);
+        $wfIn  = $inSql($wfIds);
         
-        // Em execução (rotinas + pipelines + workflows)
+        // Total de rotinas visíveis
+        $total = $db->query("SELECT COUNT(*) FROM tb_rotinas WHERE id IN {$rotIn}")->fetchColumn();
+        
+        // Em execução (filtrado)
         $emExec = $db->query("
-            SELECT (SELECT COUNT(*) FROM tb_rotinas WHERE esta_executando = true)
-                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'running')
-                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'running')
+            SELECT (SELECT COUNT(*) FROM tb_rotinas WHERE esta_executando = true AND id IN {$rotIn})
+                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'running' AND id_pipeline IN {$pipIn})
+                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'running' AND id_workflow IN {$wfIn})
         ")->fetchColumn();
         
-        // Execuções hoje (rotinas + pipelines + workflows)
+        // Execuções hoje (filtrado)
         $execHoje = $db->query("
-            SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE)
-                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE)
-                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE)
+            SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE AND id_rotina IN {$rotIn})
+                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE AND id_pipeline IN {$pipIn})
+                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE AND id_workflow IN {$wfIn})
         ")->fetchColumn();
         
-        // Falhas hoje (rotinas + pipelines + workflows)
+        // Falhas hoje (filtrado)
         $falhasHoje = $db->query("
-            SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE status IN ('falha','erro') AND data_inicio >= CURRENT_DATE)
-                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'error' AND data_inicio >= CURRENT_DATE)
-                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'failed' AND data_inicio >= CURRENT_DATE)
+            SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE status IN ('falha','erro') AND data_inicio >= CURRENT_DATE AND id_rotina IN {$rotIn})
+                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'error' AND data_inicio >= CURRENT_DATE AND id_pipeline IN {$pipIn})
+                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'failed' AND data_inicio >= CURRENT_DATE AND id_workflow IN {$wfIn})
         ")->fetchColumn();
         
-        // Rotinas ativas (agendadas)
-        $ativas = $db->query("SELECT COUNT(*) FROM tb_rotinas WHERE ativa = true AND agendamento_cron IS NOT NULL")->fetchColumn();
+        // Rotinas ativas (agendadas, filtrado)
+        $ativas = $db->query("SELECT COUNT(*) FROM tb_rotinas WHERE ativa = true AND agendamento_cron IS NOT NULL AND id IN {$rotIn}")->fetchColumn();
         
-        // Próximas execuções (5)
+        // Próximas execuções (5, filtrado)
         $proximas = $db->query("SELECT r.id, r.nome, r.proxima_execucao, r.agendamento_cron, p.nome_conexao as conexao, 'rotina' as tipo
             FROM tb_rotinas r 
             LEFT JOIN tb_perfis_conexao p ON r.id_conexao = p.id
-            WHERE r.ativa = true AND r.proxima_execucao IS NOT NULL 
+            WHERE r.ativa = true AND r.proxima_execucao IS NOT NULL AND r.id IN {$rotIn}
             ORDER BY r.proxima_execucao ASC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
         
-        // Incluir pipelines com cron nas próximas execuções
+        // Incluir pipelines com cron (filtrado)
         $proximasPip = $db->query("SELECT id, nome, agendamento_cron, 'pipeline' as tipo
             FROM tb_pipelines
-            WHERE ativo = true AND trigger_tipo = 'cron' AND agendamento_cron IS NOT NULL AND agendamento_cron != ''
+            WHERE ativo = true AND trigger_tipo = 'cron' AND agendamento_cron IS NOT NULL AND agendamento_cron != '' AND id IN {$pipIn}
             ORDER BY nome")->fetchAll(PDO::FETCH_ASSOC);
         
-        // Calcular próxima execução para pipelines usando cálculo simples
+        // Calcular próxima execução para pipelines
         $schedulerCtrl = new \App\Controllers\SchedulerController();
         foreach ($proximasPip as &$pip) {
             $pip['proxima_execucao'] = $schedulerCtrl->calcularProximaExecucao($pip['agendamento_cron']);
@@ -244,51 +317,52 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
         usort($todasProximas, fn($a, $b) => strcmp($a['proxima_execucao'] ?? '', $b['proxima_execucao'] ?? ''));
         $todasProximas = array_slice($todasProximas, 0, 5);
         
-        // Total de pipelines
-        $totalPipelines = $db->query("SELECT COUNT(*) FROM tb_pipelines")->fetchColumn();
-        $pipelinesAtivos = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE ativo = true AND trigger_tipo = 'cron'")->fetchColumn();
+        // Total de pipelines e workflows visíveis
+        $totalPipelines = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE id IN {$pipIn}")->fetchColumn();
+        $pipelinesAtivos = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE ativo = true AND trigger_tipo = 'cron' AND id IN {$pipIn}")->fetchColumn();
+        $totalWorkflows = $db->query("SELECT COUNT(*) FROM tb_workflows WHERE id IN {$wfIn}")->fetchColumn();
+        $workflowsAtivos = $db->query("SELECT COUNT(*) FROM tb_workflows WHERE ativo = true AND id IN {$wfIn}")->fetchColumn();
         
-        // Total de workflows
-        $totalWorkflows = $db->query("SELECT COUNT(*) FROM tb_workflows")->fetchColumn();
-        $workflowsAtivos = $db->query("SELECT COUNT(*) FROM tb_workflows WHERE ativo = true")->fetchColumn();
-        
-        // Últimas execuções (10) - todas as fontes
+        // Últimas execuções (10, filtrado)
         $ultimas = $db->query("
             (SELECT l.id, l.status, l.data_inicio, l.duracao_ms, r.nome as rotina, 'rotina' as tipo_execucao
-            FROM tb_logs_execucao l LEFT JOIN tb_rotinas r ON l.id_rotina = r.id)
+            FROM tb_logs_execucao l LEFT JOIN tb_rotinas r ON l.id_rotina = r.id
+            WHERE l.id_rotina IN {$rotIn})
             UNION ALL
             (SELECT pe.id, 
                 CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' ELSE pe.status END,
                 pe.data_inicio, pe.duracao_ms, p.nome, 'pipeline'
-            FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id)
+            FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id
+            WHERE pe.id_pipeline IN {$pipIn})
             UNION ALL
             (SELECT we.id, 
                 CASE we.status WHEN 'completed' THEN 'sucesso' WHEN 'failed' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' WHEN 'paused' THEN 'pausado' ELSE we.status END,
                 we.data_inicio, we.duracao_ms, w.nome, 'workflow'
-            FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id)
+            FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id
+            WHERE we.id_workflow IN {$wfIn})
             ORDER BY data_inicio DESC LIMIT 10
         ")->fetchAll(PDO::FETCH_ASSOC);
         
-        // Dados para gráfico (últimos 7 dias) - todas as fontes
+        // Dados para gráfico (últimos 7 dias, filtrado)
         $grafico = $db->query("SELECT data,
             SUM(sucesso) as sucesso, SUM(falha) as falha
             FROM (
                 SELECT DATE(data_inicio) as data,
                     COUNT(*) FILTER (WHERE status = 'sucesso') as sucesso,
                     COUNT(*) FILTER (WHERE status IN ('falha','erro')) as falha
-                FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days'
+                FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days' AND id_rotina IN {$rotIn}
                 GROUP BY DATE(data_inicio)
                 UNION ALL
                 SELECT DATE(data_inicio),
                     COUNT(*) FILTER (WHERE status = 'success'),
                     COUNT(*) FILTER (WHERE status = 'error')
-                FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days'
+                FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days' AND id_pipeline IN {$pipIn}
                 GROUP BY DATE(data_inicio)
                 UNION ALL
                 SELECT DATE(data_inicio),
                     COUNT(*) FILTER (WHERE status = 'completed'),
                     COUNT(*) FILTER (WHERE status = 'failed')
-                FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days'
+                FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days' AND id_workflow IN {$wfIn}
                 GROUP BY DATE(data_inicio)
             ) combined
             GROUP BY data ORDER BY data ASC
@@ -404,8 +478,13 @@ if (preg_match('#^/conexoes/delete/(\d+)$#', $path, $m) && $method === 'POST') {
         exit;
     }
     $id = intval($m[1]);
-    $c = new ConexoesController();
     header('Content-Type: application/json');
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('conexao', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para excluir esta conexão', 'sucesso' => false]);
+        exit;
+    }
+    $c = new ConexoesController();
     \App\Servicos\ServicoAuditoria::registrar('excluir', 'conexao', $id);
     echo json_encode($c->deletar($id));
     exit;
@@ -514,9 +593,14 @@ if (preg_match('#^/rotinas/delete/(\d+)$#', $path, $m) && $method === 'POST') {
         exit;
     }
     $id = intval($m[1]);
+    header('Content-Type: application/json');
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('rotina', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para excluir esta rotina', 'sucesso' => false]);
+        exit;
+    }
     \App\Servicos\ServicoAuditoria::registrar('excluir', 'rotina', $id);
     $c = new RotinasController();
-    header('Content-Type: application/json');
     echo json_encode($c->deletar($id));
     exit;
 }
@@ -592,6 +676,12 @@ if ($path === '/scheduler' || $path === '/agendamentos') {
     exit;
 }
 
+// Meu Perfil
+if ($path === '/meu-perfil') {
+    include __DIR__ . '/../views/meu-perfil.php';
+    exit;
+}
+
 // Logs do Sistema
 if ($path === '/logs') {
     include __DIR__ . '/../views/logs.php';
@@ -600,6 +690,7 @@ if ($path === '/logs') {
 
 // Configurações
 if ($path === '/configuracoes') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
     include __DIR__ . '/../views/configuracoes.php';
     exit;
 }
@@ -613,7 +704,7 @@ if ($path === '/admin/usuarios') {
 
 // Admin - Empresas
 if ($path === '/admin/empresas') {
-    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
     include __DIR__ . '/../views/admin/empresas.php';
     exit;
 }
@@ -627,14 +718,14 @@ if ($path === '/admin/projetos') {
 
 // Admin - Auditoria
 if ($path === '/admin/auditoria') {
-    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
     include __DIR__ . '/../views/admin/auditoria.php';
     exit;
 }
 
 // Admin - Webhooks
 if ($path === '/admin/webhooks') {
-    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
     include __DIR__ . '/../views/admin/webhooks.php';
     exit;
 }
@@ -979,6 +1070,88 @@ if ($path === '/admin/usuarios/reset-senha' && $method === 'POST') {
     exit;
 }
 
+if ($path === '/admin/usuarios/reset-senha-email' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\UsersController();
+    $c->resetSenhaEmail();
+    exit;
+}
+
+if ($path === '/admin/usuarios/desbloquear' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\UsersController();
+    $c->desbloquearUsuario();
+    exit;
+}
+
+// ========== API PERFIL (PRÓPRIO USUÁRIO) ==========
+
+if ($path === '/api/perfil' && $method === 'GET') {
+    $c = new \App\Controllers\UsersController();
+    $c->meuPerfil();
+    exit;
+}
+
+if ($path === '/api/perfil/atualizar' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\UsersController();
+    $c->atualizarPerfil();
+    exit;
+}
+
+if ($path === '/api/perfil/alterar-senha' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\UsersController();
+    $c->alterarMinhaSenha();
+    exit;
+}
+
+if ($path === '/api/perfil/solicitar-reset-email' && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    try {
+        $usuario = AuthMiddleware::obterUsuario();
+        $svc = new \App\Servicos\ServicoRecuperacaoSenha();
+        $resultado = $svc->solicitarPorAdmin((int)$usuario['id']);
+        echo json_encode($resultado);
+    } catch (\Exception $e) {
+        echo json_encode(['sucesso' => false, 'erro' => 'Erro ao processar solicitação']);
+    }
+    exit;
+}
+
 // ========== API EMPRESAS (ADMIN) ==========
 
 if ($path === '/admin/empresas/list' && $method === 'GET') {
@@ -1260,7 +1433,31 @@ if ($path === '/api/historico' && $method === 'GET') {
         $stmt->execute($allParams);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Estatísticas unificadas
+        // RBAC: pré-computar IDs visíveis por tipo de recurso para stats
+        $fRotSt = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('rotina', 'r', 'id_usuario_criador');
+        $stR = $db->prepare("SELECT r.id FROM tb_rotinas r WHERE ({$fRotSt['where']})");
+        $stR->execute($fRotSt['params']);
+        $rotIdsSt = $stR->fetchAll(PDO::FETCH_COLUMN);
+
+        $fPipSt = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
+        $stP = $db->prepare("SELECT p.id FROM tb_pipelines p WHERE ({$fPipSt['where']})");
+        $stP->execute($fPipSt['params']);
+        $pipIdsSt = $stP->fetchAll(PDO::FETCH_COLUMN);
+
+        $fWfSt = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
+        $stW = $db->prepare("SELECT w.id FROM tb_workflows w WHERE ({$fWfSt['where']})");
+        $stW->execute($fWfSt['params']);
+        $wfIdsSt = $stW->fetchAll(PDO::FETCH_COLUMN);
+
+        $inSqlSt = function(array $ids): string {
+            if (empty($ids)) return '(0)';
+            return '(' . implode(',', array_map('intval', $ids)) . ')';
+        };
+        $rotInSt = $inSqlSt($rotIdsSt);
+        $pipInSt = $inSqlSt($pipIdsSt);
+        $wfInSt  = $inSqlSt($wfIdsSt);
+
+        // Estatísticas unificadas (com RBAC)
         $stats = $db->query("
             SELECT 
                 COALESCE(r.sucesso_24h,0) + COALESCE(p.sucesso_24h,0) + COALESCE(w.sucesso_24h,0) as sucesso_24h,
@@ -1274,19 +1471,19 @@ if ($path === '/api/historico' && $method === 'GET') {
                 SUM(CASE WHEN status IN ('falha','erro') AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
                 SUM(CASE WHEN status = 'executando' THEN 1 ELSE 0 END) as executando,
                 AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
-            FROM tb_logs_execucao) r,
+            FROM tb_logs_execucao WHERE id_rotina IN {$rotInSt}) r,
             (SELECT 
                 SUM(CASE WHEN status = 'success' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
                 SUM(CASE WHEN status = 'error' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
                 SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as executando,
                 AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
-            FROM tb_pipeline_execucoes) p,
+            FROM tb_pipeline_execucoes WHERE id_pipeline IN {$pipInSt}) p,
             (SELECT 
                 SUM(CASE WHEN status = 'completed' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
                 SUM(CASE WHEN status = 'failed' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
                 SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as executando,
                 AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
-            FROM tb_workflow_execucoes) w
+            FROM tb_workflow_execucoes WHERE id_workflow IN {$wfInSt}) w
         ")->fetch(PDO::FETCH_ASSOC);
         
         header('Content-Type: application/json');
@@ -1858,9 +2055,16 @@ if (preg_match('#^/api/apis-externas/delete/(\d+)$#', $path, $m) && $method === 
         echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
         exit;
     }
-    $c = new ApiExternaController();
+    $id = (int)$m[1];
     header('Content-Type: application/json');
-    echo json_encode($c->deletarApi((int)$m[1]));
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('api_externa', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para excluir esta API', 'sucesso' => false]);
+        exit;
+    }
+    $c = new ApiExternaController();
+    \App\Servicos\ServicoAuditoria::registrar('excluir', 'api_externa', $id);
+    echo json_encode($c->deletarApi($id));
     exit;
 }
 
@@ -2092,6 +2296,22 @@ if ($path === '/api/configuracoes/testar-email' && $method === 'POST') {
     exit;
 }
 
+// API: Testar conexão LDAP
+if ($path === '/api/configuracoes/testar-ldap' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->testarLdap();
+    exit;
+}
+
+// API: Backup do banco de dados
+if ($path === '/api/configuracoes/backup-bd' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->backupBD();
+    exit;
+}
+
 // API: Exportar configurações
 if ($path === '/api/configuracoes/exportar' && $method === 'GET') {
     \App\Servicos\ServicoPermissao::exigirNivel('admin');
@@ -2276,10 +2496,16 @@ if (preg_match('#^/api/workflows/delete/(\d+)$#', $path, $m) && $method === 'POS
         echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
         exit;
     }
-    \App\Servicos\ServicoAuditoria::registrar('excluir', 'workflow', (int)$m[1]);
-    $c = new WorkflowController();
+    $id = (int)$m[1];
     header('Content-Type: application/json');
-    echo json_encode($c->deletar((int)$m[1]));
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('workflow', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para excluir este workflow', 'sucesso' => false]);
+        exit;
+    }
+    \App\Servicos\ServicoAuditoria::registrar('excluir', 'workflow', $id);
+    $c = new WorkflowController();
+    echo json_encode($c->deletar($id));
     exit;
 }
 
@@ -2463,10 +2689,16 @@ if (preg_match('#^/pipelines/delete/(\d+)$#', $path, $m) && $method === 'POST') 
         echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
         exit;
     }
-    \App\Servicos\ServicoAuditoria::registrar('excluir', 'pipeline', (int)$m[1]);
-    $c = new PipelineController();
+    $id = (int)$m[1];
     header('Content-Type: application/json');
-    echo json_encode($c->deletar((int)$m[1]));
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('pipeline', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para excluir este pipeline', 'sucesso' => false]);
+        exit;
+    }
+    \App\Servicos\ServicoAuditoria::registrar('excluir', 'pipeline', $id);
+    $c = new PipelineController();
+    echo json_encode($c->deletar($id));
     exit;
 }
 

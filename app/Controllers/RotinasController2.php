@@ -24,12 +24,16 @@ class RotinasController2
     public function listar(): array
     {
         $db = Database::getConexao();
-        $s = $db->query("SELECT r.id, r.nome, r.descricao, r.esta_executando, r.ativa, r.agendamento_cron, 
-                                r.proxima_execucao, r.ultima_execucao, r.tentativas_falha,
-                                p.nome_conexao 
-                         FROM tb_rotinas r 
-                         JOIN tb_perfis_conexao p ON r.id_conexao = p.id 
-                         ORDER BY r.id DESC");
+        $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('rotina', 'r', 'id_usuario_criador');
+        $sql = "SELECT r.id, r.nome, r.descricao, r.esta_executando, r.ativa, r.agendamento_cron, 
+                       r.proxima_execucao, r.ultima_execucao, r.tentativas_falha,
+                       p.nome_conexao 
+                FROM tb_rotinas r 
+                JOIN tb_perfis_conexao p ON r.id_conexao = p.id 
+                WHERE ({$filtro['where']})
+                ORDER BY r.id DESC";
+        $s = $db->prepare($sql);
+        $s->execute($filtro['params']);
         $rows = $s->fetchAll(PDO::FETCH_ASSOC);
         return ['sucesso' => true, 'dados' => $rows, 'data' => $rows];
     }
@@ -120,11 +124,11 @@ class RotinasController2
                 }
             }
             // Associar empresas/projetos
-            if (isset($data['empresas']) && is_array($data['empresas'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('rotina', (int)$data['id'], array_map('intval', $data['empresas']));
-            }
-            if (isset($data['projetos']) && is_array($data['projetos'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoProjetos('rotina', (int)$data['id'], array_map('intval', $data['projetos']));
+            if (!empty($data['_rbac_presente'])) {
+                $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+                $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('rotina', (int)$data['id'], $idsEmpresas);
+                \App\Servicos\ServicoPermissao::associarRecursoProjetos('rotina', (int)$data['id'], $idsProjetos);
             }
             return ['sucesso' => true, 'mensagem' => 'Atualizado'];
         }
@@ -165,11 +169,11 @@ class RotinasController2
             }
         }
         // Associar empresas/projetos
-        if (isset($data['empresas']) && is_array($data['empresas'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('rotina', (int)$id, array_map('intval', $data['empresas']));
-        }
-        if (isset($data['projetos']) && is_array($data['projetos'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoProjetos('rotina', (int)$id, array_map('intval', $data['projetos']));
+        if (!empty($data['_rbac_presente'])) {
+            $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+            $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('rotina', (int)$id, $idsEmpresas);
+            \App\Servicos\ServicoPermissao::associarRecursoProjetos('rotina', (int)$id, $idsProjetos);
         }
         return ['sucesso' => true, 'id' => $id];
         

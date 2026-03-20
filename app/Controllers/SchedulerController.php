@@ -156,6 +156,7 @@ class SchedulerController
      */
     public function start(): void
     {
+        \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
         header('Content-Type: application/json');
         
         try {
@@ -206,6 +207,7 @@ class SchedulerController
      */
     public function stop(): void
     {
+        \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
         header('Content-Type: application/json');
         
         try {
@@ -236,6 +238,7 @@ class SchedulerController
      */
     public function toggle(): void
     {
+        \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
         header('Content-Type: application/json');
         
         try {
@@ -263,6 +266,7 @@ class SchedulerController
      */
     public function atualizar(): void
     {
+        \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
         header('Content-Type: application/json');
         
         try {
@@ -472,6 +476,7 @@ class SchedulerController
      */
     public function excluir(): void
     {
+        \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
         header('Content-Type: application/json');
         
         try {
@@ -513,6 +518,7 @@ class SchedulerController
      */
     public function salvar(): void
     {
+        \App\Servicos\ServicoPermissao::exigirNivel('desenvolvedor');
         header('Content-Type: application/json');
         
         try {

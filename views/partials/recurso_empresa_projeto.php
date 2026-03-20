@@ -14,9 +14,10 @@
  *   rbacLimparSelects() - limpa seleções
  */
 $nivelLogado = App\Core\AuthMiddleware::obterUsuario()['nivel_acesso'] ?? 'operador';
-$exibirRbac = in_array($nivelLogado, ['super_admin', 'admin']);
+$exibirRbac = in_array($nivelLogado, ['super_admin', 'admin', 'desenvolvedor']);
 ?>
 <?php if ($exibirRbac): ?>
+<input type="hidden" name="_rbac_presente" value="1">
 <div class="row g-3 mt-2 rbac-recursos-section">
     <div class="col-12">
         <hr class="my-2">

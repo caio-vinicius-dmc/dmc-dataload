@@ -175,8 +175,10 @@ $content = ob_get_clean();
 $extraStyles = '
 <style>
 .stat-card .stat-value { font-size: 1.5rem; }
-.stat-card.info { border-left-color: #0ea5e9; }
-.stat-card.info .stat-icon { color: #0ea5e9; }
+.stat-card.info { border-left-color: #1e293b; background: #1e293b; }
+.stat-card.info .stat-icon { color: #ffffff; }
+.stat-card.info .stat-value { color: #ffffff; }
+.stat-card.info .stat-label { color: #cbd5e1; }
 .stat-card.danger { border-left-color: #ef4444; }
 .stat-card.danger .stat-icon { color: #ef4444; }
 .stat-card.secondary { border-left-color: #64748b; }

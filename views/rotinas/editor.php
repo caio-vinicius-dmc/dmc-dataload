@@ -750,8 +750,8 @@ $(document).ready(function() {
                     console.log("=== CARREGAMENTO CONCLUÍDO ===");
                     
                     // Preencher empresas/projetos RBAC
-                    var empIds = (res.empresas || []).map(function(e) { return e.id_empresa || e.id; });
-                    var projIds = (res.projetos || []).map(function(p) { return p.id_projeto || p.id; });
+                    var empIds = (res.empresas || []).map(function(e) { return parseInt(e.id_empresa || e.id || e, 10); });
+                    var projIds = (res.projetos || []).map(function(p) { return parseInt(p.id_projeto || p.id || p, 10); });
                     if (typeof rbacCarregarOpcoes === 'function') {
                         rbacCarregarOpcoes(function() { rbacPreencherSelects(empIds, projIds); });
                     }

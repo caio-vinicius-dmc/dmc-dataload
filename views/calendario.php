@@ -9,6 +9,7 @@ $breadcrumb = [
     ['label' => 'Dashboard', 'url' => BASE_URL . '/dashboard'],
     ['label' => 'Calendário', 'url' => '']
 ];
+$isOperador = \App\Servicos\ServicoPermissao::ehOperador();
 
 $extraStyles = <<<'STYLES'
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
@@ -133,187 +134,208 @@ body {
     border-color: rgba(255,255,255,0.6);
 }
 
-/* ==== FILTROS SIDEBAR ==== */
-.filtros-sidebar {
-    position: sticky;
-    top: 20px;
+/* ==== FILTROS TOP BAR ==== */
+.filtros-top-bar {
     display: flex;
-    flex-direction: column;
     gap: 1.5rem;
-    z-index: 10;
-    max-height: calc(100vh - 100px);
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.filtros-sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.filtros-sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.filtros-sidebar::-webkit-scrollbar-thumb {
-    background: rgba(102, 126, 234, 0.3);
-    border-radius: 3px;
-}
-
-.filtros-sidebar::-webkit-scrollbar-thumb:hover {
-    background: rgba(102, 126, 234, 0.5);
+    margin-bottom: 1.5rem;
+    align-items: stretch;
 }
 
 .filtros-card {
     background: white;
     border-radius: var(--radius-lg);
-    padding: 1.75rem;
+    padding: 1.25rem 1.5rem;
     box-shadow: var(--shadow-md);
     border: 1px solid rgba(0,0,0,0.04);
     transition: var(--transition);
     position: relative;
 }
 
-.filtros-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--gradient-primary);
-    transform: scaleY(0);
-    transition: transform 0.4s ease;
-}
-
 .filtros-card:hover {
     box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
 }
 
-.filtros-card:hover::before {
-    transform: scaleY(1);
+.filtros-card-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.filtros-card-tips {
+    flex: 0 0 280px;
 }
 
 .filtros-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #f0f2f5;
+    margin-bottom: 1rem;
 }
 
 .filtros-header h5 {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #1a202c;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.5rem;
 }
 
 .filtros-header h5 i {
     color: var(--primary);
-    font-size: 1.25rem;
+    font-size: 1.1rem;
+}
+
+/* ==== Multi-select dropdown ==== */
+.select2-container--default .select2-selection--multiple {
+    border: 2px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.65rem;
+    min-height: 52px;
+    transition: var(--transition);
+    background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.select2-container--default .select2-selection--multiple:focus-within,
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12), var(--shadow-sm);
+    background: white;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+    transition: var(--transition);
+    margin: 2px 0;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: rgba(255,255,255,0.75);
+    margin-right: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    transition: var(--transition);
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: white;
+    background: transparent;
+}
+
+.select2-container--default .select2-search--inline .select2-search__field {
+    margin-top: 0;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.92rem;
+    color: #4a5568;
+}
+
+.select2-container--default .select2-search--inline .select2-search__field::placeholder {
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.select2-dropdown {
+    border: 2px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.select2-results__option {
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+    transition: background 0.15s ease, color 0.15s ease;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.select2-results__option:last-child {
+    border-bottom: none;
+}
+
+.select2-results__option--highlighted[aria-selected] {
+    background: var(--gradient-primary) !important;
+    color: white !important;
+}
+
+.select2-results__option[aria-selected=true] {
+    background: #f0f4ff;
+    color: var(--primary);
+    font-weight: 600;
+    position: relative;
+}
+
+.select2-results__option[aria-selected=true]::after {
+    content: '\F272';
+    font-family: 'bootstrap-icons';
+    position: absolute;
+    right: 1rem;
+    font-size: 0.85rem;
+    color: var(--primary);
 }
 
 .filtros-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    align-items: center;
 }
 
 .filtros-actions .btn {
-    padding: 0.5rem 0.9rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
     font-weight: 600;
     transition: var(--transition);
     border-width: 2px;
+    letter-spacing: 0.2px;
 }
 
-.filtros-actions .btn:hover {
-    transform: scale(1.08);
-}
-
-/* ==== ROTINA CHECKBOXES ==== */
-.rotina-checkbox {
-    padding: 1rem 1.25rem;
-    border: 2px solid #e5e7eb;
-    border-radius: var(--radius-md);
-    margin-bottom: 0.875rem;
-    transition: var(--transition);
-    cursor: pointer;
-    background: white;
-    position: relative;
-}
-
-.rotina-checkbox:hover {
-    background: linear-gradient(135deg, #fafbff 0%, #f3f5ff 100%);
-    border-color: var(--primary);
-    transform: translateX(6px);
-    box-shadow: var(--shadow-sm);
-}
-
-.rotina-checkbox input:checked ~ label {
-    font-weight: 700;
+.filtros-actions .btn-outline-primary {
     color: var(--primary);
+    border-color: var(--primary);
 }
 
-.rotina-checkbox .form-check-label {
-    cursor: pointer;
-    margin: 0;
-    width: 100%;
+.filtros-actions .btn-outline-primary:hover {
+    background: var(--gradient-primary);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.filtros-actions .btn-outline-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.filtros-empty-msg {
+    text-align: center;
+    padding: 2rem;
+    color: #9ca3af;
     font-size: 0.95rem;
 }
 
-.evento-badge {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    margin-right: 0.85rem;
-    box-shadow: 0 0 0 3px currentColor;
-    transition: var(--transition);
-    position: relative;
-}
 
-.evento-badge::after {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0;
-}
-
-.rotina-checkbox:hover .evento-badge {
-    transform: scale(1.3);
-}
-
-.rotina-checkbox:hover .evento-badge::after {
-    opacity: 0.2;
-    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-@keyframes ping {
-    75%, 100% {
-        transform: scale(2);
-        opacity: 0;
-    }
-}
-
-.rotina-cron {
-    font-size: 0.75rem;
-    font-family: 'Courier New', Consolas, monospace;
-    background: #f3f4f6;
-    padding: 0.3rem 0.6rem;
-    border-radius: 6px;
-    color: #6b7280;
-    font-weight: 500;
-    margin-top: 0.4rem;
-    display: inline-block;
-}
 
 /* ==== CALENDÁRIO ==== */
 .calendario-wrapper {
@@ -325,6 +347,7 @@ body {
     transition: var(--transition);
     position: relative;
     z-index: 1;
+    min-height: 600px;
 }
 
 .calendario-wrapper:hover {
@@ -477,24 +500,16 @@ body {
     }
 }
 
-.rotina-checkbox {
-    animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
-}
 
-.rotina-checkbox:nth-child(1) { animation-delay: 0.05s; }
-.rotina-checkbox:nth-child(2) { animation-delay: 0.1s; }
-.rotina-checkbox:nth-child(3) { animation-delay: 0.15s; }
-.rotina-checkbox:nth-child(4) { animation-delay: 0.2s; }
-.rotina-checkbox:nth-child(5) { animation-delay: 0.25s; }
 
 /* ==== RESPONSIVE ==== */
 @media (max-width: 991px) {
-    .filtros-sidebar {
-        position: relative;
-        top: 0;
-        margin-bottom: 2rem;
-        max-height: none;
-        overflow-y: visible;
+    .filtros-top-bar {
+        flex-direction: column;
+    }
+    
+    .filtros-card-tips {
+        flex: auto;
     }
     
     .page-header {
@@ -503,16 +518,6 @@ body {
     
     .header-actions {
         margin-top: 1.25rem;
-    }
-    
-    .row {
-        margin-left: 0;
-        margin-right: 0;
-    }
-    
-    .row > [class*='col-'] {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
     }
 }
 
@@ -551,7 +556,7 @@ body {
     .filtros-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1rem;
+        gap: 0.75rem;
     }
     
     .fc-event {
@@ -562,13 +567,22 @@ body {
 </style>
 STYLES;
 
+$extraStyles .= '<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">';
+
 $extraScripts = <<<'SCRIPTS'
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/locales/pt-br.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 let calendar;
 let rotinasData = [];
+let rotinaCores = {};
 let currentEvents = [];
+
+const cores = [
+    '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a',
+    '#30cfd0', '#a8edea', '#ff6b6b', '#feca57', '#48dbfb'
+];
 
 $(document).ready(function() {
     carregarRotinas();
@@ -585,7 +599,6 @@ function carregarRotinas() {
             } else if (response.sucesso && response.data) {
                 rotinasData = response.data.filter(r => r.agendamento_cron);
             }
-            // Buscar pipelines com cron e adicionar ao filtro
             $.ajax({
                 url: baseUrl + '/pipelines/list',
                 method: 'GET',
@@ -601,56 +614,39 @@ function carregarRotinas() {
                         });
                     }
                     renderizarFiltros();
-                    carregarEventos();
                 },
                 error: function() {
                     renderizarFiltros();
-                    carregarEventos();
                 }
             });
         },
         error: function() {
-            $('#filtrosRotinas').html(`
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    Erro ao carregar rotinas
-                </div>
-            `);
+            $('#filtrosRotinas').html('<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Erro ao carregar rotinas</div>');
         }
     });
 }
 
 function renderizarFiltros() {
-    const cores = [
-        '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a',
-        '#30cfd0', '#a8edea', '#ff6b6b', '#feca57', '#48dbfb'
-    ];
-    
-    let html = '';
+    // Build select options
+    const $select = $('<select id="selectRotinas" multiple="multiple" style="width:100%"></select>');
     rotinasData.forEach((rotina, index) => {
-        const cor = cores[index % cores.length];
-        html += `
-            <div class="rotina-checkbox">
-                <div class="form-check">
-                    <input class="form-check-input" 
-                           type="checkbox" 
-                           value="${rotina.id}" 
-                           id="rotina${rotina.id}"
-                           data-color="${cor}"
-                           checked
-                           onchange="filtrarEventos()">
-                    <label class="form-check-label" for="rotina${rotina.id}">
-                        <span class="evento-badge" style="background-color: ${cor};"></span>
-                        <strong>${rotina.nome}</strong>
-                        <br>
-                        <small class="rotina-cron">${rotina.agendamento_cron}</small>
-                    </label>
-                </div>
-            </div>
-        `;
+        rotinaCores[rotina.id.toString()] = cores[index % cores.length];
+        $select.append($('<option>', {
+            value: rotina.id,
+            text: rotina.nome + ' (' + rotina.agendamento_cron + ')'
+        }));
     });
-    
-    $('#filtrosRotinas').html(html);
+
+    $('#filtrosRotinas').empty().append($select);
+
+    $select.select2({
+        placeholder: 'Selecione rotinas/pipelines...',
+        allowClear: true,
+        closeOnSelect: false,
+        width: '100%'
+    }).on('change', function() {
+        carregarEventos();
+    });
 }
 
 function inicializarCalendario() {
@@ -689,12 +685,9 @@ function carregarEventos() {
     const inicio = view.activeStart.toISOString().split('T')[0];
     const fim = view.activeEnd.toISOString().split('T')[0];
     
-    const rotinasSelecionadas = [];
-    $('.rotina-checkbox input:checked').each(function() {
-        rotinasSelecionadas.push($(this).val());
-    });
+    const selecionadas = $('#selectRotinas').val() || [];
     
-    if (rotinasSelecionadas.length === 0) {
+    if (selecionadas.length === 0) {
         calendar.getEventSources().forEach(s => s.remove());
         currentEvents = [];
         return;
@@ -706,12 +699,12 @@ function carregarEventos() {
         data: {
             inicio: inicio,
             fim: fim,
-            rotinas: rotinasSelecionadas.join(',')
+            rotinas: selecionadas.join(',')
         },
         success: function(response) {
             if (response.sucesso && response.eventos) {
                 currentEvents = response.eventos;
-                filtrarEventos();
+                renderizarEventos();
             } else {
                 console.error('Erro ao carregar eventos:', response.erro || 'Resposta inválida');
                 calendar.getEventSources().forEach(s => s.remove());
@@ -724,38 +717,27 @@ function carregarEventos() {
     });
 }
 
-function filtrarEventos() {
+function renderizarEventos() {
     if (!calendar) return;
     
-    // Remover todas as fontes de eventos (não apenas events)
     calendar.getEventSources().forEach(s => s.remove());
     
-    const rotinasSelecionadas = [];
-    const coresRotinas = {};
-    
-    $('.rotina-checkbox input').each(function() {
-        const rotinaId = $(this).val();
-        const cor = $(this).data('color');
-        coresRotinas[rotinaId] = cor;
-        
-        if ($(this).is(':checked')) {
-            rotinasSelecionadas.push(rotinaId);
-        }
-    });
+    const selecionadas = ($('#selectRotinas').val() || []).map(String);
     
     const eventosFiltrados = currentEvents.filter(evento => {
         const rid = evento.rotina_id ? evento.rotina_id.toString() : '';
-        return rotinasSelecionadas.includes(rid);
+        return selecionadas.includes(rid);
     });
     
     const eventosFormatados = eventosFiltrados.map(evento => {
         const rid = evento.rotina_id ? evento.rotina_id.toString() : '';
+        const cor = rotinaCores[rid] || evento.cor || '#6c757d';
         return {
             id: evento.id,
             title: evento.titulo,
             start: evento.data,
-            backgroundColor: coresRotinas[rid] || evento.cor || '#6c757d',
-            borderColor: coresRotinas[rid] || evento.cor || '#6c757d',
+            backgroundColor: cor,
+            borderColor: cor,
             extendedProps: {
                 rotina_id: evento.rotina_id,
                 cron: evento.cron,
@@ -789,13 +771,14 @@ function mostrarDetalhesEvento(event) {
 }
 
 function selecionarTodas() {
-    $('.rotina-checkbox input').prop('checked', true);
-    filtrarEventos();
+    const $sel = $('#selectRotinas');
+    $sel.find('option').prop('selected', true);
+    $sel.trigger('change');
 }
 
 function deselecionarTodas() {
-    $('.rotina-checkbox input').prop('checked', false);
-    filtrarEventos();
+    const $sel = $('#selectRotinas');
+    $sel.val(null).trigger('change');
 }
 </script>
 SCRIPTS;
@@ -809,6 +792,7 @@ ob_start();
             <h1>📅 Calendário de Agendamentos</h1>
             <p class="mb-0">Visualize quando suas rotinas serão executadas de forma intuitiva</p>
         </div>
+        <?php if (!$isOperador): ?>
         <div class="col-lg-4">
             <div class="header-actions d-flex flex-column flex-lg-row gap-2 mt-3 mt-lg-0">
                 <a href="<?= BASE_URL ?>/scheduler" class="btn">
@@ -819,55 +803,55 @@ ob_start();
                 </a>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
 <div class="row">
-    <!-- Filtros -->
-    <div class="col-lg-3 col-md-4">
-        <div class="filtros-sidebar">
-            <div class="filtros-card">
+    <!-- Filtros + Dicas no topo -->
+    <div class="col-12">
+        <div class="filtros-top-bar">
+            <div class="filtros-card filtros-card-main">
                 <div class="filtros-header">
                     <h5>
                         <i class="bi bi-funnel-fill"></i>
-                        Filtros
+                        Filtros de Rotinas
                     </h5>
                     <div class="filtros-actions">
                         <button class="btn btn-sm btn-outline-primary" onclick="selecionarTodas()" title="Selecionar Todas">
-                            <i class="bi bi-check-all"></i>
+                            <i class="bi bi-check-all me-1"></i>Todas
                         </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="deselecionarTodas()" title="Limpar">
-                            <i class="bi bi-x-lg"></i>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="deselecionarTodas()" title="Limpar Seleção">
+                            <i class="bi bi-x-lg me-1"></i>Limpar
                         </button>
                     </div>
                 </div>
+                <p class="text-muted mb-2" style="font-size:0.85rem; margin-top:-0.5rem;">
+                    Selecione as rotinas e pipelines para visualizar seus agendamentos no calendário
+                </p>
                 
                 <div id="filtrosRotinas">
-                    <div class="loading-state">
-                        <div class="loading-spinner"></div>
-                        <p class="text-muted mb-0">Carregando rotinas...</p>
+                    <div class="loading-state" style="padding: 1rem;">
+                        <div class="loading-spinner" style="width:32px;height:32px;border-width:3px;margin-bottom:0.5rem;"></div>
+                        <p class="text-muted mb-0" style="font-size:0.9rem;">Carregando rotinas...</p>
                     </div>
                 </div>
             </div>
             
-            <div class="filtros-card legenda-card">
-                <h6>
+            <div class="filtros-card filtros-card-tips legenda-card">
+                <h6 style="margin-bottom:0.75rem;">
                     <i class="bi bi-lightbulb-fill"></i>
                     Dicas
                 </h6>
-                <div class="legenda-item">
+                <div class="legenda-item" style="padding:0.35rem 0;">
                     <i class="bi bi-hand-index-thumb"></i>
                     <span>Clique nos eventos para detalhes</span>
                 </div>
-                <div class="legenda-item">
-                    <i class="bi bi-toggles"></i>
-                    <span>Use filtros para ocultar rotinas</span>
+                <div class="legenda-item" style="padding:0.35rem 0;">
+                    <i class="bi bi-funnel"></i>
+                    <span>Selecione rotinas no dropdown</span>
                 </div>
-                <div class="legenda-item">
-                    <i class="bi bi-palette"></i>
-                    <span>Cores representam rotinas diferentes</span>
-                </div>
-                <div class="legenda-item">
+                <div class="legenda-item" style="padding:0.35rem 0;">
                     <i class="bi bi-calendar-week"></i>
                     <span>Alterne entre mês, semana e lista</span>
                 </div>
@@ -875,8 +859,8 @@ ob_start();
         </div>
     </div>
     
-    <!-- Calendário -->
-    <div class="col-lg-9 col-md-8">
+    <!-- Calendário largura total -->
+    <div class="col-12">
         <div class="calendario-wrapper">
             <div id="calendario"></div>
         </div>

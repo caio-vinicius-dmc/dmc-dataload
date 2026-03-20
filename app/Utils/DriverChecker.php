@@ -183,22 +183,85 @@ class DriverChecker
     }
 
     /**
+     * Retorna mapa de versões suportadas por cada driver PDO
+     */
+    public static function getSupportedVersions(): array
+    {
+        return [
+            'postgres' => [
+                'driver_version' => self::getDriverVersion('pgsql'),
+                'versoes' => ['PostgreSQL 12', 'PostgreSQL 13', 'PostgreSQL 14', 'PostgreSQL 15', 'PostgreSQL 16', 'PostgreSQL 17'],
+                'nota' => 'Driver pdo_pgsql suporta PostgreSQL 12+. Versões anteriores podem funcionar sem garantia.',
+            ],
+            'mysql' => [
+                'driver_version' => self::getDriverVersion('mysql'),
+                'versoes' => ['MySQL 5.7', 'MySQL 8.0', 'MySQL 8.4', 'MySQL 9.0'],
+                'nota' => 'Driver pdo_mysql usa protocolo MySQL nativo. Compatível com MySQL 5.7+.',
+            ],
+            'mariadb' => [
+                'driver_version' => self::getDriverVersion('mysql'),
+                'versoes' => ['MariaDB 10.4', 'MariaDB 10.5', 'MariaDB 10.6', 'MariaDB 10.11', 'MariaDB 11.x'],
+                'nota' => 'MariaDB usa o driver pdo_mysql. Compatível com MariaDB 10.4+.',
+            ],
+            'sqlserver' => [
+                'driver_version' => self::getDriverVersion('sqlsrv'),
+                'versoes' => ['SQL Server 2016', 'SQL Server 2017', 'SQL Server 2019', 'SQL Server 2022', 'Azure SQL'],
+                'nota' => 'Requer Microsoft ODBC Driver 17+ para SQL Server.',
+            ],
+            'oracle' => [
+                'driver_version' => self::getDriverVersion('oci'),
+                'versoes' => ['Oracle 12c', 'Oracle 18c', 'Oracle 19c', 'Oracle 21c', 'Oracle 23ai'],
+                'nota' => 'Requer Oracle Instant Client compatível com a versão do banco.',
+            ],
+            'sqlite' => [
+                'driver_version' => self::getDriverVersion('sqlite'),
+                'versoes' => ['SQLite 3.x'],
+                'nota' => 'Driver pdo_sqlite embutido no PHP. Versão: ' . (class_exists('SQLite3') ? \SQLite3::version()['versionString'] : 'N/A'),
+            ],
+        ];
+    }
+
+    /**
+     * Obtém a versão do driver PDO se disponível
+     */
+    private static function getDriverVersion(string $pdoDriver): ?string
+    {
+        if (!in_array($pdoDriver, self::getAvailableDrivers(), true)) {
+            return null;
+        }
+        try {
+            if ($pdoDriver === 'sqlite') {
+                $pdo = new \PDO('sqlite::memory:');
+                return $pdo->getAttribute(\PDO::ATTR_CLIENT_VERSION) ?: null;
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+        return null;
+    }
+
+    /**
      * Retorna status de todos os drivers suportados
      */
     public static function getAllDriversStatus(): array
     {
         $tiposBanco = ['postgres', 'mysql', 'mariadb', 'sqlserver', 'oracle', 'sqlite'];
         $status = [];
+        $versoesMap = self::getSupportedVersions();
 
         foreach ($tiposBanco as $tipo) {
             $driverMap = self::getDriverMap();
             $driverNecessario = $driverMap[$tipo] ?? 'unknown';
-            
+            $versaoInfo = $versoesMap[$tipo] ?? null;
+
             $status[] = [
                 'tipo_banco' => $tipo,
                 'driver' => $driverNecessario,
                 'disponivel' => self::isDriverAvailable($tipo),
-                'nome_exibicao' => ucfirst($tipo)
+                'nome_exibicao' => ucfirst($tipo),
+                'versoes_suportadas' => $versaoInfo['versoes'] ?? [],
+                'nota_versao' => $versaoInfo['nota'] ?? '',
+                'driver_version' => $versaoInfo['driver_version'] ?? null,
             ];
         }
 

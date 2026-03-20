@@ -48,22 +48,20 @@ class CalendarioController
             
             $params = $filtroRot['params'];
             if (!empty($rotinasIds)) {
-                $placeholders = implode(',', array_fill(0, count($rotinasIds), '?'));
-                $sql .= " AND r.id IN ($placeholders)";
+                $ridPlaceholders = [];
+                foreach ($rotinasIds as $i => $rid) {
+                    $key = ':rid_' . $i;
+                    $ridPlaceholders[] = $key;
+                    $params[$key] = $rid;
+                }
+                $sql .= " AND r.id IN (" . implode(',', $ridPlaceholders) . ")";
             }
             
             $sql .= " ORDER BY r.nome";
             
             $stmt = $this->db->prepare($sql);
-            // Bind named params from filter + positional from rotinasIds
-            $paramIndex = 1;
-            foreach ($filtroRot['params'] as $key => $val) {
+            foreach ($params as $key => $val) {
                 $stmt->bindValue($key, $val);
-            }
-            if (!empty($rotinasIds)) {
-                foreach ($rotinasIds as $rid) {
-                    $stmt->bindValue($paramIndex++, $rid);
-                }
             }
             $stmt->execute();
             
@@ -143,23 +141,23 @@ class CalendarioController
                          AND ({$filtroPip['where']})";
             
             // Se há filtro ativo e tem pipeline IDs, filtrar
-            $pipParams = [];
+            $pipAllParams = $filtroPip['params'];
             if (!empty($rotinasIdsRaw) && !empty($pipelineIds)) {
-                $placeholdersPip = implode(',', array_fill(0, count($pipelineIds), '?'));
-                $sqlPip .= " AND p.id IN ($placeholdersPip)";
-                $pipParams = $pipelineIds;
+                $pidPlaceholders = [];
+                foreach ($pipelineIds as $i => $pid) {
+                    $key = ':pid_' . $i;
+                    $pidPlaceholders[] = $key;
+                    $pipAllParams[$key] = $pid;
+                }
+                $sqlPip .= " AND p.id IN (" . implode(',', $pidPlaceholders) . ")";
             } elseif (!empty($rotinasIdsRaw) && empty($pipelineIds)) {
                 $sqlPip .= " AND 1=0";
             }
             
             $sqlPip .= " ORDER BY p.nome";
             $stmtPip = $this->db->prepare($sqlPip);
-            $pipParamIndex = 1;
-            foreach ($filtroPip['params'] as $key => $val) {
+            foreach ($pipAllParams as $key => $val) {
                 $stmtPip->bindValue($key, $val);
-            }
-            foreach ($pipParams as $pid) {
-                $stmtPip->bindValue($pipParamIndex++, $pid);
             }
             $stmtPip->execute();
             $pipelines = $stmtPip->fetchAll(\PDO::FETCH_ASSOC);

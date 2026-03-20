@@ -155,11 +155,11 @@ class WorkflowController
             $this->db->commit();
             
             // Associar empresas/projetos (fora da transaction principal)
-            if (isset($data['empresas']) && is_array($data['empresas'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('workflow', (int)$id, array_map('intval', $data['empresas']));
-            }
-            if (isset($data['projetos']) && is_array($data['projetos'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoProjetos('workflow', (int)$id, array_map('intval', $data['projetos']));
+            if (!empty($data['_rbac_presente'])) {
+                $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+                $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('workflow', (int)$id, $idsEmpresas);
+                \App\Servicos\ServicoPermissao::associarRecursoProjetos('workflow', (int)$id, $idsProjetos);
             }
             
             return ['sucesso' => true, 'mensagem' => 'Workflow salvo', 'id' => $id];
@@ -367,22 +367,30 @@ class WorkflowController
     }
 
     /**
-     * Listar execuções de workflow
+     * Listar execuções de workflow (com RBAC)
      */
     public function listarExecucoes(int $idWorkflow = null, int $limite = 50): array
     {
         try {
+            // RBAC: pré-computar IDs de workflows visíveis
+            $f = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
+            $stVis = $this->db->prepare("SELECT w.id FROM tb_workflows w WHERE ({$f['where']})");
+            $stVis->execute($f['params']);
+            $wfIds = $stVis->fetchAll(\PDO::FETCH_COLUMN);
+            $inSql = empty($wfIds) ? '(0)' : '(' . implode(',', array_map('intval', $wfIds)) . ')';
+
             $sql = "
                 SELECT 
                     e.*,
                     w.nome as workflow_nome
                 FROM tb_workflow_execucoes e
                 JOIN tb_workflows w ON w.id = e.id_workflow
+                WHERE e.id_workflow IN {$inSql}
             ";
             
             $params = [];
             if ($idWorkflow) {
-                $sql .= " WHERE e.id_workflow = ?";
+                $sql .= " AND e.id_workflow = ?";
                 $params[] = $idWorkflow;
             }
             
@@ -445,17 +453,19 @@ class WorkflowController
     }
 
     /**
-     * Listar rotinas disponíveis para uso no workflow
+     * Listar rotinas disponíveis para uso no workflow (com RBAC)
      */
     public function listarRotinasDisponiveis(): array
     {
         try {
-            $stmt = $this->db->query("
-                SELECT id, nome, descricao 
-                FROM tb_rotinas 
-                WHERE ativo = true
-                ORDER BY nome
+            $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('rotina', 'r', 'id_usuario_criador');
+            $stmt = $this->db->prepare("
+                SELECT r.id, r.nome, r.descricao 
+                FROM tb_rotinas r
+                WHERE r.ativo = true AND ({$filtro['where']})
+                ORDER BY r.nome
             ");
+            $stmt->execute($filtro['params']);
             
             return [
                 'sucesso' => true,
@@ -467,18 +477,25 @@ class WorkflowController
     }
 
     /**
-     * Obter estatísticas gerais dos workflows
+     * Obter estatísticas gerais dos workflows (com RBAC)
      */
     public function obterEstatisticas(): array
     {
         try {
+            // RBAC: pré-computar IDs de workflows visíveis
+            $f = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
+            $stVis = $this->db->prepare("SELECT w.id FROM tb_workflows w WHERE ({$f['where']})");
+            $stVis->execute($f['params']);
+            $wfIds = $stVis->fetchAll(\PDO::FETCH_COLUMN);
+            $inSql = empty($wfIds) ? '(0)' : '(' . implode(',', array_map('intval', $wfIds)) . ')';
+
             // Estatísticas gerais
             $stmtGeral = $this->db->query("
                 SELECT 
                     COUNT(*) as total_workflows,
                     SUM(CASE WHEN ativo THEN 1 ELSE 0 END) as workflows_ativos,
                     SUM(CASE WHEN NOT ativo THEN 1 ELSE 0 END) as workflows_inativos
-                FROM tb_workflows
+                FROM tb_workflows WHERE id IN {$inSql}
             ");
             $geral = $stmtGeral->fetch(\PDO::FETCH_ASSOC);
             
@@ -490,7 +507,7 @@ class WorkflowController
                     SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as execucoes_falha,
                     SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as execucoes_em_andamento,
                     AVG(CASE WHEN duracao_ms IS NOT NULL THEN duracao_ms ELSE 0 END) as tempo_medio_ms
-                FROM tb_workflow_execucoes
+                FROM tb_workflow_execucoes WHERE id_workflow IN {$inSql}
             ");
             $execucoes = $stmtExec->fetch(\PDO::FETCH_ASSOC);
             
@@ -501,7 +518,7 @@ class WorkflowController
                     SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as sucesso_24h,
                     SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as falha_24h
                 FROM tb_workflow_execucoes
-                WHERE data_inicio >= NOW() - INTERVAL '24 hours'
+                WHERE data_inicio >= NOW() - INTERVAL '24 hours' AND id_workflow IN {$inSql}
             ");
             $recentes = $stmtRecentes->fetch(\PDO::FETCH_ASSOC);
             
@@ -515,6 +532,7 @@ class WorkflowController
                     SUM(CASE WHEN e.status = 'failed' THEN 1 ELSE 0 END) as falha
                 FROM tb_workflows w
                 LEFT JOIN tb_workflow_execucoes e ON e.id_workflow = w.id
+                WHERE w.id IN {$inSql}
                 GROUP BY w.id, w.nome
                 HAVING COUNT(e.id) > 0
                 ORDER BY total_execucoes DESC
@@ -529,7 +547,7 @@ class WorkflowController
                     COUNT(*) as total,
                     SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as sucesso
                 FROM tb_workflow_execucoes
-                WHERE triggered_by IS NOT NULL
+                WHERE triggered_by IS NOT NULL AND id_workflow IN {$inSql}
                 GROUP BY triggered_by
             ");
             $statsTrigger = $stmtTrigger->fetchAll(\PDO::FETCH_ASSOC);
