@@ -83,24 +83,10 @@ ob_start();
                 </button>
                 <?php 
                 $nivelLogado = App\Core\AuthMiddleware::obterUsuario()['nivel_acesso'] ?? 'operador';
-                if (in_array($nivelLogado, ['super_admin', 'admin'])): ?>
-                <div class="dropdown d-none d-sm-inline-block">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Visibilidade">
-                        <i class="bi bi-building"></i>
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:280px">
-                        <small class="fw-bold text-muted"><i class="bi bi-building me-1"></i>Visibilidade</small>
-                        <div class="mt-2">
-                            <label class="form-label form-label-sm">Empresas</label>
-                            <select class="form-select form-select-sm" name="empresas[]" id="rbac_empresas" multiple size="3"></select>
-                        </div>
-                        <div class="mt-2">
-                            <label class="form-label form-label-sm">Projetos</label>
-                            <select class="form-select form-select-sm" name="projetos[]" id="rbac_projetos" multiple size="3"></select>
-                        </div>
-                        <small class="text-muted">Ctrl+click para múltiplas</small>
-                    </div>
-                </div>
+                if (in_array($nivelLogado, ['super_admin', 'admin', 'desenvolvedor'])): ?>
+                <button class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex" data-bs-toggle="modal" data-bs-target="#rbacModal" title="Visibilidade (Empresa / Projeto)">
+                    <i class="bi bi-building"></i>
+                </button>
                 <?php endif; ?>
             </div>
         </div>
@@ -191,6 +177,41 @@ ob_start();
                             <div class="palette-node-desc">Transformar dados</div>
                         </div>
                     </div>
+                    <div class="palette-node" draggable="true" data-type="data_merge">
+                        <div class="palette-node-icon" style="background:#0ea5e9"><i class="bi bi-intersect"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Data Merge</div>
+                            <div class="palette-node-desc">Juntar dois datasets</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="csv_parse">
+                        <div class="palette-node-icon" style="background:#059669"><i class="bi bi-filetype-csv"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">CSV Parse</div>
+                            <div class="palette-node-desc">Parsear texto CSV em array</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="sql_upsert">
+                        <div class="palette-node-icon" style="background:#2563eb"><i class="bi bi-database-add"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">SQL Upsert</div>
+                            <div class="palette-node-desc">Carga em lote (insert/upsert)</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="file_export">
+                        <div class="palette-node-icon" style="background:#16a34a"><i class="bi bi-file-earmark-arrow-down"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">File Export</div>
+                            <div class="palette-node-desc">Exportar dados para arquivo</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="rotina">
+                        <div class="palette-node-icon" style="background:#3b82f6"><i class="bi bi-gear-wide-connected"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Rotina</div>
+                            <div class="palette-node-desc">Executar rotina ETL</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="palette-group">
                     <div class="palette-group-title">Lógica</div>
@@ -199,6 +220,13 @@ ob_start();
                         <div class="palette-node-info">
                             <div class="palette-node-name">Condition</div>
                             <div class="palette-node-desc">If/Else branch</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="try_catch">
+                        <div class="palette-node-icon" style="background:#f97316"><i class="bi bi-shield-check"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Try/Catch</div>
+                            <div class="palette-node-desc">Tratamento de erros</div>
                         </div>
                     </div>
                     <div class="palette-node" draggable="true" data-type="loop">
@@ -213,6 +241,13 @@ ob_start();
                         <div class="palette-node-info">
                             <div class="palette-node-name">Delay</div>
                             <div class="palette-node-desc">Aguardar N segundos</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="switch_case">
+                        <div class="palette-node-icon" style="background:#d97706"><i class="bi bi-diagram-3"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Switch/Case</div>
+                            <div class="palette-node-desc">Roteamento multi-saída</div>
                         </div>
                     </div>
                 </div>
@@ -246,6 +281,27 @@ ob_start();
                             <div class="palette-node-desc">Registrar saída</div>
                         </div>
                     </div>
+                    <div class="palette-node" draggable="true" data-type="format_template">
+                        <div class="palette-node-icon" style="background:#a855f7"><i class="bi bi-file-earmark-text"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Format Template</div>
+                            <div class="palette-node-desc">Formatar texto com template</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="regex">
+                        <div class="palette-node-icon" style="background:#e11d48"><i class="bi bi-regex"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Regex</div>
+                            <div class="palette-node-desc">Extrair/substituir com regex</div>
+                        </div>
+                    </div>
+                    <div class="palette-node" draggable="true" data-type="counter">
+                        <div class="palette-node-icon" style="background:#0d9488"><i class="bi bi-plus-slash-minus"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Counter</div>
+                            <div class="palette-node-desc">Contador incremental</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -271,6 +327,21 @@ ob_start();
                     </div>
                 </div>
                 <textarea id="codeEditor" class="code-editor-textarea"></textarea>
+            </div>
+            <!-- Low-Code Editor (hidden, shown in lowcode mode) -->
+            <div id="lowCodeEditorWrapper" class="code-editor-wrapper d-none">
+                <div class="code-editor-toolbar">
+                    <span><i class="bi bi-sliders me-2"></i>Edição em modo Low-Code (Estruturado)</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-1" onclick="formatLowCode()">
+                            <i class="bi bi-text-indent-left me-1"></i>Formatar
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="applyLowCode()">
+                            <i class="bi bi-check-lg me-1"></i>Aplicar
+                        </button>
+                    </div>
+                </div>
+                <textarea id="lowCodeEditor" class="code-editor-textarea" style="font-size:0.85rem"></textarea>
             </div>
             <!-- Empty state overlay -->
             <div id="emptyOverlay" class="empty-canvas-overlay">
@@ -320,6 +391,51 @@ ob_start();
 
 <?php include __DIR__ . '/../partials/compartilhamento_modal.php'; ?>
 
+<!-- Modal: Visibilidade RBAC (Empresa / Projeto) -->
+<div class="modal fade" id="rbacModal" tabindex="-1" aria-labelledby="rbacModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title" id="rbacModalLabel"><i class="bi bi-shield-lock me-2 text-primary"></i>Visibilidade (Empresa / Projeto)</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body" style="overflow:visible">
+                <?php include __DIR__ . '/../partials/recurso_empresa_projeto.php'; ?>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal"><i class="bi bi-check-lg me-1"></i>OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Directory Browser -->
+<div id="dirBrowserModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:650px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px">
+      <i class="bi bi-folder2-open" style="font-size:20px;color:#16a34a"></i>
+      <h5 style="margin:0;flex:1;font-weight:600">Selecionar Diretório de Destino</h5>
+      <button onclick="closeDirBrowser()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">&times;</button>
+    </div>
+    <!-- Quick access -->
+    <div style="padding:10px 20px;border-bottom:1px solid #f3f4f6;display:flex;gap:6px;flex-wrap:wrap" id="dirBrowserShortcuts"></div>
+    <!-- Breadcrumb / path -->
+    <div style="padding:8px 20px;background:#f9fafb;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px">
+      <button onclick="dirBrowserUp()" id="dirBrowserUpBtn" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px" title="Subir"><i class="bi bi-arrow-up"></i></button>
+      <input type="text" id="dirBrowserPathInput" style="flex:1;border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;font-family:monospace" placeholder="Caminho do diretório..." onkeydown="if(event.key==='Enter')navigateDirBrowser(this.value)">
+      <button onclick="navigateDirBrowser(document.getElementById('dirBrowserPathInput').value)" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px" title="Ir"><i class="bi bi-arrow-right"></i></button>
+    </div>
+    <!-- Dir listing -->
+    <div id="dirBrowserList" style="flex:1;overflow-y:auto;padding:8px 12px;min-height:250px;max-height:400px"></div>
+    <!-- Footer: selected + confirm -->
+    <div style="padding:12px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:10px">
+      <div style="flex:1;font-size:13px;color:#6b7280" id="dirBrowserSelected">Nenhum diretório selecionado</div>
+      <button onclick="closeDirBrowser()" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px">Cancelar</button>
+      <button onclick="confirmDirBrowser()" id="dirBrowserConfirmBtn" style="border:none;background:#16a34a;color:#fff;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:500">Selecionar esta pasta</button>
+    </div>
+  </div>
+</div>
+
 <?php
 $content = ob_get_clean();
 
@@ -335,6 +451,12 @@ $extraStyles = <<<'STYLES'
     margin: -1.5rem;
     overflow: hidden;
 }
+
+/* RBAC Modal: allow dropdown panels to overflow */
+#rbacModal .modal-body { overflow: visible !important; }
+#rbacModal .rbac-dropdown-panel { z-index: 1070; }
+#rbacModal .rbac-recursos-section { margin-top: 0 !important; }
+#rbacModal .rbac-recursos-section > .col-12:first-child { display: none; }
 
 /* ========== TOOLBAR ========== */
 .builder-toolbar {
@@ -958,10 +1080,91 @@ select.prop-control { padding-right: 30px; }
     cursor: pointer; margin: 2px; transition: all 0.15s;
 }
 .cron-preset:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ========== LOW-CODE EDITOR ========== */
+#lowCodeEditorWrapper .code-editor-textarea {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    line-height: 1.6;
+    tab-size: 2;
+    white-space: pre;
+}
+.lowcode-help {
+    font-size: 0.7rem;
+    color: var(--gray-400);
+    padding: 4px 12px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-100);
+}
+
+/* ========== DIRECTORY BROWSER ========== */
+.dir-browser-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background .15s;
+    user-select: none;
+}
+.dir-browser-item:hover {
+    background: #f0fdf4;
+}
+.dir-browser-item.selected {
+    background: #dcfce7;
+    border-left: 3px solid #22c55e;
+}
+.dir-browser-item .dir-icon {
+    font-size: 18px;
+    color: #f59e0b;
+    flex-shrink: 0;
+}
+.dir-browser-item .dir-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+.dir-browser-item .dir-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.dir-browser-item .dir-badge.writable { background: #dcfce7; color: #16a34a; }
+.dir-browser-item .dir-badge.readonly { background: #fef2f2; color: #dc2626; }
+.dir-browser-item .dir-arrow {
+    color: #9ca3af;
+    flex-shrink: 0;
+}
+.dir-shortcut-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all .15s;
+    white-space: nowrap;
+}
+.dir-shortcut-btn:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+.dir-shortcut-btn.active {
+    background: #dcfce7;
+    border-color: #22c55e;
+    font-weight: 600;
+}
 </style>
 STYLES;
 
-$extraScripts = <<<SCRIPTS
+$extraScripts = <<<'SCRIPTS'
 <script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.60/dist/drawflow.min.js"></script>
 <script>
 // ============================================================
@@ -977,7 +1180,9 @@ let currentMode = 'nocode';
 let selectedNodeId = null;
 let connections = []; // DB connections list
 let apisExternas = []; // External APIs
+let exportDirs = { shortcuts: [], roots: [] }; // Export directories
 let eventosApi = []; // API events
+let rotinasDisponiveis = []; // Available rotinas
 let connectionTables = {}; // Cache: connId -> tables
 let pipelineDescription = '';
 let isDirty = false;
@@ -992,14 +1197,24 @@ const NODE_TYPES = {
     sql_query:    { label: 'SQL Query',     icon: 'bi-database',          color: '#3b82f6', inputs: 1, outputs: 1, category: 'data' },
     http_request: { label: 'HTTP Request',  icon: 'bi-cloud-arrow-up',    color: '#8b5cf6', inputs: 1, outputs: 1, category: 'data' },
     transform:    { label: 'Transform',     icon: 'bi-arrow-left-right',  color: '#f59e0b', inputs: 1, outputs: 1, category: 'data' },
+    data_merge:   { label: 'Data Merge',    icon: 'bi-intersect',         color: '#0ea5e9', inputs: 1, outputs: 1, category: 'data' },
+    sql_upsert:   { label: 'SQL Upsert',    icon: 'bi-database-add',      color: '#2563eb', inputs: 1, outputs: 1, category: 'data' },
     condition:    { label: 'Condition',     icon: 'bi-signpost-split',    color: '#eab308', inputs: 1, outputs: 2, category: 'logic' },
+    try_catch:    { label: 'Try/Catch',     icon: 'bi-shield-check',      color: '#f97316', inputs: 1, outputs: 2, category: 'logic' },
     loop:         { label: 'Loop',          icon: 'bi-arrow-repeat',      color: '#06b6d4', inputs: 1, outputs: 1, category: 'logic' },
     delay:        { label: 'Delay',         icon: 'bi-clock',             color: '#9ca3af', inputs: 1, outputs: 1, category: 'logic' },
     script:       { label: 'Script',        icon: 'bi-code-slash',        color: '#ef4444', inputs: 1, outputs: 1, category: 'action' },
     set_variable: { label: 'Set Variable',  icon: 'bi-braces',            color: '#14b8a6', inputs: 1, outputs: 1, category: 'action' },
     email:        { label: 'Email',         icon: 'bi-envelope',          color: '#ec4899', inputs: 1, outputs: 1, category: 'action' },
     log_node:     { label: 'Log',           icon: 'bi-journal-text',      color: '#6b7280', inputs: 1, outputs: 1, category: 'action' },
-    api_call:     { label: 'API Call',      icon: 'bi-cloud-check',       color: '#7c3aed', inputs: 1, outputs: 2, category: 'io' }
+    api_call:     { label: 'API Call',      icon: 'bi-cloud-check',       color: '#7c3aed', inputs: 1, outputs: 2, category: 'io' },
+    switch_case:  { label: 'Switch/Case',  icon: 'bi-diagram-3',         color: '#d97706', inputs: 1, outputs: 3, category: 'logic' },
+    format_template: { label: 'Format Template', icon: 'bi-file-earmark-text', color: '#a855f7', inputs: 1, outputs: 1, category: 'action' },
+    regex:        { label: 'Regex',         icon: 'bi-regex',             color: '#e11d48', inputs: 1, outputs: 1, category: 'action' },
+    csv_parse:    { label: 'CSV Parse',     icon: 'bi-filetype-csv',      color: '#059669', inputs: 1, outputs: 1, category: 'data' },
+    counter:      { label: 'Counter',       icon: 'bi-plus-slash-minus',  color: '#0d9488', inputs: 1, outputs: 1, category: 'action' },
+    file_export:  { label: 'File Export',   icon: 'bi-file-earmark-arrow-down', color: '#16a34a', inputs: 1, outputs: 1, category: 'io' },
+    rotina:       { label: 'Rotina',        icon: 'bi-gear-wide-connected',      color: '#3b82f6', inputs: 1, outputs: 1, category: 'action' }
 };
 
 // ============================================================
@@ -1011,6 +1226,8 @@ document.addEventListener('DOMContentLoaded', function() {
     loadConnections();
     loadApisExternas();
     loadEventosApi();
+    loadExportDirs();
+    loadRotinas();
     
     if (pipelineId) {
         loadPipeline(pipelineId);
@@ -1195,6 +1412,18 @@ function getNodeSubtitle(type, data) {
         case 'api_call':
             var selApi = data.api_id ? apisExternas.find(function(a){return a.id==data.api_id}) : null;
             return selApi ? selApi.nome : 'Selecione API';
+        case 'switch_case': return data.switch_variable ? '{{' + data.switch_variable + '}}' : 'Configurar';
+        case 'format_template': return data.template ? data.template.substring(0, 30) : 'Configurar';
+        case 'regex': return data.regex_mode || 'match';
+        case 'csv_parse': return data.delimiter || ',';
+        case 'counter': return data.counter_name || 'Configurar';
+        case 'file_export':
+            var dir = data.export_directory || 'storage/exports';
+            if (dir.length > 25) dir = '...' + dir.slice(-22);
+            return (data.export_format || 'CSV').toUpperCase() + ' → ' + dir;
+        case 'rotina':
+            var selRot = data.rotina_id ? rotinasDisponiveis.find(function(r){return r.id==data.rotina_id}) : null;
+            return selRot ? selRot.nome : 'Selecionar rotina';
         default: return '';
     }
 }
@@ -1216,6 +1445,26 @@ function getNodeBody(type, data) {
         case 'api_call':
             if (data.jsonpath) return '<code>' + escapeHtml(data.jsonpath) + '</code> ' + escapeHtml(data.condition_op || '==') + ' ' + escapeHtml(data.condition_value || '');
             return '<span class="text-muted">Configurar condição</span>';
+        case 'switch_case':
+            if (data.switch_variable) return '<code>{{' + escapeHtml(data.switch_variable) + '}}</code>';
+            return '';
+        case 'format_template':
+            if (data.template) return '<code>' + escapeHtml(data.template.substring(0, 60)) + '</code>';
+            return '';
+        case 'regex':
+            if (data.pattern) return '<code>' + escapeHtml(data.pattern.substring(0, 40)) + '</code>';
+            return '';
+        case 'file_export':
+            if (data.filename) {
+                return '<code>' + escapeHtml(data.filename) + '.' + escapeHtml(data.export_format || 'csv') + '</code>';
+            }
+            return '<span class="text-muted fst-italic">Configurar exportação</span>';
+        case 'rotina':
+            if (data.rotina_id) {
+                var rot = rotinasDisponiveis.find(function(r){return r.id==data.rotina_id});
+                return rot ? '<code>' + escapeHtml(rot.nome) + '</code>' : '<code>Rotina #' + data.rotina_id + '</code>';
+            }
+            return '<span class="text-muted fst-italic">Selecionar rotina</span>';
         default: return '';
     }
 }
@@ -1229,6 +1478,28 @@ function updateNodeVisual(nodeId) {
     
     const el = document.querySelector('#node-' + nodeId + ' .drawflow_content_node');
     if (el) el.innerHTML = html;
+}
+
+function rebuildAllNodeHtml() {
+    if (!editor) return;
+    const exported = editor.export();
+    const nodes = exported.drawflow && exported.drawflow.Home && exported.drawflow.Home.data ? exported.drawflow.Home.data : {};
+    Object.keys(nodes).forEach(function(nid) {
+        const node = nodes[nid];
+        const type = node.data.type || node.name;
+        if (!type || !NODE_TYPES[type]) return;
+        // Ensure node.data has type and label
+        if (!node.data.type) node.data.type = type;
+        if (!node.data.label) node.data.label = NODE_TYPES[type].label;
+        const html = buildNodeHtml(type, node.data);
+        const el = document.querySelector('#node-' + nid + ' .drawflow_content_node');
+        if (el) el.innerHTML = html;
+        // Also update the node class for CSS targeting
+        const nodeEl = document.querySelector('#node-' + nid);
+        if (nodeEl && !nodeEl.classList.contains(type)) {
+            nodeEl.classList.add(type);
+        }
+    });
 }
 
 function escapeHtml(text) {
@@ -1284,7 +1555,7 @@ function showProperties(nodeId) {
     html += getTypeProperties(type, node.data, nodeId);
     
     // Output variable (for data-producing nodes)
-    if (['sql_query', 'http_request', 'transform', 'loop', 'script', 'set_variable'].includes(type)) {
+    if (['sql_query', 'http_request', 'transform', 'loop', 'script', 'set_variable', 'format_template', 'regex', 'csv_parse', 'counter', 'file_export', 'rotina'].includes(type)) {
         html += '<div class="prop-group">';
         html += '<div class="prop-group-title">Saída</div>';
         html += '<div class="mb-3">';
@@ -1515,6 +1786,210 @@ function getTypeProperties(type, data, nodeId) {
             h += propInput(nodeId, 'output_variable', 'Salvar resultado em', data.output_variable || 'api_result', 'api_result');
             h += '<div class="prop-help mt-2"><i class="bi bi-info-circle me-1"></i>Output 1 = Condição atendida, Output 2 = Não atendida</div>';
             break;
+
+        case 'try_catch':
+            h += propSelect(nodeId, 'action_type', 'Ação a Executar', data.action_type || '', [
+                {v:'',l:'Selecione...'}, {v:'http_request',l:'HTTP Request'}, {v:'sql_query',l:'SQL Query'},
+                {v:'script',l:'Script'}, {v:'sql_upsert',l:'SQL Upsert'}
+            ]);
+            if (data.action_type === 'http_request') {
+                h += propSelect(nodeId, 'method', 'Método', data.method || 'GET', [
+                    {v:'GET',l:'GET'}, {v:'POST',l:'POST'}, {v:'PUT',l:'PUT'}, {v:'DELETE',l:'DELETE'}
+                ]);
+                h += propInput(nodeId, 'url', 'URL', data.url || '', 'https://api.exemplo.com/dados');
+                h += propTextarea(nodeId, 'headers', 'Headers (JSON)', data.headers || '', '{"Content-Type":"application/json"}');
+                h += propTextarea(nodeId, 'body', 'Body', data.body || '', '');
+            } else if (data.action_type === 'sql_query') {
+                h += propSelect(nodeId, 'connection_id', 'Conexão', data.connection_id || '', 
+                    [{v:'', l:'Selecione...'}].concat(connections.map(function(c) { 
+                        return {v: c.id, l: c.nome_conexao + ' (' + c.tipo_banco + ')'}; 
+                    }))
+                );
+                h += propTextarea(nodeId, 'sql_query', 'SQL Query', data.sql_query || '', 'SELECT * FROM tabela');
+            } else if (data.action_type === 'script') {
+                h += propTextarea(nodeId, 'script_code', 'Código', data.script_code || '', 'count({{resultado}})');
+            }
+            h += '</div><div class="prop-group"><div class="prop-group-title">Tratamento de Erro</div>';
+            h += propInput(nodeId, 'max_retries', 'Máx. Tentativas', data.max_retries || '0', '3');
+            h += propInput(nodeId, 'retry_delay_seconds', 'Delay entre tentativas (s)', data.retry_delay_seconds || '1', '2');
+            h += propInput(nodeId, 'error_variable', 'Variável de Erro', data.error_variable || 'last_error', 'last_error');
+            h += '<div class="prop-help mt-2"><i class="bi bi-info-circle me-1"></i>Output 1 = Sucesso, Output 2 = Erro (catch)</div>';
+            break;
+
+        case 'data_merge':
+            h += propInput(nodeId, 'left_variable', 'Dataset Esquerdo', data.left_variable || '', 'usuarios');
+            h += propInput(nodeId, 'right_variable', 'Dataset Direito', data.right_variable || '', 'pedidos');
+            h += propSelect(nodeId, 'merge_type', 'Tipo de Junção', data.merge_type || 'inner_join', [
+                {v:'inner_join',l:'Inner Join'}, {v:'left_join',l:'Left Join'}, {v:'full_join',l:'Full Join'},
+                {v:'union',l:'Union (concatenar)'}, {v:'diff',l:'Diff (diferença)'}
+            ]);
+            if (['inner_join','left_join','full_join','diff'].includes(data.merge_type || 'inner_join')) {
+                h += propInput(nodeId, 'left_key', 'Chave Esquerda', data.left_key || '', 'id');
+                h += propInput(nodeId, 'right_key', 'Chave Direita', data.right_key || '', 'user_id');
+            }
+            h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Use {{variavel}} nos nomes. Combina dois conjuntos de dados.</div>';
+            break;
+
+        case 'sql_upsert':
+            h += propSelect(nodeId, 'connection_id', 'Conexão', data.connection_id || '', 
+                [{v:'', l:'Selecione...'}].concat(connections.map(function(c) { 
+                    return {v: c.id, l: c.nome_conexao + ' (' + c.tipo_banco + ')'}; 
+                }))
+            );
+            h += propInput(nodeId, 'target_table', 'Tabela Destino', data.target_table || '', 'schema.tabela');
+            h += propInput(nodeId, 'input_variable', 'Variável de Dados', data.input_variable || '', 'resultado');
+            h += propSelect(nodeId, 'operation', 'Operação', data.operation || 'insert', [
+                {v:'insert',l:'Insert'}, {v:'upsert',l:'Upsert (insert ou update)'}
+            ]);
+            if (data.operation === 'upsert') {
+                h += propInput(nodeId, 'conflict_keys', 'Chaves de Conflito', data.conflict_keys || '', 'id, cpf');
+                h += '<div class="prop-help"><i class="bi bi-key me-1"></i>Colunas para detectar duplicados (separadas por vírgula)</div>';
+            }
+            h += propTextarea(nodeId, 'field_mapping', 'Mapeamento (JSON)', data.field_mapping || '', '{"campo_origem":"coluna_destino"}');
+            h += '<div class="prop-help mb-2"><i class="bi bi-arrow-left-right me-1"></i>Vazio = usar nomes originais</div>';
+            h += propInput(nodeId, 'batch_size', 'Tamanho do Lote', data.batch_size || '100', '100');
+            h += propSelect(nodeId, 'on_error', 'Em caso de erro', data.on_error || 'skip_row', [
+                {v:'skip_row',l:'Pular registro'}, {v:'abort',l:'Abortar tudo'}
+            ]);
+            break;
+
+        case 'switch_case':
+            h += propInput(nodeId, 'switch_variable', 'Variável de Avaliação', data.switch_variable || '', 'status');
+            h += propInput(nodeId, 'case_1', 'Caso 1 (Output 1)', data.case_1 || '', 'ativo');
+            h += propInput(nodeId, 'case_2', 'Caso 2 (Output 2)', data.case_2 || '', 'inativo');
+            h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Output 1 = Caso 1, Output 2 = Caso 2, Output 3 = Default (nenhum caso)</div>';
+            break;
+
+        case 'format_template':
+            h += propTextarea(nodeId, 'template', 'Template', data.template || '', 'Olá {{nome}}, seu pedido #{{id}} foi {{status}}.');
+            h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Use {{variavel}} para interpolar valores. Suporta todas as variáveis do contexto.</div>';
+            break;
+
+        case 'regex':
+            h += propSelect(nodeId, 'regex_mode', 'Modo', data.regex_mode || 'match', [
+                {v:'match',l:'Match (extrair)'}, {v:'match_all',l:'Match All (todas ocorrências)'}, {v:'replace',l:'Replace (substituir)'}, {v:'test',l:'Test (verdadeiro/falso)'}
+            ]);
+            h += propInput(nodeId, 'input_variable', 'Variável de Entrada', data.input_variable || '', 'texto');
+            h += propInput(nodeId, 'pattern', 'Padrão Regex', data.pattern || '', '/(\\d{3})\\.(\\d{3})\\.(\\d{3})-(\\d{2})/');
+            if (data.regex_mode === 'replace') {
+                h += propInput(nodeId, 'replacement', 'Substituição', data.replacement || '', '$1***$4');
+            }
+            h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Use sintaxe PCRE. Resultado salvo na variável de saída.</div>';
+            break;
+
+        case 'csv_parse':
+            h += propInput(nodeId, 'input_variable', 'Variável de Entrada', data.input_variable || '', 'csv_data');
+            h += propInput(nodeId, 'delimiter', 'Delimitador', data.delimiter || ',', ',');
+            h += propInput(nodeId, 'enclosure', 'Caractere de Cercamento', data.enclosure || '"', '"');
+            h += propSelect(nodeId, 'has_header', 'Primeira linha é cabeçalho?', data.has_header || 'true', [
+                {v:'true',l:'Sim'}, {v:'false',l:'Não'}
+            ]);
+            h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Converte texto CSV em array de objetos.</div>';
+            break;
+
+        case 'counter':
+            h += propInput(nodeId, 'counter_name', 'Nome do Contador', data.counter_name || '', 'tentativas');
+            h += propSelect(nodeId, 'counter_action', 'Ação', data.counter_action || 'increment', [
+                {v:'increment',l:'Incrementar (+1)'}, {v:'decrement',l:'Decrementar (-1)'}, {v:'reset',l:'Resetar para 0'}, {v:'set',l:'Definir valor'}
+            ]);
+            if (data.counter_action === 'set') {
+                h += propInput(nodeId, 'counter_value', 'Valor', data.counter_value || '0', '10');
+            }
+            h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Mantém um contador na variável especificada.</div>';
+            break;
+
+        case 'file_export':
+            h += propInput(nodeId, 'input_variable', 'Variável de Dados', data.input_variable || '', 'resultado');
+            h += propSelect(nodeId, 'export_format', 'Formato de Exportação', data.export_format || 'csv', [
+                {v:'csv',l:'CSV (.csv)'}, {v:'json',l:'JSON (.json)'}, {v:'xml',l:'XML (.xml)'},
+                {v:'txt',l:'Texto (.txt)'}, {v:'html',l:'HTML (.html)'}, {v:'sql',l:'SQL (.sql)'}
+            ]);
+            // Selector de diretório (browser)
+            h += '<div class="mb-3"><label class="prop-label"><i class="bi bi-folder me-1"></i>Diretório de Destino</label>';
+            var dirDisplay = data.export_directory || 'storage/exports';
+            // Resolve shortcut name if applicable
+            var dirLabel = dirDisplay;
+            if (exportDirs.shortcuts) {
+                exportDirs.shortcuts.forEach(function(s) { if (s.id === dirDisplay) dirLabel = s.nome; else if (s.path === dirDisplay) dirLabel = s.nome; });
+            }
+            h += '<div style="display:flex;gap:6px;align-items:center">';
+            h += '<div style="flex:1;background:#f9fafb;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(dirDisplay) + '">';
+            h += '<i class="bi bi-folder-fill" style="color:#f59e0b;margin-right:4px"></i>' + escapeHtml(dirLabel);
+            h += '</div>';
+            h += '<button type="button" class="btn btn-sm btn-outline-success" style="white-space:nowrap" onclick="openDirBrowser(' + nodeId + ')">';
+            h += '<i class="bi bi-folder2-open me-1"></i>Procurar</button>';
+            h += '</div>';
+            if (dirDisplay !== dirLabel) {
+                h += '<div class="prop-help"><i class="bi bi-geo-alt me-1"></i>' + escapeHtml(dirDisplay) + '</div>';
+            }
+            h += '</div>';
+            // Nome do arquivo com variáveis
+            h += propInput(nodeId, 'filename', 'Nome do Arquivo', data.filename || '', 'export_{date}_{seq}');
+            h += '<div class="prop-help mb-2"><i class="bi bi-braces me-1"></i><strong>Variáveis disponíveis:</strong><br>';
+            h += '<code>{date}</code> Data (YYYY-MM-DD)<br>';
+            h += '<code>{time}</code> Hora (HH-MM-SS)<br>';
+            h += '<code>{datetime}</code> Data+Hora<br>';
+            h += '<code>{seq}</code> Sequencial auto-incremento<br>';
+            h += '<code>{timestamp}</code> Unix timestamp<br>';
+            h += '<code>{Y} {m} {d} {H} {i} {s}</code> Componentes<br>';
+            h += '<code>{{variavel}}</code> Variáveis do pipeline</div>';
+            // Opções avançadas por formato
+            if (data.export_format === 'csv' || !data.export_format) {
+                h += '</div><div class="prop-group"><div class="prop-group-title">Opções CSV</div>';
+                h += propInput(nodeId, 'csv_delimiter', 'Delimitador', data.csv_delimiter || ',', ',');
+                h += propInput(nodeId, 'csv_enclosure', 'Cercamento', data.csv_enclosure || '"', '"');
+            } else if (data.export_format === 'json') {
+                h += '</div><div class="prop-group"><div class="prop-group-title">Opções JSON</div>';
+                h += propSelect(nodeId, 'json_pretty', 'Formatado (Pretty)', data.json_pretty || 'true', [
+                    {v:'true',l:'Sim'}, {v:'false',l:'Não (compacto)'}
+                ]);
+            } else if (data.export_format === 'xml') {
+                h += '</div><div class="prop-group"><div class="prop-group-title">Opções XML</div>';
+                h += propInput(nodeId, 'xml_root', 'Elemento Raiz', data.xml_root || 'data', 'data');
+                h += propInput(nodeId, 'xml_row', 'Elemento de Linha', data.xml_row || 'row', 'row');
+            } else if (data.export_format === 'html') {
+                h += '</div><div class="prop-group"><div class="prop-group-title">Opções HTML</div>';
+                h += propInput(nodeId, 'html_title', 'Título da Página', data.html_title || 'Export Data', 'Relatório de Dados');
+            } else if (data.export_format === 'sql') {
+                h += '</div><div class="prop-group"><div class="prop-group-title">Opções SQL</div>';
+                h += propInput(nodeId, 'sql_table_name', 'Nome da Tabela', data.sql_table_name || 'exported_data', 'schema.tabela');
+            }
+            h += '<div class="prop-help mt-2"><i class="bi bi-info-circle me-1"></i>A extensão do arquivo é adicionada automaticamente conforme o formato.</div>';
+            if (data.export_format === 'csv') {
+                h += '<div class="prop-help"><i class="bi bi-file-earmark-excel me-1"></i>CSV inclui BOM UTF-8 para compatibilidade com Excel.</div>';
+            }
+            break;
+
+        case 'rotina':
+            h += '<div class="mb-3"><label class="prop-label"><i class="bi bi-gear-wide-connected me-1"></i>Rotina</label>';
+            h += '<select class="prop-control" onchange="updateNodeProp(' + nodeId + ', \'rotina_id\', this.value); showProperties(' + nodeId + ')">';
+            h += '<option value="">-- Selecione uma rotina --</option>';
+            if (rotinasDisponiveis.length > 0) {
+                rotinasDisponiveis.forEach(function(r) {
+                    var sel = (data.rotina_id == r.id) ? ' selected' : '';
+                    var statusIcon = r.ativa ? '✓' : '✗';
+                    h += '<option value="' + r.id + '"' + sel + '>' + statusIcon + ' ' + escapeHtml(r.nome) + '</option>';
+                });
+            } else {
+                h += '<option value="" disabled>Nenhuma rotina encontrada</option>';
+            }
+            h += '</select></div>';
+            // Informações da rotina selecionada
+            if (data.rotina_id) {
+                var selRot = rotinasDisponiveis.find(function(r){return r.id==data.rotina_id});
+                if (selRot) {
+                    h += '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px;margin-bottom:12px;font-size:12px">';
+                    h += '<div style="font-weight:600;margin-bottom:4px"><i class="bi bi-info-circle me-1"></i>' + escapeHtml(selRot.nome) + '</div>';
+                    if (selRot.descricao) h += '<div style="color:#6b7280;margin-bottom:4px">' + escapeHtml(selRot.descricao) + '</div>';
+                    if (selRot.nome_conexao) h += '<div><i class="bi bi-database me-1"></i>Conexão: <strong>' + escapeHtml(selRot.nome_conexao) + '</strong></div>';
+                    if (selRot.tipo_banco) h += '<div><i class="bi bi-hdd me-1"></i>Tipo: ' + escapeHtml(selRot.tipo_banco) + '</div>';
+                    h += '<div><i class="bi bi-circle-fill me-1" style="color:' + (selRot.ativa ? '#22c55e' : '#ef4444') + ';font-size:8px"></i>' + (selRot.ativa ? 'Ativa' : 'Inativa') + '</div>';
+                    if (selRot.agendamento_cron) h += '<div><i class="bi bi-clock me-1"></i>Cron: <code>' + escapeHtml(selRot.agendamento_cron) + '</code></div>';
+                    h += '</div>';
+                }
+            }
+            h += '<div class="prop-help"><i class="bi bi-lightning me-1"></i>A rotina será executada com todos os seus blocos SQL na conexão associada.</div>';
+            break;
     }
     
     h += '</div>';
@@ -1579,26 +2054,75 @@ function deleteSelectedNode(nodeId) {
 }
 
 // ============================================================
-// MODE SWITCHING
+// MODE SWITCHING (Bidirectional sync: nocode <-> lowcode <-> code)
 // ============================================================
+let previousMode = 'nocode';
+
 function switchMode(mode) {
+    const fromMode = currentMode;
     currentMode = mode;
     document.querySelectorAll('.mode-btn').forEach(function(btn) {
         btn.classList.toggle('active', btn.dataset.mode === mode);
     });
 
     const codeWrapper = document.getElementById('codeEditorWrapper');
+    const lowCodeWrapper = document.getElementById('lowCodeEditorWrapper');
     const canvas = document.getElementById('drawflow');
 
+    // === Sync FROM previous mode before switching ===
+    if (fromMode === 'code' && mode !== 'code') {
+        // Apply code editor changes back to Drawflow
+        try {
+            const codeText = document.getElementById('codeEditor').value.trim();
+            if (codeText) {
+                const data = JSON.parse(codeText);
+                if (data.drawflow) {
+                    editor.import(data);
+                    rebuildAllNodeHtml();
+                }
+            }
+        } catch(e) {
+            console.warn('Erro ao aplicar código ao sair do modo code:', e.message);
+        }
+    } else if (fromMode === 'lowcode' && mode !== 'lowcode') {
+        // Apply low-code changes back to Drawflow
+        try {
+            const lcText = document.getElementById('lowCodeEditor').value.trim();
+            if (lcText) {
+                const data = lowcodeToFlow(lcText);
+                if (data && data.drawflow) {
+                    editor.import(data);
+                    rebuildAllNodeHtml();
+                }
+            }
+        } catch(e) {
+            console.warn('Erro ao aplicar low-code ao sair do modo lowcode:', e.message);
+        }
+    }
+
+    // === Show the target mode view ===
     if (mode === 'code') {
         const data = editor.export();
         document.getElementById('codeEditor').value = JSON.stringify(data, null, 2);
         codeWrapper.classList.remove('d-none');
+        lowCodeWrapper.classList.add('d-none');
+        canvas.style.display = 'none';
+    } else if (mode === 'lowcode') {
+        const data = editor.export();
+        document.getElementById('lowCodeEditor').value = flowToLowcode(data);
+        lowCodeWrapper.classList.remove('d-none');
+        codeWrapper.classList.add('d-none');
         canvas.style.display = 'none';
     } else {
+        // nocode - show visual canvas
         codeWrapper.classList.add('d-none');
+        lowCodeWrapper.classList.add('d-none');
         canvas.style.display = '';
+        rebuildAllNodeHtml();
+        updateEmptyOverlay();
     }
+
+    previousMode = mode;
 
     // Close mobile toolbar after selecting mode
     if (isMobileOrTablet()) {
@@ -1606,6 +2130,9 @@ function switchMode(mode) {
     }
 }
 
+// ============================================================
+// CODE VIEW FUNCTIONS
+// ============================================================
 function formatCode() {
     const textarea = document.getElementById('codeEditor');
     try {
@@ -1622,7 +2149,187 @@ function applyCode() {
         const data = JSON.parse(textarea.value);
         if (!data.drawflow) throw new Error('Formato Drawflow inválido');
         editor.import(data);
+        rebuildAllNodeHtml();
         Swal.fire({icon: 'success', title: 'Aplicado!', text: 'Fluxo atualizado a partir do código.', timer: 1500, showConfirmButton: false});
+        markDirty();
+    } catch(e) {
+        Swal.fire('Erro!', 'Não foi possível aplicar: ' + e.message, 'error');
+    }
+}
+
+// ============================================================
+// LOW-CODE VIEW FUNCTIONS
+// ============================================================
+function flowToLowcode(flowData) {
+    const nodes = flowData.drawflow && flowData.drawflow.Home && flowData.drawflow.Home.data ? flowData.drawflow.Home.data : {};
+    let lines = [];
+    lines.push('# Pipeline Low-Code');
+    lines.push('# Edite as propriedades dos nós e suas conexões');
+    lines.push('# Formato: [tipo] id=N label="..." pos=(X, Y)');
+    lines.push('# Propriedades: chave = valor (indentadas com 2 espaços)');
+    lines.push('# Conexões: -> saída => id_destino.entrada');
+    lines.push('');
+
+    const nodeIds = Object.keys(nodes).sort(function(a,b){ return parseInt(a)-parseInt(b); });
+    nodeIds.forEach(function(nid) {
+        const node = nodes[nid];
+        const type = node.data.type || node.name;
+        const label = node.data.label || (NODE_TYPES[type] ? NODE_TYPES[type].label : type);
+        const posX = Math.round(node.pos_x || 0);
+        const posY = Math.round(node.pos_y || 0);
+
+        lines.push('[' + type + '] id=' + nid + ' label="' + label + '" pos=(' + posX + ', ' + posY + ')');
+
+        // Config properties (exclude meta fields)
+        const skipKeys = ['type', 'label'];
+        Object.keys(node.data).forEach(function(key) {
+            if (skipKeys.indexOf(key) >= 0) return;
+            const val = node.data[key];
+            if (val === null || val === undefined || val === '') return;
+            const valStr = (typeof val === 'object') ? JSON.stringify(val) : String(val);
+            lines.push('  ' + key + ' = ' + valStr);
+        });
+
+        // Connections from outputs
+        const outputs = node.outputs || {};
+        Object.keys(outputs).forEach(function(outName) {
+            const conns = outputs[outName].connections || [];
+            conns.forEach(function(c) {
+                lines.push('  -> ' + outName + ' => ' + c.node + '.' + (c.output || c.input || 'input_1'));
+            });
+        });
+
+        lines.push('');
+    });
+
+    return lines.join('\n');
+}
+
+function lowcodeToFlow(text) {
+    const lines = text.split('\n');
+    const nodes = {};
+    let currentNode = null;
+    let currentId = null;
+
+    lines.forEach(function(line) {
+        line = line.replace(/\r$/, '');
+        // Skip comments and empty lines
+        if (/^\s*#/.test(line) || /^\s*$/.test(line)) {
+            return;
+        }
+
+        // Node header: [type] id=N label="..." pos=(X, Y)
+        const headerMatch = line.match(/^\[(\w+)\]\s+id=(\d+)\s+label="([^"]*)"\s+pos=\((\d+),\s*(\d+)\)/);
+        if (headerMatch) {
+            currentId = headerMatch[2];
+            const type = headerMatch[1];
+            const label = headerMatch[3];
+            const posX = parseInt(headerMatch[4]);
+            const posY = parseInt(headerMatch[5]);
+            const def = NODE_TYPES[type] || {};
+
+            currentNode = {
+                id: parseInt(currentId),
+                name: type,
+                data: { type: type, label: label },
+                class: type,
+                html: '',
+                typenode: false,
+                inputs: {},
+                outputs: {},
+                pos_x: posX,
+                pos_y: posY
+            };
+
+            // Create input/output ports based on type definition
+            for (var i = 1; i <= (def.inputs || 0); i++) {
+                currentNode.inputs['input_' + i] = { connections: [] };
+            }
+            for (var o = 1; o <= (def.outputs || 0); o++) {
+                currentNode.outputs['output_' + o] = { connections: [] };
+            }
+
+            nodes[currentId] = currentNode;
+            return;
+        }
+
+        if (!currentNode) return;
+
+        // Connection: -> output_name => target_id.input_name
+        const connMatch = line.match(/^\s+->\s+(\w+)\s+=>\s+(\d+)\.(\w+)/);
+        if (connMatch) {
+            const outName = connMatch[1];
+            const targetId = connMatch[2];
+            const targetInput = connMatch[3];
+            if (!currentNode.outputs[outName]) {
+                currentNode.outputs[outName] = { connections: [] };
+            }
+            currentNode.outputs[outName].connections.push({ node: targetId, output: targetInput });
+            return;
+        }
+
+        // Property: key = value
+        const propMatch = line.match(/^\s+(\w+)\s*=\s*(.+)$/);
+        if (propMatch) {
+            const key = propMatch[1];
+            let val = propMatch[2].trim();
+            // Try parsing as JSON for objects/arrays
+            if ((val.charAt(0) === '{' || val.charAt(0) === '[') && val.length > 1) {
+                try { val = JSON.parse(val); } catch(e) { /* keep as string */ }
+            }
+            currentNode.data[key] = val;
+        }
+    });
+
+    // Post-process: populate input connections from output connections
+    Object.keys(nodes).forEach(function(sourceId) {
+        const sourceNode = nodes[sourceId];
+        Object.keys(sourceNode.outputs).forEach(function(outName) {
+            var conns = sourceNode.outputs[outName].connections || [];
+            conns.forEach(function(c) {
+                var targetNode = nodes[c.node];
+                if (targetNode) {
+                    var inputName = c.output || 'input_1'; // c.output is the target's input port name
+                    if (!targetNode.inputs[inputName]) {
+                        targetNode.inputs[inputName] = { connections: [] };
+                    }
+                    targetNode.inputs[inputName].connections.push({ node: sourceId, input: outName });
+                }
+            });
+        });
+    });
+
+    // Build HTML for each node
+    Object.keys(nodes).forEach(function(nid) {
+        const node = nodes[nid];
+        const type = node.data.type || node.name;
+        node.html = buildNodeHtml(type, node.data);
+    });
+
+    return { drawflow: { Home: { data: nodes } } };
+}
+
+function formatLowCode() {
+    // Re-generate from current low-code text (parse + regenerate)
+    try {
+        const text = document.getElementById('lowCodeEditor').value;
+        const data = lowcodeToFlow(text);
+        if (data && data.drawflow) {
+            document.getElementById('lowCodeEditor').value = flowToLowcode(data);
+        }
+    } catch(e) {
+        Swal.fire('Erro!', 'Formato inválido: ' + e.message, 'error');
+    }
+}
+
+function applyLowCode() {
+    try {
+        const text = document.getElementById('lowCodeEditor').value;
+        const data = lowcodeToFlow(text);
+        if (!data || !data.drawflow) throw new Error('Formato low-code inválido');
+        editor.import(data);
+        rebuildAllNodeHtml();
+        Swal.fire({icon: 'success', title: 'Aplicado!', text: 'Fluxo atualizado a partir do low-code.', timer: 1500, showConfirmButton: false});
         markDirty();
     } catch(e) {
         Swal.fire('Erro!', 'Não foi possível aplicar: ' + e.message, 'error');
@@ -1639,7 +2346,36 @@ function savePipeline() {
         return;
     }
 
+    // Validar empresa obrigatória
+    if (document.querySelector('input[name="_rbac_presente"]')) {
+        var empSel = (typeof rbacGetSelectedIds === 'function') ? rbacGetSelectedIds('empresas') : [];
+        if (empSel.length === 0) {
+            Swal.fire('Atenção', 'Selecione ao menos uma empresa na seção de Visibilidade.', 'warning');
+            return;
+        }
+    }
+
+    // Sync: ensure Drawflow has latest data from current editor mode
+    if (currentMode === 'code') {
+        try {
+            const codeText = document.getElementById('codeEditor').value.trim();
+            if (codeText) {
+                const parsed = JSON.parse(codeText);
+                if (parsed.drawflow) { editor.import(parsed); rebuildAllNodeHtml(); }
+            }
+        } catch(e) { /* save with current drawflow state */ }
+    } else if (currentMode === 'lowcode') {
+        try {
+            const lcText = document.getElementById('lowCodeEditor').value.trim();
+            if (lcText) {
+                const parsed = lowcodeToFlow(lcText);
+                if (parsed && parsed.drawflow) { editor.import(parsed); rebuildAllNodeHtml(); }
+            }
+        } catch(e) { /* save with current drawflow state */ }
+    }
+
     const flowData = editor.export();
+    const codeValue = JSON.stringify(flowData, null, 2);
     const statusEl = document.getElementById('saveStatus');
     statusEl.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Salvando...';
     statusEl.className = 'save-status saving';
@@ -1654,12 +2390,13 @@ function savePipeline() {
             descricao: pipelineDescription,
             modo: currentMode,
             dados_flow: JSON.stringify(flowData),
-            dados_code: document.getElementById('codeEditor').value,
+            dados_code: codeValue,
             trigger_tipo: getTriggerType(flowData),
             agendamento_cron: getTriggerCron(flowData),
             trigger_config: JSON.stringify(getTriggerConfig(flowData)),
-            'empresas[]': (function() { var s = document.getElementById('rbac_empresas'); return s ? Array.from(s.selectedOptions).map(function(o){return o.value}) : []; })(),
-            'projetos[]': (function() { var s = document.getElementById('rbac_projetos'); return s ? Array.from(s.selectedOptions).map(function(o){return o.value}) : []; })()
+            _rbac_presente: document.querySelector('input[name="_rbac_presente"]') ? '1' : '',
+            'empresas[]': (typeof rbacGetSelectedIds === 'function') ? rbacGetSelectedIds('empresas') : [],
+            'projetos[]': (typeof rbacGetSelectedIds === 'function') ? rbacGetSelectedIds('projetos') : []
         },
         dataType: 'json'
     }).then(function(res) {
@@ -1692,19 +2429,38 @@ function loadPipeline(id) {
             pipelineDescription = p.descricao || '';
             currentMode = p.modo || 'nocode';
 
-            // Import flow
+            // Determine source: prefer dados_flow, fallback to dados_code
+            let imported = false;
             if (p.dados_flow && p.dados_flow.drawflow) {
+                // Fix empty arrays to objects for inputs/outputs
+                const homeData = p.dados_flow.drawflow.Home && p.dados_flow.drawflow.Home.data ? p.dados_flow.drawflow.Home.data : {};
+                Object.keys(homeData).forEach(function(nid) {
+                    const node = homeData[nid];
+                    if (Array.isArray(node.inputs) && node.inputs.length === 0) node.inputs = {};
+                    if (Array.isArray(node.outputs) && node.outputs.length === 0) node.outputs = {};
+                });
                 editor.import(p.dados_flow);
+                imported = true;
+            } else if (p.dados_code) {
+                // Fallback: parse dados_code to load Drawflow
+                try {
+                    const codeData = JSON.parse(p.dados_code);
+                    if (codeData.drawflow) {
+                        editor.import(codeData);
+                        imported = true;
+                    }
+                } catch(e) { console.warn('dados_code parse error:', e); }
             }
 
-            // Set mode
+            // Rebuild node HTML with proper builder styling
+            if (imported) {
+                rebuildAllNodeHtml();
+            }
+
+            // Set mode (this will also update view-specific editors)
             switchMode(currentMode);
-            if (currentMode !== 'code') {
-                document.getElementById('codeEditorWrapper').classList.add('d-none');
-                document.getElementById('drawflow').style.display = '';
-            }
 
-            // Code editor content
+            // Code editor content (additional fallback)
             if (p.dados_code) {
                 document.getElementById('codeEditor').value = p.dados_code;
             }
@@ -1740,6 +2496,144 @@ function loadEventosApi() {
     $.getJSON(baseUrl + '/pipelines/eventos-api', function(res) {
         if (res.sucesso) eventosApi = res.data || [];
     });
+}
+
+function loadExportDirs() {
+    $.getJSON(baseUrl + '/pipelines/export-dirs', function(res) {
+        if (res && res.shortcuts) exportDirs = res;
+    });
+}
+
+function loadRotinas() {
+    $.getJSON(baseUrl + '/pipelines/rotinas', function(res) {
+        if (res.sucesso) rotinasDisponiveis = res.data || [];
+    });
+}
+
+// ========== Directory Browser ==========
+var _dirBrowserNodeId = null;
+var _dirBrowserCurrentPath = '';
+
+function openDirBrowser(nodeId) {
+    _dirBrowserNodeId = nodeId;
+    var modal = document.getElementById('dirBrowserModal');
+    modal.style.display = 'flex';
+
+    // Render shortcuts
+    var sh = '';
+    (exportDirs.shortcuts || []).forEach(function(s) {
+        sh += '<button class="dir-shortcut-btn" onclick="selectDirShortcut(\'' + escapeHtml(s.id) + '\',\'' + escapeHtml(s.path.replace(/\\/g, '\\\\')) + '\')" title="' + escapeHtml(s.path) + '">';
+        sh += '<i class="bi bi-folder-fill" style="color:#f59e0b"></i> ' + escapeHtml(s.nome);
+        sh += '</button>';
+    });
+    // Drive roots
+    if (exportDirs.roots && exportDirs.roots.length > 0) {
+        sh += '<span style="color:#d1d5db;margin:0 4px">|</span>';
+        exportDirs.roots.forEach(function(r) {
+            sh += '<button class="dir-shortcut-btn" onclick="navigateDirBrowser(\'' + escapeHtml(r.path.replace(/\\/g, '\\\\')) + '\')" title="' + escapeHtml(r.path) + '">';
+            sh += '<i class="bi bi-hdd" style="color:#6b7280"></i> ' + escapeHtml(r.letter) + ':';
+            sh += '</button>';
+        });
+    }
+    document.getElementById('dirBrowserShortcuts').innerHTML = sh;
+
+    // Start with the currently selected directory or default
+    var data = editor.getNodeFromId(nodeId).data || {};
+    var currentDir = data.export_directory || 'storage/exports';
+    // If it's a shortcut id, resolve to path
+    var resolved = null;
+    (exportDirs.shortcuts || []).forEach(function(s) { if (s.id === currentDir) resolved = s.path; });
+    if (resolved) {
+        navigateDirBrowser(resolved);
+    } else if (currentDir.match(/^[A-Za-z]:[\\\/]/) || currentDir.startsWith('/')) {
+        navigateDirBrowser(currentDir);
+    } else {
+        // Default to storage/exports path
+        var defPath = (exportDirs.shortcuts && exportDirs.shortcuts.length > 0) ? exportDirs.shortcuts[0].path : '';
+        if (defPath) navigateDirBrowser(defPath);
+    }
+}
+
+function closeDirBrowser() {
+    document.getElementById('dirBrowserModal').style.display = 'none';
+}
+
+function selectDirShortcut(id, path) {
+    _dirBrowserCurrentPath = path;
+    document.getElementById('dirBrowserPathInput').value = path;
+    document.getElementById('dirBrowserSelected').innerHTML = '<i class="bi bi-check-circle text-success me-1"></i><strong>' + escapeHtml(path) + '</strong>';
+    // Also navigate to show its contents
+    navigateDirBrowser(path);
+}
+
+function navigateDirBrowser(path) {
+    if (!path) return;
+    var list = document.getElementById('dirBrowserList');
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="bi bi-arrow-clockwise spin"></i> Carregando...</div>';
+    document.getElementById('dirBrowserPathInput').value = path;
+
+    $.getJSON(baseUrl + '/pipelines/browse-dir', { path: path }, function(res) {
+        if (res.erro) {
+            list.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444"><i class="bi bi-exclamation-triangle me-2"></i>' + escapeHtml(res.erro) + '</div>';
+            return;
+        }
+        _dirBrowserCurrentPath = res.path;
+        document.getElementById('dirBrowserPathInput').value = res.path;
+        document.getElementById('dirBrowserUpBtn').disabled = !res.parent;
+        document.getElementById('dirBrowserSelected').innerHTML = '<i class="bi bi-check-circle text-success me-1"></i><strong>' + escapeHtml(res.path) + '</strong>' + (res.writable ? ' <span class="badge bg-success" style="font-size:10px">gravável</span>' : ' <span class="badge bg-danger" style="font-size:10px">somente leitura</span>');
+
+        if (!res.dirs || res.dirs.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="bi bi-folder-x me-2"></i>Nenhuma sub-pasta encontrada</div>';
+            return;
+        }
+
+        var h = '';
+        res.dirs.forEach(function(d) {
+            var wrClass = d.writable ? 'dir-item-writable' : 'dir-item-readonly';
+            var arrow = d.has_children ? '<i class="bi bi-chevron-right" style="color:#d1d5db;font-size:11px"></i>' : '';
+            h += '<div class="dir-browser-item ' + wrClass + '" ondblclick="navigateDirBrowser(\'' + escapeHtml(d.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")) + '\')" onclick="selectDirItem(this,\'' + escapeHtml(d.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")) + '\',' + (d.writable ? 'true' : 'false') + ')">';
+            h += '<i class="bi bi-folder-fill" style="color:' + (d.writable ? '#f59e0b' : '#9ca3af') + ';font-size:16px"></i>';
+            h += '<span style="flex:1;font-size:13px">' + escapeHtml(d.name) + '</span>';
+            if (!d.writable) h += '<span style="font-size:10px;color:#ef4444" title="Sem permissão de escrita"><i class="bi bi-lock"></i></span>';
+            h += arrow + '</div>';
+        });
+        list.innerHTML = h;
+    }).fail(function() {
+        list.innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444"><i class="bi bi-wifi-off me-2"></i>Erro de conexão</div>';
+    });
+}
+
+function selectDirItem(el, path, writable) {
+    // Remove selection from others
+    document.querySelectorAll('.dir-browser-item.selected').forEach(function(e) { e.classList.remove('selected'); });
+    el.classList.add('selected');
+    _dirBrowserCurrentPath = path;
+    var label = '<i class="bi bi-check-circle text-success me-1"></i><strong>' + escapeHtml(path) + '</strong>';
+    if (writable) {
+        label += ' <span class="badge bg-success" style="font-size:10px">gravável</span>';
+    } else {
+        label += ' <span class="badge bg-danger" style="font-size:10px">somente leitura</span>';
+    }
+    document.getElementById('dirBrowserSelected').innerHTML = label;
+}
+
+function dirBrowserUp() {
+    var parts = _dirBrowserCurrentPath.replace(/[\\/]+$/, '');
+    var sep = parts.indexOf('\\') >= 0 ? '\\' : '/';
+    var parent = parts.substring(0, parts.lastIndexOf(sep));
+    if (!parent || parent === parts) {
+        // Try the root
+        if (/^[A-Za-z]:/.test(parts)) parent = parts.substring(0, 2) + '\\';
+        else parent = '/';
+    }
+    navigateDirBrowser(parent);
+}
+
+function confirmDirBrowser() {
+    if (!_dirBrowserCurrentPath || !_dirBrowserNodeId) return;
+    updateNodeProp(_dirBrowserNodeId, 'export_directory', _dirBrowserCurrentPath);
+    closeDirBrowser();
+    showProperties(_dirBrowserNodeId);
 }
 
 function loadTablesForConnection(connId, callback) {

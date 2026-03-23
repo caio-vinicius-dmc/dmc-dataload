@@ -31,6 +31,7 @@ class ServicoPermissao
         '/scheduler',
         '/calendario',
         '/meu-perfil',
+        '/notificacoes',
     ];
 
     // Tipos de recurso válidos
@@ -129,6 +130,11 @@ class ServicoPermissao
         // APIs de perfil do próprio usuário: permitidas para todos (GET e POST)
         $apisPerfil = ['/api/perfil', '/api/perfil/atualizar', '/api/perfil/alterar-senha'];
         if (in_array($path, $apisPerfil, true)) {
+            return true;
+        }
+
+        // APIs de notificação do próprio usuário: permitidas para todos
+        if (str_starts_with($path, '/api/notificacoes/')) {
             return true;
         }
 
@@ -321,7 +327,7 @@ class ServicoPermissao
             ];
         }
 
-        // Operador: vê recursos dos projetos dele (somente leitura, mesma visibilidade que desenvolvedor)
+        // Operador: vê recursos dos projetos dele (somente leitura)
         if ($nivel === 'operador') {
             return [
                 'where' => "({$aliasTabela}.{$colunaCriador} = :filtro_uid 
@@ -400,6 +406,30 @@ class ServicoPermissao
     // ================================================================
 
     /**
+     * Busca o ID do criador de um recurso no banco de dados
+     */
+    private static function obterCriadorRecurso(string $tipoRecurso, int $idRecurso): ?int
+    {
+        $mapa = [
+            'conexao'     => ['tabela' => 'tb_perfis_conexao',  'coluna' => 'criado_por'],
+            'rotina'      => ['tabela' => 'tb_rotinas',         'coluna' => 'id_usuario_criador'],
+            'pipeline'    => ['tabela' => 'tb_pipelines',       'coluna' => 'criado_por'],
+            'api_externa' => ['tabela' => 'tb_api_externas',    'coluna' => 'criado_por'],
+            'workflow'    => ['tabela' => 'tb_workflows',       'coluna' => 'criado_por'],
+        ];
+
+        if (!isset($mapa[$tipoRecurso])) return null;
+
+        $cfg = $mapa[$tipoRecurso];
+        $db = Database::getConexao();
+        $stmt = $db->prepare("SELECT {$cfg['coluna']} FROM {$cfg['tabela']} WHERE id = ?");
+        $stmt->execute([$idRecurso]);
+        $val = $stmt->fetchColumn();
+
+        return $val !== false ? (int)$val : null;
+    }
+
+    /**
      * Verifica se o usuário pode VER um recurso específico
      */
     public static function podeVerRecurso(string $tipoRecurso, int $idRecurso, ?int $idCriador = null): bool
@@ -413,6 +443,11 @@ class ServicoPermissao
 
         // Super admin vê tudo
         if ($nivel === 'super_admin') return true;
+
+        // Buscar criador do banco se não informado
+        if ($idCriador === null) {
+            $idCriador = self::obterCriadorRecurso($tipoRecurso, $idRecurso);
+        }
 
         // É o criador
         if ($idCriador !== null && $idCriador === $idUsuario) return true;
@@ -429,7 +464,7 @@ class ServicoPermissao
             return (bool)$stmt->fetchColumn();
         }
 
-        // Desenvolvedor: verifica se foi compartilhado com ele
+        // Desenvolvedor: verifica se foi compartilhado com ele ou pertence a projetos dele
         if ($nivel === 'desenvolvedor') {
             $db = Database::getConexao();
             // Verifica compartilhamento específico ou total
@@ -452,7 +487,7 @@ class ServicoPermissao
             return (bool)$stmt2->fetchColumn();
         }
 
-        // Operador: verifica se pertence a algum projeto dele (mesma visibilidade que desenvolvedor)
+        // Operador: verifica se pertence a algum projeto dele
         if ($nivel === 'operador') {
             $db = Database::getConexao();
             $stmt = $db->prepare("
@@ -485,6 +520,11 @@ class ServicoPermissao
         // Super admin pode tudo
         if ($nivel === 'super_admin') return true;
 
+        // Buscar criador do banco se não informado
+        if ($idCriador === null) {
+            $idCriador = self::obterCriadorRecurso($tipoRecurso, $idRecurso);
+        }
+
         // Admin: pode modificar recursos das empresas dele
         if ($nivel === 'admin') {
             if ($idCriador !== null && $idCriador === $idUsuario) return true;
@@ -498,10 +538,11 @@ class ServicoPermissao
             return (bool)$stmt->fetchColumn();
         }
 
-        // Desenvolvedor: pode modificar o que ele criou OU o que foi compartilhado com permissão 'editar'
+        // Desenvolvedor: pode modificar o que ele criou, compartilhado com 'editar', ou pertence a projetos dele
         if ($nivel === 'desenvolvedor') {
             if ($idCriador !== null && $idCriador === $idUsuario) return true;
             $db = Database::getConexao();
+            // Compartilhamento com permissão editar
             $stmt = $db->prepare("
                 SELECT 1 FROM tb_compartilhamentos
                 WHERE tipo_recurso = :tipo
@@ -510,7 +551,16 @@ class ServicoPermissao
                 AND permissao = 'editar'
             ");
             $stmt->execute([':tipo' => $tipoRecurso, ':uid' => $idUsuario, ':rid' => $idRecurso]);
-            return (bool)$stmt->fetchColumn();
+            if ($stmt->fetchColumn()) return true;
+
+            // Pertence a algum projeto do desenvolvedor
+            $stmt2 = $db->prepare("
+                SELECT 1 FROM tb_recurso_projetos rp
+                JOIN tb_usuario_projetos up ON up.id_projeto = rp.id_projeto AND up.id_usuario = :uid
+                WHERE rp.tipo_recurso = :tipo AND rp.id_recurso = :rid
+            ");
+            $stmt2->execute([':uid' => $idUsuario, ':tipo' => $tipoRecurso, ':rid' => $idRecurso]);
+            return (bool)$stmt2->fetchColumn();
         }
 
         return false;

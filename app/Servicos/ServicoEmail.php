@@ -103,6 +103,79 @@ class ServicoEmail
     }
 
     /**
+     * Envia notificação de falha para todos os usuários que pertencem às empresas/projetos do recurso.
+     * Respeita as regras RBAC: só envia para quem faz parte da empresa/projeto associado.
+     */
+    public static function notificarFalhaParaUsuarios(string $tipo, int $idRecurso, string $nome, string $erro): void
+    {
+        $config = self::obterConfigSmtp();
+        if (empty($config['smtp_host']) || ($config['notif_email_falha'] ?? '0') !== '1') {
+            return;
+        }
+
+        try {
+            $emails = self::obterEmailsUsuariosDoRecurso($tipo, $idRecurso);
+            if (empty($emails)) {
+                // Fallback: enviar para o admin
+                self::notificarFalha($tipo, $nome, $erro, $idRecurso);
+                return;
+            }
+
+            $assunto = "[DMC DataLoad] Falha na execução: $nome";
+            $corpo = self::templateFalha($tipo, $nome, $erro, $idRecurso);
+
+            foreach ($emails as $email) {
+                self::enviar($email, $assunto, $corpo);
+            }
+        } catch (\Throwable $e) {
+            error_log("Erro ao enviar emails por recurso: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtém emails dos usuários que pertencem às empresas e projetos do recurso
+     */
+    private static function obterEmailsUsuariosDoRecurso(string $tipoRecurso, int $idRecurso): array
+    {
+        $db = Database::getConexao();
+        $emails = [];
+
+        // Usuários por empresa
+        $stmt = $db->prepare("
+            SELECT DISTINCT u.email FROM tb_usuarios u
+            JOIN tb_usuario_empresas ue ON ue.id_usuario = u.id
+            JOIN tb_recurso_empresas re ON re.id_empresa = ue.id_empresa
+            WHERE re.tipo_recurso = ? AND re.id_recurso = ?
+            AND u.email IS NOT NULL AND u.email != ''
+        ");
+        $stmt->execute([$tipoRecurso, $idRecurso]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_COLUMN) as $e) {
+            $emails[$e] = true;
+        }
+
+        // Usuários por projeto
+        $stmt2 = $db->prepare("
+            SELECT DISTINCT u.email FROM tb_usuarios u
+            JOIN tb_usuario_projetos up ON up.id_usuario = u.id
+            JOIN tb_recurso_projetos rp ON rp.id_projeto = up.id_projeto
+            WHERE rp.tipo_recurso = ? AND rp.id_recurso = ?
+            AND u.email IS NOT NULL AND u.email != ''
+        ");
+        $stmt2->execute([$tipoRecurso, $idRecurso]);
+        foreach ($stmt2->fetchAll(\PDO::FETCH_COLUMN) as $e) {
+            $emails[$e] = true;
+        }
+
+        // Super admins sempre recebem
+        $stmt3 = $db->query("SELECT email FROM tb_usuarios WHERE nivel_acesso = 'super_admin' AND email IS NOT NULL AND email != ''");
+        foreach ($stmt3->fetchAll(\PDO::FETCH_COLUMN) as $e) {
+            $emails[$e] = true;
+        }
+
+        return array_keys($emails);
+    }
+
+    /**
      * Obtém configurações SMTP do banco
      */
     public static function obterConfigSmtp(): array

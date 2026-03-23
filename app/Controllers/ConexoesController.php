@@ -101,11 +101,15 @@ class ConexoesController
             $data['tipo_banco'] = 'mysql';
         }
         
-        // Verificar se conexão já existe
-        $s = $db->prepare('SELECT id, senha_encriptada FROM tb_perfis_conexao WHERE nome_conexao = ?');
-        $s->execute([$data['nome_conexao']]);
-        $exists = $s->fetch(PDO::FETCH_ASSOC);
-        $isEdit = !empty($exists);
+        // Verificar se é edição (id enviado pelo formulário) ou criação
+        $exists = null;
+        $isEdit = false;
+        if (!empty($data['id'])) {
+            $s = $db->prepare('SELECT id, senha_encriptada FROM tb_perfis_conexao WHERE id = ?');
+            $s->execute([intval($data['id'])]);
+            $exists = $s->fetch(PDO::FETCH_ASSOC);
+            $isEdit = !empty($exists);
+        }
         
         // Se for edição e não tem senha, buscar a senha existente
         if ($isEdit && empty($data['senha']) && !empty($exists['senha_encriptada'])) {
@@ -152,8 +156,8 @@ class ConexoesController
 
         // Se já existe, atualizar; senão, inserir
         if ($isEdit) {
-            $u = $db->prepare('UPDATE tb_perfis_conexao SET tipo_banco=?, host=?, porta=?, nome_banco=?, usuario=?, senha_encriptada=?, parametros_extras=?::jsonb WHERE id=?');
-            $u->execute([$data['tipo_banco'], $data['host'], $data['porta'] ?: null, $data['nome_banco'] ?: null, $data['usuario'] ?: null, $senhaEnc, json_encode($parametrosExtras), $exists['id']]);
+            $u = $db->prepare('UPDATE tb_perfis_conexao SET nome_conexao=?, tipo_banco=?, host=?, porta=?, nome_banco=?, usuario=?, senha_encriptada=?, parametros_extras=?::jsonb WHERE id=?');
+            $u->execute([$data['nome_conexao'], $data['tipo_banco'], $data['host'], $data['porta'] ?: null, $data['nome_banco'] ?: null, $data['usuario'] ?: null, $senhaEnc, json_encode($parametrosExtras), $exists['id']]);
             $idRecurso = (int)$exists['id'];
         } else {
             $ins = $db->prepare('INSERT INTO tb_perfis_conexao (nome_conexao, tipo_banco, host, porta, nome_banco, usuario, senha_encriptada, parametros_extras) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb) RETURNING id');

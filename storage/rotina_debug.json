@@ -1,14 +1,14 @@
 {
-    "id": "34",
-    "nome": "PG_Teste_03_Configuracoes",
+    "id": "35",
+    "nome": "PG_Teste_04_Setores_Categorias",
     "id_conexao": "15",
-    "descricao": "Listar configuracoes do sistema Helpdesk",
+    "descricao": "Listar setores e categorias do Helpdesk",
     "_rbac_presente": "1",
     "empresas": [
         "1"
     ],
     "projetos": [
-        "1"
+        "122"
     ],
     "bloco_codigo": [
         "bloco_1"
@@ -17,7 +17,7 @@
         "SELECT"
     ],
     "script_sql": [
-        "SELECT * FROM cfg_configuracoes LIMIT 20"
+        "SELECT s.id, s.nome as setor FROM cfg_setor s ORDER BY s.nome"
     ],
     "id_usuario_criador": "1"
 }

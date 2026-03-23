@@ -568,6 +568,15 @@ $("#btnSalvar").on("click", function() {
         return;
     }
     
+    // Validar empresa obrigatória
+    if (document.querySelector('input[name="_rbac_presente"]')) {
+        var empSel = (typeof rbacGetSelectedIds === 'function') ? rbacGetSelectedIds('empresas') : [];
+        if (empSel.length === 0) {
+            Swal.fire("Atenção", "Selecione ao menos uma empresa na seção de Visibilidade.", "warning");
+            return;
+        }
+    }
+    
     // Salvar CodeMirror para textareas
     $(".sql-editor").each(function() {
         try {
@@ -688,7 +697,11 @@ $(document).ready(function() {
                 showConfirmButton: false
             });
             
-            $.getJSON(baseUrl + "/rotinas/get/" + id)
+            $.ajax({
+                url: baseUrl + "/rotinas/get/" + id,
+                dataType: 'json',
+                cache: false
+            })
                 .done(function(res) {
                     console.log("=== RESPOSTA DA API ===");
                     console.log("Response completo:", res);
@@ -753,6 +766,7 @@ $(document).ready(function() {
                     var empIds = (res.empresas || []).map(function(e) { return parseInt(e.id_empresa || e.id || e, 10); });
                     var projIds = (res.projetos || []).map(function(p) { return parseInt(p.id_projeto || p.id || p, 10); });
                     if (typeof rbacCarregarOpcoes === 'function') {
+                        window._rbacCarregado = false;
                         rbacCarregarOpcoes(function() { rbacPreencherSelects(empIds, projIds); });
                     }
                 })

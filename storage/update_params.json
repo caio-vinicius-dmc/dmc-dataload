@@ -1,11 +1,11 @@
 {
-    "nome": "PG_Teste_03_Configuracoes",
-    "descricao": "Listar configuracoes do sistema Helpdesk",
+    "nome": "PG_Teste_04_Setores_Categorias",
+    "descricao": "Listar setores e categorias do Helpdesk",
     "id_conexao": "15",
     "webhook_sucesso": null,
     "webhook_falha": null,
     "ativa": false,
     "agendamento_cron": null,
     "max_tentativas": 3,
-    "id": "34"
+    "id": "35"
 }

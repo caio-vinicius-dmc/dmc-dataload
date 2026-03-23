@@ -821,10 +821,10 @@ function salvarWorkflow() {
     };
     
     // Empresas/Projetos RBAC
-    var empSel = document.getElementById('rbac_empresas');
-    var projSel = document.getElementById('rbac_projetos');
-    if (empSel) data.empresas = Array.from(empSel.selectedOptions).map(function(o) { return parseInt(o.value); });
-    if (projSel) data.projetos = Array.from(projSel.selectedOptions).map(function(o) { return parseInt(o.value); });
+    if (typeof rbacGetSelectedIds === 'function') {
+        data.empresas = rbacGetSelectedIds('empresas').map(Number);
+        data.projetos = rbacGetSelectedIds('projetos').map(Number);
+    }
     
     const url = workflowId ? baseUrl + '/api/workflows/update/' + workflowId : baseUrl + '/api/workflows/create';
     

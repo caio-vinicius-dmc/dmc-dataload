@@ -227,51 +227,120 @@ ob_start();
     background: rgba(102, 126, 234, 0.03);
 }
 
-/* ==== ESTILOS ESPECÍFICOS ==== */
-/* Estilos específicos para APIs */
+/* ========== API CARDS (estilo pipeline) ========== */
 .api-card {
-    transition: all 0.3s ease;
-    border-left: 4px solid transparent;
+    background: white; border-radius: var(--radius-lg);
+    border: 1px solid rgba(0,0,0,0.06);
+    transition: var(--transition); overflow: hidden;
 }
 .api-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    transform: translateY(-4px); box-shadow: var(--shadow-lg);
+    border-color: rgba(102,126,234,0.2);
 }
-.api-card.active { border-left-color: #10b981; }
-.api-card.inactive { border-left-color: #ef4444; }
+.api-card-accent {
+    height: 4px; width: 100%; transition: height 0.3s;
+}
+.api-card:hover .api-card-accent { height: 6px; }
+.method-get .api-card-accent { background: var(--gradient-info); }
+.method-post .api-card-accent { background: var(--gradient-success); }
+.method-put .api-card-accent { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.method-delete .api-card-accent { background: var(--gradient-danger); }
+.method-patch .api-card-accent { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+.api-card-body { padding: 1.25rem 1.5rem; cursor: pointer; }
+.api-card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.api-card-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; color: white; flex-shrink: 0;
+}
+.method-get .api-card-icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.method-post .api-card-icon { background: linear-gradient(135deg, #10b981, #059669); }
+.method-put .api-card-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.method-delete .api-card-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.method-patch .api-card-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+.api-card-title {
+    font-size: 1.1rem; font-weight: 700; color: #1a202c; margin-bottom: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;
+}
+.api-card-url {
+    font-size: 0.78rem; color: #94a3b8; font-family: 'Fira Code', monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    margin-bottom: 4px;
+}
+.api-card-desc {
+    font-size: 0.85rem; color: #6b7280;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; min-height: 2.5em;
+}
+.api-card-stats {
+    display: flex; gap: 16px; padding-top: 12px;
+    border-top: 1px solid #f3f4f6; margin-top: 12px;
+}
+.api-stat {
+    font-size: 0.8rem; color: #6b7280;
+    display: flex; align-items: center; gap: 4px;
+}
+.api-stat strong { color: #1a202c; }
+.api-card-footer {
+    padding: 0.75rem 1.5rem; background: #f9fafb;
+    border-top: 1px solid #f3f4f6;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.api-actions { display: flex; gap: 4px; }
+.api-actions .btn {
+    width: 32px; height: 32px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; font-size: 0.85rem;
+}
 
 .method-badge {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    font-size: 0.7rem; padding: 3px 10px; border-radius: 20px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
 }
 .method-GET { background: #dbeafe; color: #1d4ed8; }
 .method-POST { background: #dcfce7; color: #15803d; }
 .method-PUT { background: #fef3c7; color: #b45309; }
 .method-DELETE { background: #fee2e2; color: #dc2626; }
+.method-PATCH { background: #ede9fe; color: #7c3aed; }
 
 .auth-badge {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 12px;
-    background: #f3f4f6;
-    color: #6b7280;
+    font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 500;
 }
+.auth-none { background: #f3f4f6; color: #6b7280; }
 .auth-bearer { background: #e0e7ff; color: #4338ca; }
 .auth-basic { background: #fce7f3; color: #be185d; }
 .auth-api_key { background: #ccfbf1; color: #0d9488; }
 
-.status-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 6px;
+.status-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
 }
-.status-success { background: #10b981; }
-.status-error { background: #ef4444; }
-.status-unknown { background: #9ca3af; }
+.status-dot.active { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); animation: pulse-dot 2s infinite; }
+.status-dot.inactive { background: #d1d5db; }
+@keyframes pulse-dot {
+    0%,100% { box-shadow: 0 0 4px rgba(16,185,129,0.4); }
+    50% { box-shadow: 0 0 12px rgba(16,185,129,0.6); }
+}
+
+.empty-state { text-align: center; padding: 80px 20px; }
+.empty-state-icon {
+    width: 100px; height: 100px; border-radius: 24px;
+    background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; color: #667eea; margin-bottom: 24px;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.col-12.col-md-6.col-xl-4 { animation: fadeInUp 0.4s ease both; }
+.col-12.col-md-6.col-xl-4:nth-child(2) { animation-delay: 0.05s; }
+.col-12.col-md-6.col-xl-4:nth-child(3) { animation-delay: 0.1s; }
+.col-12.col-md-6.col-xl-4:nth-child(4) { animation-delay: 0.15s; }
+.col-12.col-md-6.col-xl-4:nth-child(5) { animation-delay: 0.2s; }
+.col-12.col-md-6.col-xl-4:nth-child(6) { animation-delay: 0.25s; }
 
 .response-preview {
     max-height: 300px;
@@ -350,25 +419,56 @@ ob_start();
     </div>
 </div>
 
-<!-- Lista de APIs -->
-<div class="card-modern">
-    <div class="card-modern-header">
-        <i class="bi bi-list-ul me-2"></i>
-        <span>APIs Cadastradas</span>
-        <div class="ms-auto d-flex gap-2">
-            <input type="text" class="form-control form-control-sm" placeholder="Buscar..." id="searchApis" style="width: 200px;">
-            <button class="btn btn-sm btn-outline-secondary" onclick="carregarApis()">
-                <i class="bi bi-arrow-clockwise"></i>
-            </button>
-        </div>
-    </div>
-    <div class="card-modern-body">
-        <div class="row g-3" id="listaApis">
-            <div class="col-12 text-center py-5">
-                <div class="spinner-border text-primary"></div>
-                <p class="mt-2 text-muted">Carregando APIs...</p>
+<!-- Filtros -->
+<div class="card-modern mb-4">
+    <div class="card-modern-body py-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control border-start-0" id="searchApis" placeholder="Buscar APIs...">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="filterMetodo">
+                    <option value="">Todos os Métodos</option>
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                    <option value="PATCH">PATCH</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="filterStatus">
+                    <option value="">Todos</option>
+                    <option value="1">Ativas</option>
+                    <option value="0">Inativas</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="filterAuth">
+                    <option value="">Todas as Auth</option>
+                    <option value="none">Nenhuma</option>
+                    <option value="bearer">Bearer</option>
+                    <option value="basic">Basic</option>
+                    <option value="api_key">API Key</option>
+                </select>
+            </div>
+            <div class="col-md-2 text-end">
+                <button class="btn btn-outline-secondary btn-sm" onclick="carregarApis()" title="Atualizar">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+                </button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- API Cards Grid -->
+<div class="row g-4" id="listaApis">
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted">Carregando APIs...</p>
     </div>
 </div>
 
@@ -589,57 +689,59 @@ function renderizarApis(lista) {
     const container = $('#listaApis');
     
     if (!lista || lista.length === 0) {
-        container.html('<div class="col-12 text-center py-5"><p class="text-muted">Nenhuma API cadastrada</p><button class="btn btn-primary" onclick="abrirModalApi()"><i class="bi bi-plus-lg me-2"></i>Cadastrar Primeira API</button></div>');
+        container.html('<div class="col-12"><div class="empty-state">' +
+            '<div class="empty-state-icon"><i class="bi bi-cloud-arrow-down-fill"></i></div>' +
+            '<h4>Nenhuma API cadastrada</h4>' +
+            '<p>Cadastre sua primeira API externa e comece a integrar seus dados</p>' +
+            '<button class="btn-modern-primary" onclick="abrirModalApi()"><i class="bi bi-plus-lg me-2"></i>Cadastrar Primeira API</button></div></div>');
         return;
     }
     
     let html = '';
     lista.forEach(api => {
-        const statusClass = api.ativo ? 'active' : 'inactive';
-        const badgeClass = api.ativo ? 'bg-success' : 'bg-secondary';
-        const authLabel = api.auth_tipo || 'none';
-        const authClass = 'auth-' + authLabel;
-        const statusIndicator = api.ultimo_status === 'success' ? 'status-success' : (api.ultimo_status === 'error' ? 'status-error' : 'status-unknown');
+        const isA = !!api.ativo;
+        const m = (api.metodo || 'GET').toUpperCase();
+        const mLow = m.toLowerCase();
+        const mIcon = {GET:'bi-cloud-download',POST:'bi-cloud-upload',PUT:'bi-pencil-square',DELETE:'bi-trash3',PATCH:'bi-wrench'}[m]||'bi-cloud';
+        const authLabel = {none:'Sem Auth',bearer:'Bearer',basic:'Basic',api_key:'API Key'}[api.auth_tipo||'none']||'Sem Auth';
+        const authClass = 'auth-'+(api.auth_tipo||'none');
+        const eventos = parseInt(api.total_eventos)||0;
+        const polling = parseInt(api.intervalo_polling)||60;
+        const safeNome = $('<div>').text(api.nome).html();
+        const safeUrl = $('<div>').text(api.url||'').html();
+        const safeDesc = $('<div>').text(api.descricao||'Sem descrição').html();
+        const descTrunc = safeDesc.length>80 ? safeDesc.substring(0,80)+'...' : safeDesc;
         
-        html += `
-        <div class="col-md-6 col-xl-4">
-            <div class="card api-card ${statusClass} h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="status-indicator ${statusIndicator}"></span>
-                            <h6 class="mb-0">${api.nome}</h6>
-                        </div>
-                        <span class="method-badge method-${api.metodo}">${api.metodo}</span>
-                    </div>
-                    <p class="text-muted small text-truncate mb-2" title="${api.url}">${api.url}</p>
-                    ${api.descricao ? '<p class="text-muted small mb-2">' + api.descricao.substring(0, 80) + '</p>' : ''}
-                    <div class="d-flex gap-2 mb-3 flex-wrap">
-                        <span class="auth-badge ${authClass}">${authLabel}</span>
-                        <span class="badge ${badgeClass}">${api.ativo ? 'Ativa' : 'Inativa'}</span>
-                        ${api.total_eventos > 0 ? '<span class="badge bg-info">' + api.total_eventos + ' evento(s)</span>' : ''}
-                    </div>
-                    <div class="btn-group w-100 btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="testarApiExistente(${api.id})" title="Testar">
-                            <i class="bi bi-play-circle"></i>
-                        </button>
-                        <button class="btn btn-outline-warning" onclick="editarApi(${api.id})" title="Editar">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <a href="${baseUrl}/eventos-api?api=${api.id}" class="btn btn-outline-info" title="Eventos">
-                            <i class="bi bi-bell"></i>
-                        </a>
-                        <button class="btn btn-outline-secondary" onclick="abrirModalCompartilhamento('api', ${api.id})" title="Compartilhar">
-                            <i class="bi bi-share"></i>
-                        </button>
-                        <button class="btn btn-outline-danger" onclick="excluirApi(${api.id})" title="Excluir">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
+        html += '<div class="col-12 col-md-6 col-xl-4" data-nome="'+safeNome.toLowerCase()+'" data-metodo="'+m+'" data-ativo="'+(isA?'1':'0')+'" data-auth="'+(api.auth_tipo||'none')+'">' +
+            '<div class="api-card method-'+mLow+'">' +
+            '<div class="api-card-accent"></div>' +
+            '<div class="api-card-body" onclick="editarApi('+api.id+')">' +
+            '<div class="api-card-header">' +
+            '<div class="api-card-icon"><i class="bi '+mIcon+'"></i></div>' +
+            '<div class="flex-grow-1" style="min-width:0">' +
+            '<div class="d-flex align-items-center gap-2 mb-1">' +
+            '<span class="api-card-title" title="'+safeNome+'">'+safeNome+'</span>' +
+            '<span class="status-dot '+(isA?'active':'inactive')+'" title="'+(isA?'Ativa':'Inativa')+'"></span></div>' +
+            '<div class="api-card-url" title="'+safeUrl+'">'+safeUrl+'</div></div>' +
+            '<span class="method-badge method-'+m+'">'+m+'</span></div>' +
+            '<div class="api-card-desc">'+descTrunc+'</div>' +
+            '<div class="d-flex gap-2 align-items-center mb-0 mt-2">' +
+            '<span class="auth-badge '+authClass+'"><i class="bi bi-shield-lock me-1"></i>'+authLabel+'</span>' +
+            (eventos>0?'<span class="auth-badge" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-bell me-1"></i>'+eventos+' evento(s)</span>':'')+
+            '</div>' +
+            '<div class="api-card-stats">' +
+            '<div class="api-stat"><i class="bi bi-arrow-repeat"></i> <strong>'+polling+'s</strong> polling</div>' +
+            '<div class="api-stat"><i class="bi bi-bell"></i> <strong>'+eventos+'</strong> eventos</div>' +
+            '<div class="api-stat"><i class="bi bi-'+(isA?'check-circle text-success':'x-circle text-danger')+'"></i> '+(isA?'Ativa':'Inativa')+'</div></div></div>' +
+            '<div class="api-card-footer">' +
+            '<div class="api-actions">' +
+            '<button class="btn btn-outline-success btn-sm" title="Testar" onclick="event.stopPropagation();testarApiExistente('+api.id+')"><i class="bi bi-play-fill"></i></button>' +
+            '<button class="btn btn-outline-primary btn-sm" title="Editar" onclick="event.stopPropagation();editarApi('+api.id+')"><i class="bi bi-pencil"></i></button>' +
+            '<a href="'+baseUrl+'/eventos-api?api='+api.id+'" class="btn btn-outline-info btn-sm" title="Eventos" onclick="event.stopPropagation()"><i class="bi bi-bell"></i></a>' +
+            '<button class="btn btn-outline-secondary btn-sm" title="Compartilhar" onclick="event.stopPropagation();abrirModalCompartilhamento(\'api\','+api.id+')"><i class="bi bi-share"></i></button></div>' +
+            '<div class="d-flex gap-1">' +
+            '<button class="btn btn-outline-danger btn-sm" title="Excluir" onclick="event.stopPropagation();excluirApi('+api.id+')"><i class="bi bi-trash"></i></button>' +
+            '</div></div></div></div>';
     });
     
     container.html(html);
@@ -736,7 +838,11 @@ function abrirModalApi(id) {
     if (id) {
         $('#modalApiTitulo').text('Editar API');
         // Buscar dados completos da API
-        $.getJSON(baseUrl + '/api/apis-externas/get/' + id, function(res) {
+        $.ajax({
+            url: baseUrl + '/api/apis-externas/get/' + id,
+            dataType: 'json',
+            cache: false,
+            success: function(res) {
             if (res.sucesso && res.dados) {
                 const api = res.dados;
                 $('#apiId').val(api.id);
@@ -783,13 +889,14 @@ function abrirModalApi(id) {
                 // Preencher empresas/projetos RBAC
                 var empIds = (res.empresas || []).map(function(e) { return parseInt(e.id_empresa || e.id || e, 10); });
                 var projIds = (res.projetos || []).map(function(p) { return parseInt(p.id_projeto || p.id || p, 10); });
+                window._rbacCarregado = false;
                 rbacCarregarOpcoes(function() { rbacPreencherSelects(empIds, projIds); });
                 
                 new bootstrap.Modal('#modalApi').show();
             } else {
                 mostrarErro('Erro ao carregar dados da API');
             }
-        });
+        }});
     } else {
         $('#modalApiTitulo').text('Nova API');
         new bootstrap.Modal('#modalApi').show();
@@ -850,10 +957,10 @@ function salvarApi(e) {
     }
     
     // Empresas/Projetos RBAC
-    var empSel = document.getElementById('rbac_empresas');
-    var projSel = document.getElementById('rbac_projetos');
-    if (empSel) data.empresas = Array.from(empSel.selectedOptions).map(function(o) { return parseInt(o.value); });
-    if (projSel) data.projetos = Array.from(projSel.selectedOptions).map(function(o) { return parseInt(o.value); });
+    if (typeof rbacGetSelectedIds === 'function') {
+        data.empresas = rbacGetSelectedIds('empresas');
+        data.projetos = rbacGetSelectedIds('projetos');
+    }
     
     const btnSalvar = $('#formApi button[type="submit"]');
     btnSalvar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Salvando...');
@@ -1027,20 +1134,27 @@ function testarApi() {
     });
 }
 
-// Filtrar APIs por busca
-$('#searchApis').on('input', function() {
-    const term = $(this).val().toLowerCase();
-    if (!term) {
-        renderizarApis(apis);
-        return;
-    }
-    const filtered = apis.filter(a => 
-        a.nome.toLowerCase().includes(term) || 
-        a.url.toLowerCase().includes(term) ||
-        (a.descricao || '').toLowerCase().includes(term)
-    );
+// Filtrar APIs
+function filterApis() {
+    const s = $('#searchApis').val().toLowerCase();
+    const m = $('#filterMetodo').val();
+    const st = $('#filterStatus').val();
+    const au = $('#filterAuth').val();
+    const filtered = apis.filter(a => {
+        if(s && !a.nome.toLowerCase().includes(s) && !a.url.toLowerCase().includes(s) && !(a.descricao||'').toLowerCase().includes(s)) return false;
+        if(m && (a.metodo||'GET')!==m) return false;
+        if(st==='1' && !a.ativo) return false;
+        if(st==='0' && a.ativo) return false;
+        if(au && (a.auth_tipo||'none')!==au) return false;
+        return true;
+    });
     renderizarApis(filtered);
-});
+}
+
+$('#searchApis').on('input', filterApis);
+$('#filterMetodo').on('change', filterApis);
+$('#filterStatus').on('change', filterApis);
+$('#filterAuth').on('change', filterApis);
 
 // Inicializar
 $(document).ready(function() {

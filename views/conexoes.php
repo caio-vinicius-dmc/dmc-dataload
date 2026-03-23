@@ -729,7 +729,11 @@ function novaConexao() {
 }
 
 function editarConexao(id) {
-    $.getJSON(baseUrl + "/conexoes/get/" + id, function(r) {
+    $.ajax({
+        url: baseUrl + "/conexoes/get/" + id,
+        dataType: 'json',
+        cache: false,
+        success: function(r) {
         document.getElementById("conexaoId").value = r.id;
         document.getElementById("nome_conexao").value = r.nome_conexao;
         document.getElementById("tipo_banco").value = r.tipo_banco;
@@ -748,6 +752,7 @@ function editarConexao(id) {
         var empIds = (r.empresas || []).map(function(e) { return parseInt(e.id_empresa || e.id || e, 10); });
         var projIds = (r.projetos || []).map(function(p) { return parseInt(p.id_projeto || p.id || p, 10); });
         if (typeof rbacCarregarOpcoes === 'function') {
+            window._rbacCarregado = false;
             rbacCarregarOpcoes(function() { if (typeof rbacPreencherSelects === 'function') rbacPreencherSelects(empIds, projIds); });
         }
         
@@ -756,6 +761,7 @@ function editarConexao(id) {
         document.getElementById("tipo_conexao_oracle").dispatchEvent(new Event('change'));
         
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConexao')).show();
+    }
     });
 }
 
@@ -975,7 +981,10 @@ function mostrarErro(res) {
 // Alterar porta padrão e campos específicos ao mudar tipo de banco
 document.getElementById("tipo_banco").addEventListener("change", function() {
     const tipoBanco = this.value;
-    document.getElementById("porta").value = portasPadrao[tipoBanco] || "";
+    // Só preenche porta padrão se o campo estiver vazio (nova conexão)
+    if (!document.getElementById("porta").value) {
+        document.getElementById("porta").value = portasPadrao[tipoBanco] || "";
+    }
     
     // Ocultar todos os campos específicos
     document.getElementById("campo_nome_banco").style.display = "none";
@@ -1015,6 +1024,15 @@ document.getElementById("tipo_conexao_oracle").addEventListener("change", functi
 document.getElementById("formConexao").addEventListener("submit", function(e) {
     e.preventDefault();
     
+    // Validar empresa obrigatória
+    if (document.querySelector('input[name="_rbac_presente"]')) {
+        var empSel = (typeof rbacGetSelectedIds === 'function') ? rbacGetSelectedIds('empresas') : [];
+        if (empSel.length === 0) {
+            Swal.fire("Atenção", "Selecione ao menos uma empresa na seção de Visibilidade.", "warning");
+            return;
+        }
+    }
+    
     const btn = document.getElementById("btnSalvar");
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Salvando...`;
@@ -1027,7 +1045,11 @@ document.getElementById("formConexao").addEventListener("submit", function(e) {
         } else {
             Swal.fire("Erro!", res.mensagem || res.erro, "error");
         }
-    }, "json").always(function() {
+    }, "json").fail(function(xhr) {
+        var msg = "Erro ao salvar conexão";
+        try { var r = JSON.parse(xhr.responseText); msg = r.erro || r.mensagem || msg; } catch(e) {}
+        Swal.fire("Erro!", msg, "error");
+    }).always(function() {
         btn.disabled = false;
         btn.innerHTML = `<i class="bi bi-check-lg me-2"></i>Salvar`;
     });

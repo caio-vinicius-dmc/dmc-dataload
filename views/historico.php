@@ -91,7 +91,7 @@ ob_start();
             </div>
             <div class="stat-content">
                 <div class="stat-value-modern" id="statSucesso">0</div>
-                <div class="stat-label-modern">Sucesso (24h)</div>
+                <div class="stat-label-modern">Sucesso</div>
             </div>
             <div class="stat-trend success-trend">
                 <i class="bi bi-arrow-up"></i>
@@ -105,7 +105,7 @@ ob_start();
             </div>
             <div class="stat-content">
                 <div class="stat-value-modern" id="statFalhas">0</div>
-                <div class="stat-label-modern">Falhas (24h)</div>
+                <div class="stat-label-modern">Falhas</div>
             </div>
             <div class="stat-trend danger-trend">
                 <i class="bi bi-arrow-down"></i>
@@ -1839,13 +1839,19 @@ $(document).ready(function() {
         ajax: {
             url: baseUrl + "/api/historico",
             dataSrc: function(json) {
-                if (json.estatisticas) {
-                    $("#statSucesso").text(json.estatisticas.sucesso_24h || 0);
-                    $("#statFalhas").text(json.estatisticas.falhas_24h || 0);
-                    $("#statExecutando").text(json.estatisticas.executando || 0);
-                    $("#statTempo").text(formatDuracao(json.estatisticas.tempo_medio_ms || 0));
-                }
-                return json.dados || [];
+                var dados = json.dados || [];
+                var sucesso = 0, falhas = 0, executando = 0, tempoTotal = 0, tempoCount = 0;
+                dados.forEach(function(d) {
+                    if (d.status === 'sucesso') sucesso++;
+                    else if (d.status === 'falha' || d.status === 'erro') falhas++;
+                    else if (d.status === 'executando') executando++;
+                    if (d.duracao_ms) { tempoTotal += parseFloat(d.duracao_ms); tempoCount++; }
+                });
+                $("#statSucesso").text(sucesso);
+                $("#statFalhas").text(falhas);
+                $("#statExecutando").text(executando);
+                $("#statTempo").text(formatDuracao(tempoCount > 0 ? Math.round(tempoTotal / tempoCount) : 0));
+                return dados;
             }
         },
         columns: [

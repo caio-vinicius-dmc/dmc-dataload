@@ -9,7 +9,6 @@ use App\Controllers\ConexoesController;
 use App\Controllers\RotinasController2 as RotinasController;
 use App\Controllers\ApiController;
 use App\Controllers\ApiExternaController;
-use App\Controllers\WorkflowController;
 use App\Controllers\PipelineController;
 use App\Servicos\ServicoAutenticacao;
 
@@ -54,7 +53,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 define('BASE_URL', $basePath);
 
 // Rotas públicas (sem autenticação)
-$rotasPublicas = ['/', '/login', '/esqueci-senha', '/redefinir-senha', '/api/health', '/api/versao', '/api/metrics'];
+$rotasPublicas = ['/login', '/esqueci-senha', '/redefinir-senha', '/api/health', '/api/versao', '/api/metrics'];
 $requerAutenticacao = !in_array($path, $rotasPublicas);
 
 // Health check
@@ -420,6 +419,12 @@ if (preg_match('#^/conexoes/test/(\d+)$#', $path, $m) && $method === 'POST') {
         exit;
     }
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para testar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $c = new ConexoesController();
     header('Content-Type: application/json');
     echo json_encode($c->testarConexaoPorId($id));
@@ -437,6 +442,15 @@ if ($path === '/conexoes/salvar' && $method === 'POST') {
     }
     $data = $_POST;
     unset($data['_csrf_token']);
+    // RBAC: se editando, verificar permissão
+    if (!empty($data['id'])) {
+        if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('conexao', (int)$data['id'])) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['erro' => 'Sem permissão para editar esta conexão', 'sucesso' => false]);
+            exit;
+        }
+    }
     $c = new ConexoesController();
     header('Content-Type: application/json');
     $resultado = $c->salvar($data);
@@ -459,8 +473,14 @@ if ($path === '/conexoes/list' && $method === 'GET') {
 
 if (preg_match('#^/conexoes/get/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new ConexoesController();
+    header('Cache-Control: no-cache, no-store, must-revalidate');
     header('Content-Type: application/json');
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para visualizar esta conexão', 'sucesso' => false]);
+        exit;
+    }
+    $c = new ConexoesController();
     $resultado = $c->buscar($id);
     $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('conexao', $id);
     $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('conexao', $id);
@@ -554,8 +574,14 @@ if ($path === '/rotinas/list' && $method === 'GET') {
 
 if (preg_match('#^/rotinas/get/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
-    $c = new RotinasController();
+    header('Cache-Control: no-cache, no-store, must-revalidate');
     header('Content-Type: application/json');
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('rotina', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para visualizar esta rotina', 'sucesso' => false]);
+        exit;
+    }
+    $c = new RotinasController();
     $resultado = $c->buscar($id);
     $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('rotina', $id);
     $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('rotina', $id);
@@ -573,6 +599,14 @@ if ($path === '/rotinas/salvar' && $method === 'POST') {
     }
     $data = $_POST;
     unset($data['_csrf_token']);
+    // RBAC: se editando, verificar permissão
+    if (!empty($data['id'])) {
+        if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('rotina', (int)$data['id'])) {
+            http_response_code(403);
+            echo json_encode(['erro' => 'Sem permissão para editar esta rotina', 'sucesso' => false]);
+            exit;
+        }
+    }
     $c = new RotinasController();
     header('Content-Type: application/json');
     $resultado = $c->salvar($data);
@@ -679,6 +713,12 @@ if ($path === '/scheduler' || $path === '/agendamentos') {
 // Meu Perfil
 if ($path === '/meu-perfil') {
     include __DIR__ . '/../views/meu-perfil.php';
+    exit;
+}
+
+// Notificações (página)
+if ($path === '/notificacoes') {
+    include __DIR__ . '/../views/notificacoes.php';
     exit;
 }
 
@@ -863,6 +903,12 @@ if ($path === '/api/scheduler/salvar' && $method === 'POST') {
 
 if (preg_match('#^/sql-editor/connect/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->connect($id));
@@ -871,6 +917,12 @@ if (preg_match('#^/sql-editor/connect/(\d+)$#', $path, $m) && $method === 'GET')
 
 if (preg_match('#^/sql-editor/objects/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getObjects($id));
@@ -879,6 +931,12 @@ if (preg_match('#^/sql-editor/objects/(\d+)$#', $path, $m) && $method === 'GET')
 
 if (preg_match('#^/sql-editor/metadata/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->getMetadata($id));
@@ -888,6 +946,12 @@ if (preg_match('#^/sql-editor/metadata/(\d+)$#', $path, $m) && $method === 'GET'
 // SQL Editor - Lazy Loading APIs
 if (preg_match('#^/sql-editor/tables/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $schema = urldecode($m[2]);
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
@@ -897,6 +961,12 @@ if (preg_match('#^/sql-editor/tables/(\d+)/(.+)$#', $path, $m) && $method === 'G
 
 if (preg_match('#^/sql-editor/views/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $schema = urldecode($m[2]);
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
@@ -906,6 +976,12 @@ if (preg_match('#^/sql-editor/views/(\d+)/(.+)$#', $path, $m) && $method === 'GE
 
 if (preg_match('#^/sql-editor/functions/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $schema = urldecode($m[2]);
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
@@ -915,6 +991,12 @@ if (preg_match('#^/sql-editor/functions/(\d+)/(.+)$#', $path, $m) && $method ===
 
 if (preg_match('#^/sql-editor/procedures/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $schema = urldecode($m[2]);
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
@@ -924,6 +1006,12 @@ if (preg_match('#^/sql-editor/procedures/(\d+)/(.+)$#', $path, $m) && $method ==
 
 if (preg_match('#^/sql-editor/packages/(\d+)/(.+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $schema = urldecode($m[2]);
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
@@ -933,6 +1021,15 @@ if (preg_match('#^/sql-editor/packages/(\d+)/(.+)$#', $path, $m) && $method === 
 
 if ($path === '/sql-editor/execute' && $method === 'POST') {
     $data = $_POST;
+    if (!empty($data['connection_id'])) {
+        $connId = (int)$data['connection_id'];
+        if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $connId)) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+            exit;
+        }
+    }
     $c = new \App\Controllers\SqlEditorController();
     header('Content-Type: application/json');
     echo json_encode($c->execute($data));
@@ -943,6 +1040,12 @@ if ($path === '/sql-editor/execute' && $method === 'POST') {
 
 if (preg_match('#^/diagrama/estrutura/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->getEstrutura($id));
@@ -951,6 +1054,12 @@ if (preg_match('#^/diagrama/estrutura/(\d+)$#', $path, $m) && $method === 'GET')
 
 if (preg_match('#^/diagrama/estrutura-tabela/(\d+)/([^/]+)/([^/]+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $schema = urldecode($m[2]);
     $tabela = urldecode($m[3]);
     $c = new \App\Controllers\DiagramaController();
@@ -961,6 +1070,12 @@ if (preg_match('#^/diagrama/estrutura-tabela/(\d+)/([^/]+)/([^/]+)$#', $path, $m
 
 if (preg_match('#^/diagrama/tabelas/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->listarTabelas($id));
@@ -969,6 +1084,12 @@ if (preg_match('#^/diagrama/tabelas/(\d+)$#', $path, $m) && $method === 'GET') {
 
 if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para acessar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->carregarPosicoes($id));
@@ -977,6 +1098,12 @@ if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'GET') 
 
 if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'POST') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('conexao', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para modificar esta conexão', 'sucesso' => false]);
+        exit;
+    }
     $posicoes = json_decode(file_get_contents('php://input'), true) ?? [];
     $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
@@ -1243,12 +1370,14 @@ if (preg_match('#^/admin/projetos/delete/(\d+)$#', $path, $m) && $method === 'PO
 // ========== API PERMISSÕES/COMPARTILHAMENTOS ==========
 
 if ($path === '/api/permissoes/empresas-usuario' && $method === 'GET') {
+    AuthMiddleware::exigirAutenticacao();
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoPermissao::empresasDisponiveisParaAdmin()]);
     exit;
 }
 
 if ($path === '/api/permissoes/projetos-usuario' && $method === 'GET') {
+    AuthMiddleware::exigirAutenticacao();
     header('Content-Type: application/json');
     $idsEmpresas = isset($_GET['empresas']) ? array_map('intval', explode(',', $_GET['empresas'])) : null;
     echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoPermissao::projetosDisponiveisParaAdmin($idsEmpresas)]);
@@ -1256,6 +1385,7 @@ if ($path === '/api/permissoes/projetos-usuario' && $method === 'GET') {
 }
 
 if ($path === '/api/permissoes/papeis-disponiveis' && $method === 'GET') {
+    AuthMiddleware::exigirAutenticacao();
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true, 'dados' => \App\Servicos\ServicoPermissao::papeisDisponiveis()]);
     exit;
@@ -1433,64 +1563,10 @@ if ($path === '/api/historico' && $method === 'GET') {
         $stmt->execute($allParams);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // RBAC: pré-computar IDs visíveis por tipo de recurso para stats
-        $fRotSt = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('rotina', 'r', 'id_usuario_criador');
-        $stR = $db->prepare("SELECT r.id FROM tb_rotinas r WHERE ({$fRotSt['where']})");
-        $stR->execute($fRotSt['params']);
-        $rotIdsSt = $stR->fetchAll(PDO::FETCH_COLUMN);
-
-        $fPipSt = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
-        $stP = $db->prepare("SELECT p.id FROM tb_pipelines p WHERE ({$fPipSt['where']})");
-        $stP->execute($fPipSt['params']);
-        $pipIdsSt = $stP->fetchAll(PDO::FETCH_COLUMN);
-
-        $fWfSt = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
-        $stW = $db->prepare("SELECT w.id FROM tb_workflows w WHERE ({$fWfSt['where']})");
-        $stW->execute($fWfSt['params']);
-        $wfIdsSt = $stW->fetchAll(PDO::FETCH_COLUMN);
-
-        $inSqlSt = function(array $ids): string {
-            if (empty($ids)) return '(0)';
-            return '(' . implode(',', array_map('intval', $ids)) . ')';
-        };
-        $rotInSt = $inSqlSt($rotIdsSt);
-        $pipInSt = $inSqlSt($pipIdsSt);
-        $wfInSt  = $inSqlSt($wfIdsSt);
-
-        // Estatísticas unificadas (com RBAC)
-        $stats = $db->query("
-            SELECT 
-                COALESCE(r.sucesso_24h,0) + COALESCE(p.sucesso_24h,0) + COALESCE(w.sucesso_24h,0) as sucesso_24h,
-                COALESCE(r.falhas_24h,0) + COALESCE(p.falhas_24h,0) + COALESCE(w.falhas_24h,0) as falhas_24h,
-                COALESCE(r.executando,0) + COALESCE(p.executando,0) + COALESCE(w.executando,0) as executando,
-                (COALESCE(r.tempo_medio_ms,0) + COALESCE(p.tempo_medio_ms,0) + COALESCE(w.tempo_medio_ms,0)) / 
-                    NULLIF((CASE WHEN r.tempo_medio_ms IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN p.tempo_medio_ms IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN w.tempo_medio_ms IS NOT NULL THEN 1 ELSE 0 END), 0) as tempo_medio_ms
-            FROM
-            (SELECT 
-                SUM(CASE WHEN status = 'sucesso' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
-                SUM(CASE WHEN status IN ('falha','erro') AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
-                SUM(CASE WHEN status = 'executando' THEN 1 ELSE 0 END) as executando,
-                AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
-            FROM tb_logs_execucao WHERE id_rotina IN {$rotInSt}) r,
-            (SELECT 
-                SUM(CASE WHEN status = 'success' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
-                SUM(CASE WHEN status = 'error' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
-                SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as executando,
-                AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
-            FROM tb_pipeline_execucoes WHERE id_pipeline IN {$pipInSt}) p,
-            (SELECT 
-                SUM(CASE WHEN status = 'completed' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as sucesso_24h,
-                SUM(CASE WHEN status = 'failed' AND data_inicio >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) as falhas_24h,
-                SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as executando,
-                AVG(duracao_ms) FILTER (WHERE duracao_ms IS NOT NULL) as tempo_medio_ms
-            FROM tb_workflow_execucoes WHERE id_workflow IN {$wfInSt}) w
-        ")->fetch(PDO::FETCH_ASSOC);
-        
         header('Content-Type: application/json');
         echo json_encode([
             'sucesso' => true,
-            'dados' => $dados,
-            'estatisticas' => $stats
+            'dados' => $dados
         ]);
     } catch (Exception $e) {
         header('Content-Type: application/json');
@@ -1987,6 +2063,18 @@ if ($path === '/rotinas/test_save3' && $method === 'GET') {
 // rota de teste: executar rotina por id via GET (apenas para testes locais)
 if (preg_match('#^/rotinas/test_run/(\d+)$#', $path, $m) && $method === 'GET') {
     $id = intval($m[1]);
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('rotina', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para executar esta rotina', 'sucesso' => false]);
+        exit;
+    }
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('rotina', $id)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Sem permissão para executar esta rotina', 'sucesso' => false]);
+        exit;
+    }
     $r = new RotinasController();
     header('Content-Type: application/json');
     echo json_encode($r->executar($id));
@@ -2013,9 +2101,15 @@ if ($path === '/api/apis-externas/list' && $method === 'GET') {
 
 // Buscar API por ID
 if (preg_match('#^/api/apis-externas/get/(\d+)$#', $path, $m) && $method === 'GET') {
-    $c = new ApiExternaController();
     $id = (int)$m[1];
+    header('Cache-Control: no-cache, no-store, must-revalidate');
     header('Content-Type: application/json');
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('api_externa', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para visualizar esta API', 'sucesso' => false]);
+        exit;
+    }
+    $c = new ApiExternaController();
     $resultado = $c->buscarApi($id);
     $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('api', $id);
     $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('api', $id);
@@ -2041,6 +2135,13 @@ if ($path === '/api/apis-externas/salvar' && $method === 'POST') {
     }
     unset($data['_csrf_token']);
     header('Content-Type: application/json');
+    if (!empty($data['id'])) {
+        if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('api_externa', (int)$data['id'])) {
+            http_response_code(403);
+            echo json_encode(['erro' => 'Sem permissão para modificar esta API', 'sucesso' => false]);
+            exit;
+        }
+    }
     echo json_encode($c->salvarApi($data));
     exit;
 }
@@ -2229,21 +2330,45 @@ if ($path === '/api/apis-externas/polling' && $method === 'POST') {
 // ROTAS: NOTIFICAÇÕES
 // =====================================================
 
-// Listar Notificações
+// Listar Notificações (com filtros e paginação)
 if ($path === '/api/notificacoes/list' && $method === 'GET') {
+    $idUsuario = AuthMiddleware::obterUsuarioId();
     $limite = isset($_GET['limite']) ? min((int)$_GET['limite'], 100) : 20;
+    $pagina = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
+    $offset = ($pagina - 1) * $limite;
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("SELECT * FROM tb_notificacoes ORDER BY created_at DESC LIMIT ?");
-    $stmt->execute([$limite]);
+
+    $where = "WHERE (id_usuario = ? OR id_usuario IS NULL)";
+    $params = [$idUsuario];
+
+    if (isset($_GET['lida'])) {
+        $where .= " AND lida = ?";
+        $params[] = $_GET['lida'] === '1';
+    }
+    if (!empty($_GET['tipo'])) {
+        $where .= " AND tipo LIKE ?";
+        $params[] = '%' . $_GET['tipo'] . '%';
+    }
+
+    $stmtCount = $db->prepare("SELECT COUNT(*) FROM tb_notificacoes $where");
+    $stmtCount->execute($params);
+    $total = (int)$stmtCount->fetchColumn();
+
+    $params[] = $limite;
+    $params[] = $offset;
+    $stmt = $db->prepare("SELECT * FROM tb_notificacoes $where ORDER BY created_at DESC LIMIT ? OFFSET ?");
+    $stmt->execute($params);
     header('Content-Type: application/json');
-    echo json_encode(['sucesso' => true, 'dados' => $stmt->fetchAll(\PDO::FETCH_ASSOC)]);
+    echo json_encode(['sucesso' => true, 'dados' => $stmt->fetchAll(\PDO::FETCH_ASSOC), 'total' => $total]);
     exit;
 }
 
-// Contar Notificações não lidas
+// Contar Notificações não lidas (do usuário)
 if ($path === '/api/notificacoes/count' && $method === 'GET') {
+    $idUsuario = AuthMiddleware::obterUsuarioId();
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->query("SELECT COUNT(*) FROM tb_notificacoes WHERE lida = false");
+    $stmt = $db->prepare("SELECT COUNT(*) FROM tb_notificacoes WHERE lida = false AND (id_usuario = ? OR id_usuario IS NULL)");
+    $stmt->execute([$idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true, 'count' => (int)$stmt->fetchColumn()]);
     exit;
@@ -2251,18 +2376,43 @@ if ($path === '/api/notificacoes/count' && $method === 'GET') {
 
 // Marcar notificação como lida
 if (preg_match('#^/api/notificacoes/lida/(\d+)$#', $path, $m) && $method === 'POST') {
+    $idUsuario = AuthMiddleware::obterUsuarioId();
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE id = ?");
-    $stmt->execute([(int)$m[1]]);
+    $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE id = ? AND (id_usuario = ? OR id_usuario IS NULL)");
+    $stmt->execute([(int)$m[1], $idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true]);
     exit;
 }
 
-// Marcar todas como lidas
+// Marcar todas como lidas (do usuário)
 if ($path === '/api/notificacoes/lida-todas' && $method === 'POST') {
+    $idUsuario = AuthMiddleware::obterUsuarioId();
     $db = \App\Core\Database::getConexao();
-    $db->exec("UPDATE tb_notificacoes SET lida = true WHERE lida = false");
+    $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE lida = false AND (id_usuario = ? OR id_usuario IS NULL)");
+    $stmt->execute([$idUsuario]);
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true]);
+    exit;
+}
+
+// Excluir notificação
+if (preg_match('#^/api/notificacoes/excluir/(\d+)$#', $path, $m) && $method === 'POST') {
+    $idUsuario = AuthMiddleware::obterUsuarioId();
+    $db = \App\Core\Database::getConexao();
+    $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE id = ? AND (id_usuario = ? OR id_usuario IS NULL)");
+    $stmt->execute([(int)$m[1], $idUsuario]);
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => true]);
+    exit;
+}
+
+// Excluir todas as notificações lidas (do usuário)
+if ($path === '/api/notificacoes/excluir-lidas' && $method === 'POST') {
+    $idUsuario = AuthMiddleware::obterUsuarioId();
+    $db = \App\Core\Database::getConexao();
+    $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE lida = true AND (id_usuario = ? OR id_usuario IS NULL)");
+    $stmt->execute([$idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true]);
     exit;
@@ -2414,211 +2564,6 @@ if (preg_match('#^/api/webhooks/testar/(\d+)$#', $path, $m) && $method === 'POST
 }
 
 // =====================================================
-// ROTAS: WORKFLOWS
-// =====================================================
-
-// View Lista de Workflows
-if ($path === '/workflows') {
-    include __DIR__ . '/../views/workflows.php';
-    exit;
-}
-
-// View Workflow Builder
-if ($path === '/workflow-builder' || preg_match('#^/workflow-builder/(\d+)$#', $path, $matches)) {
-    $params = ['id' => $matches[1] ?? null];
-    include __DIR__ . '/../views/workflow-builder.php';
-    exit;
-}
-
-// View Execuções de Workflow
-if ($path === '/workflow-execucoes') {
-    include __DIR__ . '/../views/workflow-execucoes.php';
-    exit;
-}
-
-// Listar Workflows
-if ($path === '/api/workflows/list' && $method === 'GET') {
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->listar());
-    exit;
-}
-
-// Buscar Workflow por ID
-if (preg_match('#^/api/workflows/get/(\d+)$#', $path, $m) && $method === 'GET') {
-    $c = new WorkflowController();
-    $id = (int)$m[1];
-    header('Content-Type: application/json');
-    $resultado = $c->buscar($id);
-    $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('workflow', $id);
-    $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('workflow', $id);
-    echo json_encode($resultado);
-    exit;
-}
-
-// Salvar Workflow
-if ($path === '/api/workflows/salvar' && $method === 'POST') {
-    $c = new WorkflowController();
-    $data = $_POST;
-    
-    // Se veio JSON no body
-    $input = file_get_contents('php://input');
-    if ($input && strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
-        $data = json_decode($input, true);
-    }
-    
-    // Validar CSRF
-    $csrfToken = $data['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
-        exit;
-    }
-    unset($data['_csrf_token']);
-    
-    header('Content-Type: application/json');
-    $resultado = $c->salvar($data);
-    \App\Servicos\ServicoAuditoria::registrar(
-        isset($data['id']) && $data['id'] ? 'editar' : 'criar',
-        'workflow', (int)($resultado['id'] ?? $data['id'] ?? 0), $data['nome'] ?? ''
-    );
-    echo json_encode($resultado);
-    exit;
-}
-
-// Deletar Workflow
-if (preg_match('#^/api/workflows/delete/(\d+)$#', $path, $m) && $method === 'POST') {
-    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
-        exit;
-    }
-    $id = (int)$m[1];
-    header('Content-Type: application/json');
-    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('workflow', $id)) {
-        http_response_code(403);
-        echo json_encode(['erro' => 'Sem permissão para excluir este workflow', 'sucesso' => false]);
-        exit;
-    }
-    \App\Servicos\ServicoAuditoria::registrar('excluir', 'workflow', $id);
-    $c = new WorkflowController();
-    echo json_encode($c->deletar($id));
-    exit;
-}
-
-// Alternar ativo
-if (preg_match('#^/api/workflows/toggle/(\d+)$#', $path, $m) && $method === 'POST') {
-    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
-        exit;
-    }
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->alternarAtivo((int)$m[1]));
-    exit;
-}
-
-// Duplicar Workflow
-if (preg_match('#^/api/workflows/duplicar/(\d+)$#', $path, $m) && $method === 'POST') {
-    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
-        exit;
-    }
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->duplicar((int)$m[1]));
-    exit;
-}
-
-// Executar Workflow
-if (preg_match('#^/api/workflows/executar/(\d+)$#', $path, $m) && $method === 'POST') {
-    // Validar CSRF (aceita via JSON body, POST ou header)
-    $contexto = [];
-    $input = file_get_contents('php://input');
-    if ($input) {
-        $contexto = json_decode($input, true) ?? [];
-    }
-    $csrfToken = $contexto['_csrf_token'] ?? $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
-        exit;
-    }
-    unset($contexto['_csrf_token']);
-    // Rate limiting: max 10 execuções de workflow por minuto por sessão
-    $rateLimiter = new \App\Core\RateLimiter();
-    $sessionId = session_id() ?: 'anonymous';
-    if (!$rateLimiter->permitir("exec_workflow:{$sessionId}", 10, 60)) {
-        http_response_code(429);
-        header('Content-Type: application/json');
-        echo json_encode(['erro' => 'Limite de execuções excedido. Aguarde 1 minuto.', 'sucesso' => false]);
-        exit;
-    }
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->executar((int)$m[1], $contexto));
-    exit;
-}
-
-// Listar Execuções
-if ($path === '/api/workflow-execucoes/list' && $method === 'GET') {
-    $idWorkflow = isset($_GET['id_workflow']) ? (int)$_GET['id_workflow'] : null;
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->listarExecucoes($idWorkflow));
-    exit;
-}
-
-// Buscar Execução
-if (preg_match('#^/api/workflow-execucoes/get/(\d+)$#', $path, $m) && $method === 'GET') {
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->buscarExecucao((int)$m[1]));
-    exit;
-}
-
-// Listar Rotinas Disponíveis (para uso no builder)
-if ($path === '/api/workflows/rotinas-disponiveis' && $method === 'GET') {
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->listarRotinasDisponiveis());
-    exit;
-}
-
-// Obter estatísticas dos workflows
-if ($path === '/api/workflows/stats' && $method === 'GET') {
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->obterEstatisticas());
-    exit;
-}
-
-// Cancelar execução
-if (preg_match('#^/api/workflow-execucoes/cancelar/(\d+)$#', $path, $m) && $method === 'POST') {
-    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
-        http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
-        exit;
-    }
-    $c = new WorkflowController();
-    header('Content-Type: application/json');
-    echo json_encode($c->cancelarExecucao((int)$m[1]));
-    exit;
-}
-
-// =====================================================
 // ROTAS: PIPELINES
 // =====================================================
 
@@ -2645,9 +2590,14 @@ if ($path === '/pipelines/list' && $method === 'GET') {
 
 // API: Buscar Pipeline por ID
 if (preg_match('#^/pipelines/get/(\d+)$#', $path, $m) && $method === 'GET') {
-    $c = new PipelineController();
     $id = (int)$m[1];
     header('Content-Type: application/json');
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('pipeline', $id)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para visualizar este pipeline', 'sucesso' => false]);
+        exit;
+    }
+    $c = new PipelineController();
     $resultado = $c->buscar($id);
     $resultado['empresas'] = \App\Servicos\ServicoPermissao::obterEmpresasDoRecurso('pipeline', $id);
     $resultado['projetos'] = \App\Servicos\ServicoPermissao::obterProjetosDoRecurso('pipeline', $id);
@@ -2671,6 +2621,13 @@ if ($path === '/pipelines/salvar' && $method === 'POST') {
         $data = json_decode($input, true);
     }
     header('Content-Type: application/json');
+    if (!empty($data['id'])) {
+        if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('pipeline', (int)$data['id'])) {
+            http_response_code(403);
+            echo json_encode(['erro' => 'Sem permissão para modificar este pipeline', 'sucesso' => false]);
+            exit;
+        }
+    }
     $resultado = $c->salvar($data);
     \App\Servicos\ServicoAuditoria::registrar(
         isset($data['id']) && $data['id'] ? 'editar' : 'criar',
@@ -2722,7 +2679,13 @@ if (preg_match('#^/pipelines/executar/(\d+)$#', $path, $m) && $method === 'POST'
     }
     $c = new PipelineController();
     header('Content-Type: application/json');
-    echo json_encode($c->executar((int)$m[1]));
+    $pipelineId = (int)$m[1];
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('pipeline', $pipelineId)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para executar este pipeline', 'sucesso' => false]);
+        exit;
+    }
+    echo json_encode($c->executar($pipelineId));
     exit;
 }
 
@@ -2737,7 +2700,13 @@ if (preg_match('#^/pipelines/duplicar/(\d+)$#', $path, $m) && $method === 'POST'
     }
     $c = new PipelineController();
     header('Content-Type: application/json');
-    echo json_encode($c->duplicar((int)$m[1]));
+    $pipelineId = (int)$m[1];
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('pipeline', $pipelineId)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para duplicar este pipeline', 'sucesso' => false]);
+        exit;
+    }
+    echo json_encode($c->duplicar($pipelineId));
     exit;
 }
 
@@ -2752,7 +2721,13 @@ if (preg_match('#^/pipelines/toggle/(\d+)$#', $path, $m) && $method === 'POST') 
     }
     $c = new PipelineController();
     header('Content-Type: application/json');
-    echo json_encode($c->toggleAtivo((int)$m[1]));
+    $pipelineId = (int)$m[1];
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('pipeline', $pipelineId)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para alterar este pipeline', 'sucesso' => false]);
+        exit;
+    }
+    echo json_encode($c->toggleAtivo($pipelineId));
     exit;
 }
 
@@ -2760,7 +2735,13 @@ if (preg_match('#^/pipelines/toggle/(\d+)$#', $path, $m) && $method === 'POST') 
 if (preg_match('#^/pipelines/exportar/(\d+)$#', $path, $m) && $method === 'GET') {
     $c = new PipelineController();
     header('Content-Type: application/json');
-    echo json_encode($c->exportar((int)$m[1]));
+    $pipelineId = (int)$m[1];
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('pipeline', $pipelineId)) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Sem permissão para exportar este pipeline', 'sucesso' => false]);
+        exit;
+    }
+    echo json_encode($c->exportar($pipelineId));
     exit;
 }
 
@@ -2785,6 +2766,29 @@ if ($path === '/pipelines/conexoes' && $method === 'GET') {
     $c = new PipelineController();
     header('Content-Type: application/json');
     echo json_encode($c->listarConexoes());
+    exit;
+}
+
+// API: Listar Diretórios disponíveis para exportação
+if ($path === '/pipelines/export-dirs' && $method === 'GET') {
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarDiretoriosExport());
+    exit;
+}
+
+// API: Navegar diretórios do sistema (browser de pastas)
+if ($path === '/pipelines/browse-dir' && $method === 'GET') {
+    $dirPath = $_GET['path'] ?? '';
+    if (empty($dirPath)) {
+        http_response_code(400);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Parâmetro path obrigatório']);
+        exit;
+    }
+    $c = new PipelineController();
+    header('Content-Type: application/json');
+    echo json_encode($c->navegarDiretorio($dirPath));
     exit;
 }
 

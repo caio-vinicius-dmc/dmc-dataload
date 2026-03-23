@@ -148,21 +148,96 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             color: var(--text-muted);
         }
 
+        /* ========== MENU GROUP DROPDOWNS ========== */
+        .menu-group {
+            margin-bottom: 2px;
+        }
+
+        .menu-group-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.7rem 1rem;
+            margin: 0 0.75rem;
+            border-radius: 10px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: var(--transition);
+            user-select: none;
+            border: none;
+            background: none;
+            width: calc(100% - 1.5rem);
+            text-align: left;
+        }
+
+        .menu-group-toggle:hover {
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.75);
+        }
+
+        .menu-group-toggle .group-icon {
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .menu-group-toggle .group-label {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .menu-group-toggle .group-chevron {
+            font-size: 0.7rem;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+            opacity: 0.6;
+        }
+
+        .menu-group.open > .menu-group-toggle .group-chevron {
+            transform: rotate(90deg);
+        }
+
+        .menu-group.open > .menu-group-toggle {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .menu-group-items {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.25s ease;
+            opacity: 0;
+        }
+
+        .menu-group.open > .menu-group-items {
+            max-height: 600px;
+            opacity: 1;
+        }
+
+        .menu-group-items .menu-item {
+            padding: 0 0.75rem 0 1.25rem;
+        }
+
         .menu-item {
             padding: 0 1rem;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .menu-link {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 0.85rem 1rem;
+            padding: 0.65rem 1rem;
             border-radius: 10px;
             color: var(--text-muted);
             text-decoration: none;
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             transition: var(--transition);
             position: relative;
             overflow: hidden;
@@ -182,7 +257,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         }
 
         .menu-link:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.06);
             color: var(--text-light);
         }
 
@@ -196,9 +271,10 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         }
 
         .menu-link i {
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             width: 24px;
             text-align: center;
+            flex-shrink: 0;
         }
 
         .menu-badge {
@@ -209,6 +285,45 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             border-radius: 20px;
             background: var(--primary);
             color: white;
+        }
+
+        /* ========== BACK TO TOP ========== */
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+            z-index: 1060;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(12px);
+            transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        body.dark-mode .back-to-top {
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
         }
 
         .sidebar-footer {
@@ -379,12 +494,142 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             position: absolute;
             top: 6px;
             right: 6px;
+            min-width: 18px;
+            height: 18px;
+            background: var(--danger);
+            border-radius: 9px;
+            border: 2px solid white;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            line-height: 1;
+        }
+
+        /* Notification Dropdown */
+        .notif-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 380px;
+            max-height: 480px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            z-index: 9999;
+            display: none;
+            overflow: hidden;
+        }
+        .notif-dropdown.active { display: block; }
+        .notif-dropdown-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .notif-dropdown-header a {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--primary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .notif-dropdown-header a:hover { text-decoration: underline; }
+        .notif-dropdown-body {
+            max-height: 360px;
+            overflow-y: auto;
+        }
+        .notif-dropdown-body::-webkit-scrollbar { width: 4px; }
+        .notif-dropdown-body::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 4px; }
+        .notif-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--gray-100);
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .notif-item:hover { background: var(--gray-50); }
+        .notif-item.unread { background: rgba(59,130,246,0.04); }
+        .notif-item .notif-icon {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .notif-icon.falha { background: #fef2f2; color: #ef4444; }
+        .notif-icon.sucesso { background: #f0fdf4; color: #22c55e; }
+        .notif-icon.info { background: #eff6ff; color: #3b82f6; }
+        .notif-item .notif-content { flex: 1; min-width: 0; }
+        .notif-item .notif-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-800);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .notif-item .notif-msg {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 2px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .notif-item .notif-time {
+            font-size: 11px;
+            color: var(--gray-400);
+            margin-top: 4px;
+        }
+        .notif-item .notif-dot {
+            flex-shrink: 0;
             width: 8px;
             height: 8px;
-            background: var(--danger);
             border-radius: 50%;
-            border: 2px solid white;
+            background: var(--primary);
+            margin-top: 6px;
         }
+        .notif-empty {
+            padding: 40px 16px;
+            text-align: center;
+            color: var(--gray-400);
+            font-size: 13px;
+        }
+        .notif-empty i { font-size: 32px; display: block; margin-bottom: 8px; }
+        .notif-dropdown-footer {
+            padding: 10px 16px;
+            border-top: 1px solid var(--gray-200);
+            text-align: center;
+        }
+        .notif-dropdown-footer a {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .notif-dropdown-footer a:hover { text-decoration: underline; }
+
+        body.dark-mode .notif-dropdown { background: var(--dark-card); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+        body.dark-mode .notif-dropdown-header { border-color: var(--dark-border); color: var(--dark-text); }
+        body.dark-mode .notif-dropdown-footer { border-color: var(--dark-border); }
+        body.dark-mode .notif-item { border-color: var(--dark-border); }
+        body.dark-mode .notif-item:hover { background: rgba(255,255,255,0.04); }
+        body.dark-mode .notif-item.unread { background: rgba(59,130,246,0.08); }
+        body.dark-mode .notif-item .notif-title { color: var(--dark-text); }
+        body.dark-mode .notif-item .notif-msg { color: var(--dark-muted); }
+        body.dark-mode .notif-empty { color: var(--dark-muted); }
 
         /* ========== MAIN CONTENT ========== */
         .main-content {
@@ -396,6 +641,70 @@ $base = defined('BASE_URL') ? BASE_URL : '';
 
         .content-wrapper {
             padding: 1.5rem;
+        }
+
+        /* ========== PAGE HEADER MODERN ========== */
+        .page-header-modern {
+            background: white;
+            padding: 1.75rem 2rem;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .page-icon-modern {
+            width: 60px;
+            height: 60px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .page-title-modern {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin: 0 0 0.15rem 0;
+            color: var(--dark);
+        }
+
+        .page-subtitle-modern {
+            color: var(--gray-500);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            .page-header-modern {
+                padding: 1.25rem;
+                gap: 1rem;
+            }
+            .page-header-modern .ms-auto {
+                width: 100%;
+                display: flex;
+                gap: 0.5rem;
+            }
+            .page-header-modern .ms-auto .btn {
+                flex: 1;
+                font-size: 0.85rem;
+                padding: 0.5rem 0.75rem;
+            }
+            .page-icon-modern {
+                width: 48px;
+                height: 48px;
+                font-size: 1.4rem;
+            }
+            .page-title-modern {
+                font-size: 1.35rem;
+            }
         }
 
         /* ========== CARDS ========== */
@@ -443,6 +752,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         .stat-card.warning { background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%); }
         .stat-card.danger { background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%); }
         .stat-card.secondary { background: linear-gradient(135deg, var(--secondary) 0%, #0284c7 100%); }
+        .stat-card.info { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
 
         .stat-icon {
             width: 50px;
@@ -624,13 +934,63 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             body.sidebar-collapsed .menu-link span,
             body.sidebar-collapsed .menu-badge,
             body.sidebar-collapsed .user-info,
-            body.sidebar-collapsed .user-actions {
+            body.sidebar-collapsed .user-actions,
+            body.sidebar-collapsed .menu-group-toggle .group-label,
+            body.sidebar-collapsed .menu-group-toggle .group-chevron {
                 opacity: 0;
                 width: 0;
                 overflow: hidden;
                 white-space: nowrap;
                 pointer-events: none;
                 transition: opacity 0.2s ease, width 0.2s ease;
+            }
+
+            body.sidebar-collapsed .menu-group-toggle {
+                justify-content: center;
+                padding: 0.6rem 0.5rem;
+                margin: 0 0.5rem;
+                width: calc(100% - 1rem);
+            }
+
+            body.sidebar-collapsed .menu-group-toggle .group-icon {
+                font-size: 1.3rem;
+                margin: 0;
+            }
+
+            body.sidebar-collapsed .menu-group-items {
+                max-height: 0 !important;
+                opacity: 0 !important;
+            }
+
+            /* Flyout submenu on hover when collapsed */
+            body.sidebar-collapsed .menu-group {
+                position: relative;
+            }
+
+            body.sidebar-collapsed .menu-group:hover > .menu-group-items {
+                display: block;
+                position: absolute;
+                left: 100%;
+                top: 0;
+                max-height: none !important;
+                opacity: 1 !important;
+                overflow: visible;
+                width: 220px;
+                background: var(--dark);
+                border-radius: 10px;
+                box-shadow: 4px 4px 20px rgba(0,0,0,0.3);
+                padding: 8px 0;
+                z-index: 9999;
+            }
+
+            body.sidebar-collapsed .menu-group:hover > .menu-group-items .menu-item {
+                padding: 0 8px;
+            }
+
+            body.sidebar-collapsed .menu-group:hover > .menu-group-items .menu-link span {
+                opacity: 1;
+                width: auto;
+                pointer-events: auto;
             }
 
             body.sidebar-collapsed .sidebar-header {
@@ -738,6 +1098,35 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             body.sidebar-collapsed .menu-link:hover::after {
                 opacity: 1;
             }
+
+            /* Tooltip for group toggles when collapsed */
+            body.sidebar-collapsed .menu-group-toggle {
+                position: relative;
+            }
+
+            body.sidebar-collapsed .menu-group-toggle::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                left: calc(100% + 12px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: var(--dark);
+                color: white;
+                padding: 0.4rem 0.8rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                font-weight: 500;
+                white-space: nowrap;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s ease;
+                z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+
+            body.sidebar-collapsed .menu-group-toggle:hover::after {
+                opacity: 1;
+            }
         }
 
         /* Hide collapse button on mobile (mobile uses its own toggle) */
@@ -745,6 +1134,11 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             .sidebar-collapse-btn {
                 display: none !important;
             }
+        }
+
+        /* Dark mode flyout */
+        body.dark-mode.sidebar-collapsed .menu-group:hover > .menu-group-items {
+            background: #0d0f18;
         }
 
         /* ========== DARK MODE ========== */
@@ -1168,6 +1562,14 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             border: 1px solid var(--dm-border);
         }
 
+        body.dark-mode .page-title-modern {
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .page-subtitle-modern {
+            color: var(--dm-text-muted);
+        }
+
         /* Stat cards - keep gradient backgrounds, adjust overlays */
         body.dark-mode .stat-card {
             box-shadow: 0 4px 16px var(--dm-shadow);
@@ -1343,9 +1745,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         </div>
 
         <nav class="sidebar-menu">
-            <div class="menu-label">Principal</div>
-            
-            <div class="menu-item">
+            <div class="menu-item" style="margin-top: 4px;">
                 <a href="<?= $base ?>/dashboard" class="menu-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>" data-tooltip="Dashboard">
                     <i class="bi bi-grid-1x2-fill"></i>
                     <span>Dashboard</span>
@@ -1361,182 +1761,206 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             ?>
 
             <?php if ($ehDevOuSuperior): ?>
-            <div class="menu-label">ETL</div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/conexoes" class="menu-link <?= $currentPage === 'conexoes' ? 'active' : '' ?>" data-tooltip="Conexões">
-                    <i class="bi bi-hdd-network-fill"></i>
-                    <span>Conexões</span>
-                </a>
+            <div class="menu-group" data-group="etl">
+                <button class="menu-group-toggle" data-tooltip="ETL">
+                    <i class="bi bi-database-gear group-icon"></i>
+                    <span class="group-label">ETL</span>
+                    <i class="bi bi-chevron-right group-chevron"></i>
+                </button>
+                <div class="menu-group-items">
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/conexoes" class="menu-link <?= $currentPage === 'conexoes' ? 'active' : '' ?>" data-tooltip="Conexões">
+                            <i class="bi bi-hdd-network-fill"></i>
+                            <span>Conexões</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/rotinas" class="menu-link <?= $currentPage === 'rotinas' ? 'active' : '' ?>" data-tooltip="Rotinas">
+                            <i class="bi bi-play-circle-fill"></i>
+                            <span>Rotinas</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>" data-tooltip="Histórico">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Histórico</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/sql-editor" class="menu-link <?= $currentPage === 'sql-editor' ? 'active' : '' ?>" data-tooltip="SQL Editor">
+                            <i class="bi bi-terminal"></i>
+                            <span>SQL Editor</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>" data-tooltip="Diagrama ER">
+                            <i class="bi bi-diagram-3"></i>
+                            <span>Diagrama ER</span>
+                        </a>
+                    </div>
+                </div>
             </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/rotinas" class="menu-link <?= $currentPage === 'rotinas' ? 'active' : '' ?>" data-tooltip="Rotinas">
-                    <i class="bi bi-play-circle-fill"></i>
-                    <span>Rotinas</span>
-                </a>
-            </div>
-            <?php endif; ?>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>" data-tooltip="Histórico">
-                    <i class="bi bi-clock-history"></i>
-                    <span>Histórico</span>
-                </a>
-            </div>
-            
-            <?php if ($ehDevOuSuperior): ?>
-            <div class="menu-item">
-                <a href="<?= $base ?>/sql-editor" class="menu-link <?= $currentPage === 'sql-editor' ? 'active' : '' ?>" data-tooltip="SQL Editor">
-                    <i class="bi bi-terminal"></i>
-                    <span>SQL Editor</span>
-                </a>
-            </div>
-            <?php endif; ?>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>" data-tooltip="Diagrama ER">
-                    <i class="bi bi-diagram-3"></i>
-                    <span>Diagrama ER</span>
-                </a>
-            </div>
-
-            <?php if ($ehDevOuSuperior): ?>
-            <div class="menu-label">Automação</div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/apis-externas" class="menu-link <?= $currentPage === 'apis-externas' ? 'active' : '' ?>" data-tooltip="APIs Externas">
-                    <i class="bi bi-cloud-arrow-up-fill"></i>
-                    <span>APIs Externas</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/eventos-api" class="menu-link <?= $currentPage === 'eventos-api' ? 'active' : '' ?>" data-tooltip="Eventos de API">
-                    <i class="bi bi-lightning-charge-fill"></i>
-                    <span>Eventos de API</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/workflows" class="menu-link <?= $currentPage === 'workflows' ? 'active' : '' ?>" data-tooltip="Workflows">
-                    <i class="bi bi-diagram-3-fill"></i>
-                    <span>Workflows</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/workflow-execucoes" class="menu-link <?= $currentPage === 'workflow-execucoes' ? 'active' : '' ?>" data-tooltip="Execuções">
-                    <i class="bi bi-play-btn-fill"></i>
-                    <span>Execuções</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/pipelines" class="menu-link <?= $currentPage === 'pipelines' ? 'active' : '' ?>" data-tooltip="Pipelines">
-                    <i class="bi bi-bezier2"></i>
-                    <span>Pipelines</span>
-                </a>
+            <?php else: ?>
+            <div class="menu-group" data-group="etl-op">
+                <button class="menu-group-toggle" data-tooltip="Dados">
+                    <i class="bi bi-database-gear group-icon"></i>
+                    <span class="group-label">Dados</span>
+                    <i class="bi bi-chevron-right group-chevron"></i>
+                </button>
+                <div class="menu-group-items">
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>" data-tooltip="Histórico">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Histórico</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>" data-tooltip="Diagrama ER">
+                            <i class="bi bi-diagram-3"></i>
+                            <span>Diagrama ER</span>
+                        </a>
+                    </div>
+                </div>
             </div>
             <?php endif; ?>
 
-            <div class="menu-label">Sistema</div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/scheduler" class="menu-link <?= $currentPage === 'scheduler' ? 'active' : '' ?>" data-tooltip="Agendamentos">
-                    <i class="bi bi-calendar-check-fill"></i>
-                    <span>Agendamentos</span>
-                    <span class="menu-badge" id="schedulerBadge">0</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/calendario" class="menu-link <?= $currentPage === 'calendario' ? 'active' : '' ?>" data-tooltip="Calendário">
-                    <i class="bi bi-calendar3"></i>
-                    <span>Calendário</span>
-                </a>
-            </div>
-            
             <?php if ($ehDevOuSuperior): ?>
-            <div class="menu-item">
-                <a href="<?= $base ?>/logs" class="menu-link <?= $currentPage === 'logs' ? 'active' : '' ?>" data-tooltip="Logs do Sistema">
-                    <i class="bi bi-file-text-fill"></i>
-                    <span>Logs do Sistema</span>
-                </a>
+            <div class="menu-group" data-group="automacao">
+                <button class="menu-group-toggle" data-tooltip="Automação">
+                    <i class="bi bi-lightning-charge group-icon"></i>
+                    <span class="group-label">Automação</span>
+                    <i class="bi bi-chevron-right group-chevron"></i>
+                </button>
+                <div class="menu-group-items">
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/apis-externas" class="menu-link <?= $currentPage === 'apis-externas' ? 'active' : '' ?>" data-tooltip="APIs Externas">
+                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                            <span>APIs Externas</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/eventos-api" class="menu-link <?= $currentPage === 'eventos-api' ? 'active' : '' ?>" data-tooltip="Eventos de API">
+                            <i class="bi bi-broadcast-pin"></i>
+                            <span>Eventos de API</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/pipelines" class="menu-link <?= $currentPage === 'pipelines' ? 'active' : '' ?>" data-tooltip="Pipelines">
+                            <i class="bi bi-bezier2"></i>
+                            <span>Pipelines</span>
+                        </a>
+                    </div>
+                </div>
             </div>
             <?php endif; ?>
+
+            <div class="menu-group" data-group="sistema">
+                <button class="menu-group-toggle" data-tooltip="Sistema">
+                    <i class="bi bi-sliders group-icon"></i>
+                    <span class="group-label">Sistema</span>
+                    <i class="bi bi-chevron-right group-chevron"></i>
+                </button>
+                <div class="menu-group-items">
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/scheduler" class="menu-link <?= $currentPage === 'scheduler' ? 'active' : '' ?>" data-tooltip="Agendamentos">
+                            <i class="bi bi-calendar-check-fill"></i>
+                            <span>Agendamentos</span>
+                            <span class="menu-badge" id="schedulerBadge">0</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/calendario" class="menu-link <?= $currentPage === 'calendario' ? 'active' : '' ?>" data-tooltip="Calendário">
+                            <i class="bi bi-calendar3"></i>
+                            <span>Calendário</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/notificacoes" class="menu-link <?= $currentPage === 'notificacoes' ? 'active' : '' ?>" data-tooltip="Notificações">
+                            <i class="bi bi-bell-fill"></i>
+                            <span>Notificações</span>
+                        </a>
+                    </div>
+                    <?php if ($ehDevOuSuperior): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/logs" class="menu-link <?= $currentPage === 'logs' ? 'active' : '' ?>" data-tooltip="Logs do Sistema">
+                            <i class="bi bi-file-text-fill"></i>
+                            <span>Logs do Sistema</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
 
             <?php if ($ehAdminSidebar): ?>
-            <div class="menu-label">Administração</div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/usuarios" class="menu-link <?= $currentPage === 'usuarios' ? 'active' : '' ?>" data-tooltip="Usuários">
-                    <i class="bi bi-people-fill"></i>
-                    <span>Usuários</span>
-                </a>
+            <div class="menu-group" data-group="admin">
+                <button class="menu-group-toggle" data-tooltip="Administração">
+                    <i class="bi bi-shield-lock group-icon"></i>
+                    <span class="group-label">Administração</span>
+                    <i class="bi bi-chevron-right group-chevron"></i>
+                </button>
+                <div class="menu-group-items">
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/usuarios" class="menu-link <?= $currentPage === 'usuarios' ? 'active' : '' ?>" data-tooltip="Usuários">
+                            <i class="bi bi-people-fill"></i>
+                            <span>Usuários</span>
+                        </a>
+                    </div>
+                    <?php if ($ehSuperAdminSidebar): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/empresas" class="menu-link <?= $currentPage === 'empresas' ? 'active' : '' ?>" data-tooltip="Empresas">
+                            <i class="bi bi-building"></i>
+                            <span>Empresas</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/projetos" class="menu-link <?= $currentPage === 'projetos' ? 'active' : '' ?>" data-tooltip="Projetos">
+                            <i class="bi bi-folder-fill"></i>
+                            <span>Projetos</span>
+                        </a>
+                    </div>
+                    <?php if ($ehSuperAdminSidebar): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/configuracoes" class="menu-link <?= $currentPage === 'configuracoes' ? 'active' : '' ?>" data-tooltip="Configurações">
+                            <i class="bi bi-gear-fill"></i>
+                            <span>Configurações</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/auditoria" class="menu-link <?= $currentPage === 'auditoria' ? 'active' : '' ?>" data-tooltip="Auditoria">
+                            <i class="bi bi-shield-check"></i>
+                            <span>Auditoria</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/webhooks" class="menu-link <?= $currentPage === 'webhooks' ? 'active' : '' ?>" data-tooltip="Webhooks">
+                            <i class="bi bi-broadcast"></i>
+                            <span>Webhooks</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/canais" class="menu-link <?= $currentPage === 'canais' ? 'active' : '' ?>" data-tooltip="Slack/Teams">
+                            <i class="bi bi-chat-dots"></i>
+                            <span>Slack/Teams</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>" data-tooltip="Fila Execução">
+                            <i class="bi bi-collection"></i>
+                            <span>Fila Execução</span>
+                        </a>
+                    </div>
+                    <?php if ($ehSuperAdminSidebar): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/backups" class="menu-link <?= $currentPage === 'backups' ? 'active' : '' ?>" data-tooltip="Backups">
+                            <i class="bi bi-cloud-download"></i>
+                            <span>Backups</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
-            
-            <?php if ($ehSuperAdminSidebar): ?>
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/empresas" class="menu-link <?= $currentPage === 'empresas' ? 'active' : '' ?>" data-tooltip="Empresas">
-                    <i class="bi bi-building"></i>
-                    <span>Empresas</span>
-                </a>
-            </div>
-            <?php endif; ?>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/projetos" class="menu-link <?= $currentPage === 'projetos' ? 'active' : '' ?>" data-tooltip="Projetos">
-                    <i class="bi bi-folder-fill"></i>
-                    <span>Projetos</span>
-                </a>
-            </div>
-            
-            <?php if ($ehSuperAdminSidebar): ?>
-            <div class="menu-item">
-                <a href="<?= $base ?>/configuracoes" class="menu-link <?= $currentPage === 'configuracoes' ? 'active' : '' ?>" data-tooltip="Configurações">
-                    <i class="bi bi-gear-fill"></i>
-                    <span>Configurações</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/auditoria" class="menu-link <?= $currentPage === 'auditoria' ? 'active' : '' ?>" data-tooltip="Auditoria">
-                    <i class="bi bi-shield-check"></i>
-                    <span>Auditoria</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/webhooks" class="menu-link <?= $currentPage === 'webhooks' ? 'active' : '' ?>" data-tooltip="Webhooks">
-                    <i class="bi bi-broadcast"></i>
-                    <span>Webhooks</span>
-                </a>
-            </div>
-            <?php endif; ?>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/canais" class="menu-link <?= $currentPage === 'canais' ? 'active' : '' ?>" data-tooltip="Slack/Teams">
-                    <i class="bi bi-chat-dots"></i>
-                    <span>Slack/Teams</span>
-                </a>
-            </div>
-            
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>" data-tooltip="Fila Execução">
-                    <i class="bi bi-collection"></i>
-                    <span>Fila Execução</span>
-                </a>
-            </div>
-            
-            <?php if ($ehSuperAdminSidebar): ?>
-            <div class="menu-item">
-                <a href="<?= $base ?>/admin/backups" class="menu-link <?= $currentPage === 'backups' ? 'active' : '' ?>" data-tooltip="Backups">
-                    <i class="bi bi-cloud-download"></i>
-                    <span>Backups</span>
-                </a>
-            </div>
-            <?php endif; ?>
             <?php endif; ?>
         </nav>
 
@@ -1581,10 +2005,24 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <button class="topbar-btn" title="Atualizar" onclick="location.reload()">
                 <i class="bi bi-arrow-clockwise"></i>
             </button>
-            <button class="topbar-btn" title="Notificações" id="btnNotifications">
-                <i class="bi bi-bell"></i>
-                <span class="notification-badge" id="notificationBadge" style="display: none;"></span>
-            </button>
+            <div style="position: relative;">
+                <button class="topbar-btn" title="Notificações" id="btnNotifications">
+                    <i class="bi bi-bell"></i>
+                    <span class="notification-badge" id="notificationBadge" style="display: none;"></span>
+                </button>
+                <div class="notif-dropdown" id="notifDropdown">
+                    <div class="notif-dropdown-header">
+                        <span>Notificações</span>
+                        <a id="notifMarkAllRead">Marcar todas como lidas</a>
+                    </div>
+                    <div class="notif-dropdown-body" id="notifDropdownBody">
+                        <div class="notif-empty"><i class="bi bi-bell-slash"></i>Nenhuma notificação</div>
+                    </div>
+                    <div class="notif-dropdown-footer">
+                        <a href="<?= $base ?>/notificacoes">Ver todas as notificações</a>
+                    </div>
+                </div>
+            </div>
             <button class="topbar-btn" title="Modo Escuro" id="btnTheme">
                 <i class="bi bi-moon" id="themeIcon"></i>
             </button>
@@ -1597,6 +2035,11 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             <?= $content ?? '' ?>
         </div>
     </main>
+
+    <!-- Back to Top -->
+    <button class="back-to-top" id="backToTop" title="Voltar ao topo">
+        <i class="bi bi-chevron-up"></i>
+    </button>
 
     <!-- Scripts Base -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -1634,6 +2077,62 @@ $base = defined('BASE_URL') ? BASE_URL : '';
             const isCollapsed = document.body.classList.contains('sidebar-collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed ? '1' : '0');
             collapseBtn.title = isCollapsed ? 'Expandir menu' : 'Recolher menu';
+        });
+
+        // ========== MENU GROUP TOGGLE ==========
+        document.querySelectorAll('.menu-group-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                // If sidebar is collapsed on desktop, expand it first
+                if (document.body.classList.contains('sidebar-collapsed') && window.innerWidth >= 1200) {
+                    document.body.classList.remove('sidebar-collapsed');
+                    localStorage.setItem('sidebarCollapsed', '0');
+                }
+                var group = this.closest('.menu-group');
+                var isOpen = group.classList.contains('open');
+                // Close all other groups
+                document.querySelectorAll('.menu-group.open').forEach(function(g) {
+                    if (g !== group) g.classList.remove('open');
+                });
+                group.classList.toggle('open', !isOpen);
+                // Save open groups
+                saveMenuGroupState();
+            });
+        });
+
+        function saveMenuGroupState() {
+            var openGroups = [];
+            document.querySelectorAll('.menu-group.open').forEach(function(g) {
+                openGroups.push(g.dataset.group);
+            });
+            localStorage.setItem('menuGroupsOpen', JSON.stringify(openGroups));
+        }
+
+        // Restore open groups + auto-open group with active page
+        (function() {
+            var saved = [];
+            try { saved = JSON.parse(localStorage.getItem('menuGroupsOpen') || '[]'); } catch(e) {}
+            var activeOpened = false;
+            document.querySelectorAll('.menu-group').forEach(function(g) {
+                if (g.querySelector('.menu-link.active')) {
+                    g.classList.add('open');
+                    activeOpened = true;
+                } else if (saved.indexOf(g.dataset.group) !== -1) {
+                    g.classList.add('open');
+                }
+            });
+        })();
+
+        // ========== BACK TO TOP ==========
+        var backToTopBtn = document.getElementById('backToTop');
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 300) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+        backToTopBtn?.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
         // Dark Mode Toggle
@@ -1701,7 +2200,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         function loadNotificationBadge() {
             $.getJSON(baseUrl + '/api/notificacoes/count', function(res) {
                 if (res.count > 0) {
-                    $('#notificationBadge').text(res.count).show();
+                    $('#notificationBadge').text(res.count > 99 ? '99+' : res.count).show();
                 } else {
                     $('#notificationBadge').hide();
                 }
@@ -1709,6 +2208,81 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                 $('#notificationBadge').hide();
             });
         }
+
+        // Notification dropdown
+        function notifTimeAgo(dateStr) {
+            var now = new Date(), d = new Date(dateStr);
+            var diff = Math.floor((now - d) / 1000);
+            if (diff < 60) return 'agora';
+            if (diff < 3600) return Math.floor(diff / 60) + 'min atrás';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h atrás';
+            if (diff < 604800) return Math.floor(diff / 86400) + 'd atrás';
+            return d.toLocaleDateString('pt-BR');
+        }
+
+        function notifIcon(tipo) {
+            if (tipo.includes('falha')) return '<div class="notif-icon falha"><i class="bi bi-exclamation-triangle-fill"></i></div>';
+            if (tipo.includes('sucesso')) return '<div class="notif-icon sucesso"><i class="bi bi-check-circle-fill"></i></div>';
+            return '<div class="notif-icon info"><i class="bi bi-info-circle-fill"></i></div>';
+        }
+
+        function loadNotifDropdown() {
+            $.getJSON(baseUrl + '/api/notificacoes/list?limite=8', function(res) {
+                var body = $('#notifDropdownBody');
+                if (!res.sucesso || !res.dados || res.dados.length === 0) {
+                    body.html('<div class="notif-empty"><i class="bi bi-bell-slash"></i>Nenhuma notificação</div>');
+                    return;
+                }
+                var html = '';
+                res.dados.forEach(function(n) {
+                    html += '<div class="notif-item' + (n.lida ? '' : ' unread') + '" data-id="' + n.id + '">'
+                        + notifIcon(n.tipo)
+                        + '<div class="notif-content">'
+                        + '<div class="notif-title">' + $('<span>').text(n.titulo).html() + '</div>'
+                        + '<div class="notif-msg">' + $('<span>').text(n.mensagem || '').html() + '</div>'
+                        + '<div class="notif-time">' + notifTimeAgo(n.created_at) + '</div>'
+                        + '</div>'
+                        + (n.lida ? '' : '<div class="notif-dot"></div>')
+                        + '</div>';
+                });
+                body.html(html);
+            });
+        }
+
+        $(document).on('click', '#btnNotifications', function(e) {
+            e.stopPropagation();
+            var dd = $('#notifDropdown');
+            if (dd.hasClass('active')) {
+                dd.removeClass('active');
+            } else {
+                loadNotifDropdown();
+                dd.addClass('active');
+            }
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#notifDropdown, #btnNotifications').length) {
+                $('#notifDropdown').removeClass('active');
+            }
+        });
+
+        $(document).on('click', '.notif-item', function() {
+            var id = $(this).data('id');
+            var el = $(this);
+            if (el.hasClass('unread')) {
+                $.post(baseUrl + '/api/notificacoes/lida/' + id);
+                el.removeClass('unread').find('.notif-dot').remove();
+                loadNotificationBadge();
+            }
+        });
+
+        $(document).on('click', '#notifMarkAllRead', function(e) {
+            e.preventDefault();
+            $.post(baseUrl + '/api/notificacoes/lida-todas', function() {
+                loadNotificationBadge();
+                loadNotifDropdown();
+            });
+        });
 
         // Initialize
         $(document).ready(function() {

@@ -387,7 +387,7 @@ class PipelineController
                     }
 
                     // Tratar condições (qual branch seguir)
-                    if ($nodeType === 'condition' && isset($result['branch'])) {
+                    if (in_array($nodeType, ['condition', 'try_catch', 'api_call', 'switch_case']) && isset($result['branch'])) {
                         $this->handleConditionBranch($node, $result['branch'], $nodes, $context);
                     }
 
@@ -558,6 +558,36 @@ class PipelineController
 
             case 'api_call':
                 return $this->execApiCall($config, $context);
+
+            case 'try_catch':
+                return $this->execTryCatch($config, $context);
+
+            case 'data_merge':
+                return $this->execDataMerge($config, $context);
+
+            case 'sql_upsert':
+                return $this->execSqlUpsert($config, $context);
+
+            case 'switch_case':
+                return $this->execSwitchCase($config, $context);
+
+            case 'format_template':
+                return $this->execFormatTemplate($config, $context);
+
+            case 'regex':
+                return $this->execRegex($config, $context);
+
+            case 'csv_parse':
+                return $this->execCsvParse($config, $context);
+
+            case 'counter':
+                return $this->execCounter($config, $context);
+
+            case 'file_export':
+                return $this->execFileExport($config, $context);
+
+            case 'rotina':
+                return $this->execRotina($config, $context);
 
             case 'end':
                 return ['data' => ['finished' => true]];
@@ -968,13 +998,18 @@ class PipelineController
      */
     private function handleConditionBranch(array $node, string $branch, array $allNodes, array &$context): void
     {
-        // output_1 = true, output_2 = false
-        $skipOutput = $branch === 'true' ? 'output_2' : 'output_1';
+        // Determinar quais outputs pular (todos exceto o branch ativo)
+        $allOutputs = array_keys($node['outputs'] ?? []);
+        $activeOutput = $branch;
 
-        if (isset($node['outputs'][$skipOutput])) {
-            foreach ($node['outputs'][$skipOutput]['connections'] ?? [] as $conn) {
+        // Compatibilidade: branch 'true'/'false' → output_1/output_2
+        if ($branch === 'true') $activeOutput = 'output_1';
+        elseif ($branch === 'false') $activeOutput = 'output_2';
+
+        foreach ($allOutputs as $outputKey) {
+            if ($outputKey === $activeOutput) continue;
+            foreach ($node['outputs'][$outputKey]['connections'] ?? [] as $conn) {
                 $context['skip_nodes'][(string)$conn['node']] = true;
-                // Propagar skip para nós filhos
                 $this->propagateSkip((string)$conn['node'], $allNodes, $context);
             }
         }
@@ -1143,6 +1178,302 @@ class PipelineController
         $sent = @mail($to, $subject, $body, $headers);
 
         return ['data' => ['sent' => $sent, 'to' => $to]];
+    }
+
+    /**
+     * Executa nó Try/Catch - tenta executar uma ação com retry e branch de erro
+     */
+    private function execTryCatch(array $config, array &$context): array
+    {
+        $actionType = $config['action_type'] ?? '';
+        $maxRetries = min((int)($config['max_retries'] ?? 0), 3);
+        $retryDelay = min((int)($config['retry_delay_seconds'] ?? 1), 10);
+        $errorVariable = $config['error_variable'] ?? 'last_error';
+
+        if (empty($actionType)) {
+            throw new \RuntimeException('Tipo de ação do try/catch é obrigatório');
+        }
+
+        $lastError = null;
+        for ($attempt = 0; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $result = $this->executarNode($actionType, $config, $context);
+                // Sucesso: seguir output_1 (true branch)
+                $context['variables'][$errorVariable] = null;
+                return [
+                    'data' => $result['data'] ?? null,
+                    'branch' => 'output_1',
+                    'attempts' => $attempt + 1
+                ];
+            } catch (\Throwable $e) {
+                $lastError = $e->getMessage();
+                if ($attempt < $maxRetries) {
+                    sleep($retryDelay);
+                }
+            }
+        }
+
+        // Falhou após todas as tentativas: seguir output_2 (catch branch)
+        $context['variables'][$errorVariable] = $lastError;
+        return [
+            'data' => ['error' => $lastError, 'attempts' => $maxRetries + 1],
+            'branch' => 'output_2'
+        ];
+    }
+
+    /**
+     * Executa nó Data Merge - combina dois datasets (join, union, diff)
+     */
+    private function execDataMerge(array $config, array &$context): array
+    {
+        $leftVar = $config['left_variable'] ?? '';
+        $rightVar = $config['right_variable'] ?? '';
+        $mergeType = $config['merge_type'] ?? 'inner_join';
+        $leftKey = $config['left_key'] ?? 'id';
+        $rightKey = $config['right_key'] ?? 'id';
+
+        if (empty($leftVar) || empty($rightVar)) {
+            throw new \RuntimeException('Variáveis de entrada são obrigatórias');
+        }
+
+        $left = $context['variables'][$leftVar] ?? [];
+        $right = $context['variables'][$rightVar] ?? [];
+
+        if (!is_array($left)) $left = json_decode((string)$left, true) ?: [];
+        if (!is_array($right)) $right = json_decode((string)$right, true) ?: [];
+
+        // Indexar dataset direito por chave
+        $rightIndex = [];
+        foreach ($right as $row) {
+            $key = $row[$rightKey] ?? null;
+            if ($key !== null) {
+                $rightIndex[$key][] = $row;
+            }
+        }
+
+        $result = [];
+
+        switch ($mergeType) {
+            case 'inner_join':
+                foreach ($left as $lRow) {
+                    $lKey = $lRow[$leftKey] ?? null;
+                    if ($lKey !== null && isset($rightIndex[$lKey])) {
+                        foreach ($rightIndex[$lKey] as $rRow) {
+                            $result[] = array_merge($lRow, $rRow);
+                        }
+                    }
+                }
+                break;
+
+            case 'left_join':
+                foreach ($left as $lRow) {
+                    $lKey = $lRow[$leftKey] ?? null;
+                    if ($lKey !== null && isset($rightIndex[$lKey])) {
+                        foreach ($rightIndex[$lKey] as $rRow) {
+                            $result[] = array_merge($lRow, $rRow);
+                        }
+                    } else {
+                        $result[] = $lRow;
+                    }
+                }
+                break;
+
+            case 'full_join':
+                $matchedRight = [];
+                foreach ($left as $lRow) {
+                    $lKey = $lRow[$leftKey] ?? null;
+                    if ($lKey !== null && isset($rightIndex[$lKey])) {
+                        foreach ($rightIndex[$lKey] as $rRow) {
+                            $result[] = array_merge($lRow, $rRow);
+                            $matchedRight[$lKey] = true;
+                        }
+                    } else {
+                        $result[] = $lRow;
+                    }
+                }
+                foreach ($right as $rRow) {
+                    $rKey = $rRow[$rightKey] ?? null;
+                    if ($rKey !== null && !isset($matchedRight[$rKey])) {
+                        $result[] = $rRow;
+                    }
+                }
+                break;
+
+            case 'union':
+                $result = array_merge($left, $right);
+                break;
+
+            case 'diff':
+                $rightKeys = [];
+                foreach ($right as $rRow) {
+                    $rKey = $rRow[$rightKey] ?? null;
+                    if ($rKey !== null) $rightKeys[$rKey] = true;
+                }
+                foreach ($left as $lRow) {
+                    $lKey = $lRow[$leftKey] ?? null;
+                    if ($lKey === null || !isset($rightKeys[$lKey])) {
+                        $result[] = $lRow;
+                    }
+                }
+                break;
+
+            default:
+                throw new \RuntimeException("Tipo de merge '{$mergeType}' não suportado");
+        }
+
+        return ['data' => $result, 'count' => count($result), 'merge_type' => $mergeType];
+    }
+
+    /**
+     * Executa nó SQL Upsert - inserção/atualização em lote
+     */
+    private function execSqlUpsert(array $config, array &$context): array
+    {
+        $connId = (int)($config['connection_id'] ?? 0);
+        $targetTable = trim($config['target_table'] ?? '');
+        $inputVar = $config['input_variable'] ?? '';
+        $operation = $config['operation'] ?? 'insert';
+        $conflictKeys = $config['conflict_keys'] ?? '';
+        $fieldMapping = $config['field_mapping'] ?? '';
+        $batchSize = min(max((int)($config['batch_size'] ?? 100), 1), 1000);
+        $onError = $config['on_error'] ?? 'abort';
+
+        if (!$connId || !$targetTable || !$inputVar) {
+            throw new \RuntimeException('Conexão, tabela e variável de entrada são obrigatórios');
+        }
+
+        // Validar nome da tabela (prevenir SQL injection)
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_.]*$/', $targetTable)) {
+            throw new \RuntimeException('Nome de tabela inválido');
+        }
+
+        $data = $context['variables'][$inputVar] ?? [];
+        if (!is_array($data)) $data = json_decode((string)$data, true) ?: [];
+        if (empty($data)) return ['data' => ['inserted' => 0, 'updated' => 0, 'failed' => 0, 'total' => 0]];
+
+        // Normalizar mapeamento de campos
+        $mapping = [];
+        if (!empty($fieldMapping)) {
+            $mapping = is_string($fieldMapping) ? (json_decode($fieldMapping, true) ?: []) : $fieldMapping;
+        }
+
+        // Normalizar chaves de conflito
+        $cKeys = [];
+        if (!empty($conflictKeys)) {
+            $cKeys = is_string($conflictKeys) ? array_map('trim', explode(',', $conflictKeys)) : $conflictKeys;
+        }
+
+        // Validar nomes de colunas
+        foreach ($cKeys as $ck) {
+            if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $ck)) {
+                throw new \RuntimeException("Nome de coluna de conflito inválido: {$ck}");
+            }
+        }
+
+        // Buscar dados da conexão
+        $db = Database::getConexao();
+        $s = $db->prepare("SELECT tipo_banco, host, porta, nome_banco, usuario, senha_encriptada, parametros_extras FROM tb_perfis_conexao WHERE id = ?");
+        $s->execute([$connId]);
+        $conn = $s->fetch(PDO::FETCH_ASSOC);
+        if (!$conn) throw new \RuntimeException("Conexão ID {$connId} não encontrada");
+
+        $key = $_ENV['ENCRYPTION_KEY'] ?? $_SERVER['ENCRYPTION_KEY'] ?? getenv('ENCRYPTION_KEY') ?: '';
+        $senha = '';
+        if (!empty($conn['senha_encriptada']) && $key) {
+            $senha = Crypto::decrypt($conn['senha_encriptada'], $key);
+        }
+
+        $pdo = $this->createConnection($conn['tipo_banco'], $conn['host'], $conn['porta'], $conn['nome_banco'], $conn['usuario'], $senha, $conn['parametros_extras']);
+
+        $inserted = 0;
+        $updated = 0;
+        $failed = 0;
+        $errors = [];
+
+        // Processar em lotes
+        $batches = array_chunk($data, $batchSize);
+
+        foreach ($batches as $batch) {
+            foreach ($batch as $row) {
+                // Aplicar mapeamento
+                $mapped = [];
+                if (!empty($mapping)) {
+                    foreach ($mapping as $src => $dst) {
+                        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $dst)) continue;
+                        $mapped[$dst] = $row[$src] ?? null;
+                    }
+                } else {
+                    foreach ($row as $col => $val) {
+                        if (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $col)) {
+                            $mapped[$col] = $val;
+                        }
+                    }
+                }
+
+                if (empty($mapped)) continue;
+
+                $columns = array_keys($mapped);
+                $placeholders = array_map(fn($c) => ':' . $c, $columns);
+
+                try {
+                    if ($operation === 'upsert' && !empty($cKeys) && $conn['tipo_banco'] === 'postgres') {
+                        $colList = implode(', ', $columns);
+                        $valList = implode(', ', $placeholders);
+                        $conflictList = implode(', ', $cKeys);
+                        $updateParts = [];
+                        foreach ($columns as $col) {
+                            if (!in_array($col, $cKeys)) {
+                                $updateParts[] = "{$col} = EXCLUDED.{$col}";
+                            }
+                        }
+                        $updateClause = !empty($updateParts) ? 'DO UPDATE SET ' . implode(', ', $updateParts) : 'DO NOTHING';
+                        $sql = "INSERT INTO {$targetTable} ({$colList}) VALUES ({$valList}) ON CONFLICT ({$conflictList}) {$updateClause}";
+                    } elseif ($operation === 'upsert' && !empty($cKeys) && in_array($conn['tipo_banco'], ['mysql', 'mariadb'])) {
+                        $colList = implode(', ', $columns);
+                        $valList = implode(', ', $placeholders);
+                        $updateParts = [];
+                        foreach ($columns as $col) {
+                            if (!in_array($col, $cKeys)) {
+                                $updateParts[] = "{$col} = VALUES({$col})";
+                            }
+                        }
+                        $updateClause = !empty($updateParts) ? implode(', ', $updateParts) : $columns[0] . ' = VALUES(' . $columns[0] . ')';
+                        $sql = "INSERT INTO {$targetTable} ({$colList}) VALUES ({$valList}) ON DUPLICATE KEY UPDATE {$updateClause}";
+                    } else {
+                        // Simple INSERT
+                        $colList = implode(', ', $columns);
+                        $valList = implode(', ', $placeholders);
+                        $sql = "INSERT INTO {$targetTable} ({$colList}) VALUES ({$valList})";
+                    }
+
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute($mapped);
+
+                    $rowCount = $stmt->rowCount();
+                    if ($operation === 'upsert' && $rowCount === 2) {
+                        $updated++;
+                    } else {
+                        $inserted++;
+                    }
+                } catch (\Throwable $e) {
+                    $failed++;
+                    $errors[] = $e->getMessage();
+                    if ($onError === 'abort') {
+                        throw new \RuntimeException("Erro no upsert (linha {$failed}): " . $e->getMessage());
+                    }
+                }
+            }
+        }
+
+        return [
+            'data' => [
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'failed' => $failed,
+                'total' => $inserted + $updated + $failed,
+                'errors' => array_slice($errors, 0, 10)
+            ]
+        ];
     }
 
     /**
@@ -1430,5 +1761,682 @@ class PipelineController
         } catch (\Throwable $e) {
             return ['sucesso' => false, 'mensagem' => 'Erro ao listar colunas: ' . $e->getMessage()];
         }
+    }
+
+    /**
+     * Switch/Case — roteamento multi-branch (3 outputs)
+     * Output 1 = case_1 match, Output 2 = case_2 match, Output 3 = default
+     */
+    private function execSwitchCase(array $config, array &$context): array
+    {
+        $varName = $config['switch_variable'] ?? '';
+        // Buscar o valor: se é referência a variável (com ou sem {{}}), resolver
+        $wrappedVar = (strpos($varName, '{{') === false) ? '{{' . $varName . '}}' : $varName;
+        $value = $this->resolveValue($wrappedVar, $context['variables']);
+        $case1 = $config['case_1'] ?? '';
+        $case2 = $config['case_2'] ?? '';
+
+        if ((string)$value === (string)$case1) {
+            $branch = 'output_1';
+        } elseif ((string)$value === (string)$case2) {
+            $branch = 'output_2';
+        } else {
+            $branch = 'output_3';
+        }
+
+        return [
+            'data' => ['value' => $value, 'matched_branch' => $branch],
+            'branch' => $branch
+        ];
+    }
+
+    /**
+     * Format Template — interpola variáveis em um template de texto
+     */
+    private function execFormatTemplate(array $config, array &$context): array
+    {
+        $template = $config['template'] ?? '';
+        $result = $this->replaceVariables($template, $context);
+        return ['data' => $result];
+    }
+
+    /**
+     * Regex — match, match_all, replace ou test sobre uma variável
+     */
+    private function execRegex(array $config, array &$context): array
+    {
+        $mode = $config['regex_mode'] ?? 'match';
+        $inputVar = $config['input_variable'] ?? '';
+        $input = $this->resolveValue($inputVar, $context['variables']);
+        if (!is_string($input)) {
+            $input = json_encode($input);
+        }
+        $pattern = $config['pattern'] ?? '';
+
+        // Validar que o pattern é um regex PCRE válido
+        if (@preg_match($pattern, '') === false) {
+            throw new \RuntimeException("Padrão regex inválido: {$pattern}");
+        }
+
+        switch ($mode) {
+            case 'match':
+                preg_match($pattern, $input, $matches);
+                return ['data' => $matches ?: []];
+
+            case 'match_all':
+                preg_match_all($pattern, $input, $matches);
+                return ['data' => $matches[0] ?? []];
+
+            case 'replace':
+                $replacement = $config['replacement'] ?? '';
+                $result = preg_replace($pattern, $replacement, $input);
+                return ['data' => $result];
+
+            case 'test':
+                $result = (bool)preg_match($pattern, $input);
+                return ['data' => $result];
+
+            default:
+                return ['data' => null];
+        }
+    }
+
+    /**
+     * CSV Parse — converte texto CSV em array de objetos
+     */
+    private function execCsvParse(array $config, array &$context): array
+    {
+        $inputVar = $config['input_variable'] ?? '';
+        $input = $this->resolveValue($inputVar, $context['variables']);
+        if (!is_string($input)) {
+            throw new \RuntimeException("Variável '{$inputVar}' não contém texto CSV");
+        }
+
+        $delimiter = $config['delimiter'] ?? ',';
+        $enclosure = $config['enclosure'] ?? '"';
+        $hasHeader = ($config['has_header'] ?? 'true') === 'true';
+
+        $lines = [];
+        $rows = explode("\n", str_replace("\r\n", "\n", $input));
+        foreach ($rows as $row) {
+            $row = trim($row);
+            if ($row === '') continue;
+            $lines[] = str_getcsv($row, $delimiter, $enclosure);
+        }
+
+        if (empty($lines)) {
+            return ['data' => []];
+        }
+
+        if ($hasHeader) {
+            $headers = array_shift($lines);
+            $result = [];
+            foreach ($lines as $line) {
+                $row = [];
+                foreach ($headers as $i => $header) {
+                    $row[trim($header)] = $line[$i] ?? null;
+                }
+                $result[] = $row;
+            }
+            return ['data' => $result];
+        }
+
+        return ['data' => $lines];
+    }
+
+    /**
+     * Counter — mantém um contador no contexto de variáveis
+     */
+    private function execCounter(array $config, array &$context): array
+    {
+        $name = $config['counter_name'] ?? 'counter';
+        $action = $config['counter_action'] ?? 'increment';
+        $current = (int)($context['variables'][$name] ?? 0);
+
+        switch ($action) {
+            case 'increment':
+                $current++;
+                break;
+            case 'decrement':
+                $current--;
+                break;
+            case 'reset':
+                $current = 0;
+                break;
+            case 'set':
+                $current = (int)($config['counter_value'] ?? 0);
+                break;
+        }
+
+        $context['variables'][$name] = $current;
+        return ['data' => $current];
+    }
+
+    private function execRotina(array $config, array &$context): array
+    {
+        $idRotina = $config['rotina_id'] ?? null;
+        if (!$idRotina) {
+            throw new \Exception('ID da rotina não especificado');
+        }
+
+        $controller = new RotinasController();
+        $resultado = $controller->executar((int)$idRotina);
+
+        if (empty($resultado['sucesso'])) {
+            throw new \Exception($resultado['mensagem'] ?? 'Erro ao executar rotina');
+        }
+
+        $metricas = $resultado['metricas'] ?? [];
+        return [
+            'data' => [
+                'rotina_id' => (int)$idRotina,
+                'blocos_executados' => $metricas['blocos_executados'] ?? 0,
+                'blocos_sucesso' => $metricas['blocos_sucesso'] ?? 0,
+                'blocos_falha' => $metricas['blocos_falha'] ?? 0,
+                'registros_total' => $metricas['registros_total'] ?? 0,
+                'duracao_ms' => $metricas['duracao_ms'] ?? 0,
+            ]
+        ];
+    }
+
+    /**
+     * File Export — exporta dados para arquivo em formatos variados
+     * Suporta variáveis de sequência no nome do arquivo:
+     *   {seq} - sequencial auto-incremento
+     *   {date} - data no formato YYYY-MM-DD
+     *   {time} - hora no formato HH-MM-SS
+     *   {datetime} - data e hora YYYY-MM-DD_HH-MM-SS
+     *   {timestamp} - unix timestamp
+     *   {Y},{m},{d},{H},{i},{s} - componentes individuais
+     *   {{variavel}} - variáveis do contexto do pipeline
+     */
+    private function execFileExport(array $config, array &$context): array
+    {
+        $inputVar = $config['input_variable'] ?? '';
+        $data = $this->resolveValue($inputVar, $context['variables']);
+
+        // Se não encontrou na variável, tenta no resultado do nó anterior
+        if ($data === $inputVar && isset($context['results'])) {
+            foreach (array_reverse($context['results'], true) as $nodeResult) {
+                if (isset($nodeResult['data'])) {
+                    if (is_array($nodeResult['data']) && isset($nodeResult['data']['rows'])) {
+                        $data = $nodeResult['data']['rows'];
+                    } elseif (is_array($nodeResult['data'])) {
+                        $data = $nodeResult['data'];
+                    }
+                    break;
+                }
+            }
+        }
+
+        if ($data === null || $data === $inputVar) {
+            throw new \RuntimeException("Variável '{$inputVar}' não encontrada para exportação");
+        }
+
+        // Se é string JSON, decodificar
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $data = $decoded;
+            }
+        }
+
+        if (!is_array($data)) {
+            $data = [['value' => $data]];
+        }
+
+        $format = strtolower($config['export_format'] ?? 'csv');
+        $allowedFormats = ['csv', 'json', 'xml', 'txt', 'html', 'sql'];
+        if (!in_array($format, $allowedFormats)) {
+            throw new \RuntimeException("Formato '{$format}' não suportado. Use: " . implode(', ', $allowedFormats));
+        }
+
+        // Processar nome do arquivo com variáveis de sequência
+        $filename = $config['filename'] ?? 'export';
+        $filename = $this->processExportFilename($filename, $config, $context);
+
+        // Determinar diretório de destino
+        $exportDir = $config['export_directory'] ?? 'storage/exports';
+        $fullDir = $this->resolveExportDirectory($exportDir);
+
+        if (!is_dir($fullDir)) {
+            if (!mkdir($fullDir, 0755, true)) {
+                throw new \RuntimeException("Não foi possível criar o diretório: {$exportDir}");
+            }
+        }
+
+        $fullPath = $fullDir . DIRECTORY_SEPARATOR . $filename . '.' . $format;
+
+        // Exportar conforme formato
+        switch ($format) {
+            case 'csv':
+                $this->exportToCsv($data, $fullPath, $config);
+                break;
+            case 'json':
+                $this->exportToJson($data, $fullPath, $config);
+                break;
+            case 'xml':
+                $this->exportToXml($data, $fullPath, $config);
+                break;
+            case 'txt':
+                $this->exportToTxt($data, $fullPath, $config);
+                break;
+            case 'html':
+                $this->exportToHtml($data, $fullPath, $config);
+                break;
+            case 'sql':
+                $this->exportToSql($data, $fullPath, $config);
+                break;
+        }
+
+        $fileSize = file_exists($fullPath) ? filesize($fullPath) : 0;
+        $recordCount = is_array($data) ? count($data) : 1;
+
+        $result = [
+            'file_path' => $fullPath,
+            'filename' => basename($fullPath),
+            'directory' => dirname($fullPath),
+            'format' => $format,
+            'records' => $recordCount,
+            'file_size' => $fileSize,
+            'file_size_formatted' => $this->formatBytes($fileSize)
+        ];
+
+        if (!empty($config['output_variable'])) {
+            $context['variables'][$config['output_variable']] = $result;
+        }
+        $context['variables']['last_export_path'] = $fullPath;
+        $context['variables']['last_export_filename'] = basename($fullPath);
+
+        return ['data' => $result];
+    }
+
+    /**
+     * Processa variáveis de sequência no nome do arquivo
+     */
+    private function processExportFilename(string $filename, array $config, array &$context): string
+    {
+        $now = new \DateTime();
+
+        // Variáveis de data/hora
+        $replacements = [
+            '{date}' => $now->format('Y-m-d'),
+            '{time}' => $now->format('H-i-s'),
+            '{datetime}' => $now->format('Y-m-d_H-i-s'),
+            '{timestamp}' => (string) time(),
+            '{Y}' => $now->format('Y'),
+            '{m}' => $now->format('m'),
+            '{d}' => $now->format('d'),
+            '{H}' => $now->format('H'),
+            '{i}' => $now->format('i'),
+            '{s}' => $now->format('s'),
+        ];
+
+        $filename = str_replace(array_keys($replacements), array_values($replacements), $filename);
+
+        // Variável {seq} - sequencial auto-incremento por diretório+prefixo
+        if (strpos($filename, '{seq}') !== false) {
+            $seqKey = 'file_export_seq_' . md5(($config['export_directory'] ?? '') . '_' . ($config['filename'] ?? ''));
+            $seq = (int)($context['variables'][$seqKey] ?? 0) + 1;
+
+            // Também verifica arquivos existentes no diretório para continuar a sequência
+            $exportDir = $config['export_directory'] ?? 'storage/exports';
+            $fullDir = $this->resolveExportDirectory($exportDir);
+            if (is_dir($fullDir)) {
+                $pattern = str_replace('{seq}', '*', $config['filename'] ?? 'export');
+                $existing = glob($fullDir . DIRECTORY_SEPARATOR . $pattern . '.*');
+                if (!empty($existing)) {
+                    // Extrair o maior número sequencial
+                    $maxSeq = 0;
+                    foreach ($existing as $file) {
+                        $base = pathinfo($file, PATHINFO_FILENAME);
+                        if (preg_match('/(\d+)/', str_replace(str_replace('*', '', $pattern), '', $base), $m)) {
+                            $maxSeq = max($maxSeq, (int)$m[1]);
+                        }
+                    }
+                    $seq = max($seq, $maxSeq + 1);
+                }
+            }
+
+            $seqPad = str_pad((string) $seq, (int)($config['seq_padding'] ?? 4), '0', STR_PAD_LEFT);
+            $filename = str_replace('{seq}', $seqPad, $filename);
+            $context['variables'][$seqKey] = $seq;
+        }
+
+        // Variáveis do contexto {{variavel}} 
+        $filename = $this->replaceVariables($filename, $context['variables']);
+
+        // Sanitizar nome do arquivo
+        $filename = preg_replace('/[^a-zA-Z0-9._\-]/', '_', $filename);
+        if (empty($filename)) $filename = 'export_' . time();
+
+        return $filename;
+    }
+
+    /**
+     * Resolve o diretório de exportação — aceita caminhos absolutos ou atalhos
+     */
+    private function resolveExportDirectory(string $dir): string
+    {
+        $basePath = defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2);
+
+        // Atalhos conhecidos
+        $shortcuts = [
+            'storage/exports' => $basePath . '/storage/exports',
+            'storage/csv' => $basePath . '/storage/csv',
+            'desktop' => $this->getUserDesktopPath(),
+            'documentos' => $this->getUserDocumentsPath(),
+            'downloads' => $this->getUserDownloadsPath(),
+        ];
+
+        $dirTrim = trim($dir);
+        $dirLower = strtolower($dirTrim);
+
+        // Atalho conhecido
+        if (isset($shortcuts[$dirLower])) {
+            return $shortcuts[$dirLower];
+        }
+
+        // Sub-pastas de storage
+        if (strpos($dir, 'storage/') === 0) {
+            $resolved = $basePath . '/' . $dir;
+            $real = realpath(dirname($resolved));
+            $storageReal = realpath($basePath . '/storage');
+            if ($real !== false && $storageReal !== false && strpos($real, $storageReal) === 0) {
+                return $resolved;
+            }
+        }
+
+        // Caminho absoluto — verificar se existe e é gravável
+        if ($this->isAbsolutePath($dirTrim)) {
+            $realDir = realpath($dirTrim);
+            if ($realDir !== false && is_dir($realDir) && is_writable($realDir)) {
+                return $realDir;
+            }
+            // Se o diretório não existe ainda, tentar criar
+            if (!is_dir($dirTrim) && @mkdir($dirTrim, 0755, true)) {
+                return realpath($dirTrim) ?: $dirTrim;
+            }
+        }
+
+        // Default: storage/exports
+        return $basePath . '/storage/exports';
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            return (bool) preg_match('/^[A-Za-z]:[\\\/]/', $path);
+        }
+        return str_starts_with($path, '/');
+    }
+
+    /**
+     * Retorna atalhos rápidos + raízes do sistema para o browser de diretórios
+     */
+    public function listarDiretoriosExport(): array
+    {
+        $basePath = defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2);
+
+        // Garantir que storage/exports existe
+        $exportsDir = $basePath . '/storage/exports';
+        if (!is_dir($exportsDir)) {
+            @mkdir($exportsDir, 0755, true);
+        }
+
+        $shortcuts = [];
+        $shortcuts[] = ['id' => 'storage/exports', 'nome' => 'Storage/Exports (padrão)', 'path' => str_replace('/', DIRECTORY_SEPARATOR, $basePath . '/storage/exports'), 'writable' => true, 'type' => 'shortcut'];
+        $shortcuts[] = ['id' => 'storage/csv', 'nome' => 'Storage/CSV', 'path' => str_replace('/', DIRECTORY_SEPARATOR, $basePath . '/storage/csv'), 'writable' => true, 'type' => 'shortcut'];
+
+        $special = [
+            ['key' => 'desktop', 'nome' => 'Desktop (Área de Trabalho)', 'path' => $this->getUserDesktopPath()],
+            ['key' => 'documentos', 'nome' => 'Documentos', 'path' => $this->getUserDocumentsPath()],
+            ['key' => 'downloads', 'nome' => 'Downloads', 'path' => $this->getUserDownloadsPath()],
+        ];
+
+        foreach ($special as $s) {
+            if ($s['path'] && is_dir($s['path'])) {
+                $shortcuts[] = ['id' => $s['key'], 'nome' => $s['nome'], 'path' => $s['path'], 'writable' => is_writable($s['path']), 'type' => 'shortcut'];
+            }
+        }
+
+        // Drives / raízes do sistema
+        $roots = [];
+        if (PHP_OS_FAMILY === 'Windows') {
+            foreach (range('A', 'Z') as $letter) {
+                $drv = $letter . ':\\';
+                if (is_dir($drv)) {
+                    $roots[] = ['letter' => $letter, 'path' => $drv, 'writable' => @is_writable($drv)];
+                }
+            }
+        } else {
+            $roots[] = ['letter' => '/', 'path' => '/', 'writable' => is_writable('/')];
+        }
+
+        return ['shortcuts' => $shortcuts, 'roots' => $roots];
+    }
+
+    /**
+     * Navega um diretório e retorna sub-pastas — para o browser de diretórios
+     */
+    public function navegarDiretorio(string $path): array
+    {
+        $realPath = realpath($path);
+        if ($realPath === false || !is_dir($realPath)) {
+            return ['erro' => 'Diretório não encontrado', 'path' => $path];
+        }
+
+        if (!is_readable($realPath)) {
+            return ['erro' => 'Sem permissão de leitura', 'path' => $realPath];
+        }
+
+        $subdirs = [];
+        $entries = @scandir($realPath);
+        if ($entries === false) {
+            return ['erro' => 'Não foi possível listar o diretório', 'path' => $realPath];
+        }
+
+        sort($entries, SORT_NATURAL | SORT_FLAG_CASE);
+
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') continue;
+            if (str_starts_with($entry, '.') && $entry !== '..') continue; // ocultos
+
+            $full = $realPath . DIRECTORY_SEPARATOR . $entry;
+            if (!is_dir($full)) continue;
+
+            $subdirs[] = [
+                'name' => $entry,
+                'path' => $full,
+                'writable' => @is_writable($full),
+                'has_children' => $this->dirHasSubdirs($full),
+            ];
+        }
+
+        // Parent path
+        $parent = dirname($realPath);
+        $parentAvailable = ($parent !== $realPath); // raiz não tem pai
+
+        return [
+            'path' => $realPath,
+            'parent' => $parentAvailable ? $parent : null,
+            'writable' => @is_writable($realPath),
+            'dirs' => $subdirs,
+        ];
+    }
+
+    private function dirHasSubdirs(string $path): bool
+    {
+        $entries = @scandir($path);
+        if (!$entries) return false;
+        foreach ($entries as $e) {
+            if ($e === '.' || $e === '..') continue;
+            if (is_dir($path . DIRECTORY_SEPARATOR . $e)) return true;
+        }
+        return false;
+    }
+
+    private function getUserDesktopPath(): string
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            return getenv('USERPROFILE') . '\\Desktop';
+        }
+        return getenv('HOME') . '/Desktop';
+    }
+
+    private function getUserDocumentsPath(): string
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            return getenv('USERPROFILE') . '\\Documents';
+        }
+        return getenv('HOME') . '/Documents';
+    }
+
+    private function getUserDownloadsPath(): string
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            return getenv('USERPROFILE') . '\\Downloads';
+        }
+        return getenv('HOME') . '/Downloads';
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1048576) return round($bytes / 1048576, 2) . ' MB';
+        if ($bytes >= 1024) return round($bytes / 1024, 2) . ' KB';
+        return $bytes . ' B';
+    }
+
+    // --- Métodos de exportação por formato ---
+
+    private function exportToCsv(array $data, string $path, array $config): void
+    {
+        $delimiter = $config['csv_delimiter'] ?? ',';
+        $enclosure = $config['csv_enclosure'] ?? '"';
+        $fp = fopen($path, 'w');
+        if ($fp === false) throw new \RuntimeException('Não foi possível abrir o arquivo para escrita');
+
+        // BOM para UTF-8 (compatibilidade Excel)
+        fwrite($fp, "\xEF\xBB\xBF");
+
+        if (!empty($data) && is_array($data[0] ?? null)) {
+            fputcsv($fp, array_keys($data[0]), $delimiter, $enclosure);
+            foreach ($data as $row) {
+                if (is_array($row)) {
+                    fputcsv($fp, array_map(function($v) { return is_array($v) ? json_encode($v) : $v; }, $row), $delimiter, $enclosure);
+                }
+            }
+        } else {
+            foreach ($data as $item) {
+                fputcsv($fp, is_array($item) ? $item : [$item], $delimiter, $enclosure);
+            }
+        }
+        fclose($fp);
+    }
+
+    private function exportToJson(array $data, string $path, array $config): void
+    {
+        $pretty = ($config['json_pretty'] ?? 'true') === 'true';
+        $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        if ($pretty) $flags |= JSON_PRETTY_PRINT;
+        $json = json_encode($data, $flags);
+        if ($json === false) throw new \RuntimeException('Erro ao codificar JSON: ' . json_last_error_msg());
+        file_put_contents($path, $json);
+    }
+
+    private function exportToXml(array $data, string $path, array $config): void
+    {
+        $rootName = $config['xml_root'] ?? 'data';
+        $rowName = $config['xml_row'] ?? 'row';
+        $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><' . htmlspecialchars($rootName) . '/>');
+
+        foreach ($data as $row) {
+            $child = $xml->addChild($rowName);
+            if (is_array($row)) {
+                foreach ($row as $key => $value) {
+                    $safeKey = preg_replace('/[^a-zA-Z0-9_]/', '_', $key);
+                    if (is_numeric($safeKey[0] ?? '')) $safeKey = '_' . $safeKey;
+                    $child->addChild($safeKey, htmlspecialchars(is_array($value) ? json_encode($value) : (string)$value));
+                }
+            } else {
+                $child->addChild('value', htmlspecialchars((string)$row));
+            }
+        }
+
+        $dom = dom_import_simplexml($xml)->ownerDocument;
+        $dom->formatOutput = true;
+        file_put_contents($path, $dom->saveXML());
+    }
+
+    private function exportToTxt(array $data, string $path, array $config): void
+    {
+        $separator = $config['txt_separator'] ?? "\t";
+        $lines = [];
+
+        if (!empty($data) && is_array($data[0] ?? null)) {
+            $lines[] = implode($separator, array_keys($data[0]));
+            foreach ($data as $row) {
+                $lines[] = implode($separator, array_map(function($v) { return is_array($v) ? json_encode($v) : (string)$v; }, $row));
+            }
+        } else {
+            foreach ($data as $item) {
+                $lines[] = is_array($item) ? json_encode($item) : (string)$item;
+            }
+        }
+
+        file_put_contents($path, implode("\n", $lines));
+    }
+
+    private function exportToHtml(array $data, string $path, array $config): void
+    {
+        $title = htmlspecialchars($config['html_title'] ?? 'Export Data');
+        $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' . $title . '</title>';
+        $html .= '<style>table{border-collapse:collapse;width:100%;font-family:sans-serif}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f4f4f4;font-weight:bold}tr:nth-child(even){background:#fafafa}h1{font-family:sans-serif;color:#333}</style>';
+        $html .= '</head><body><h1>' . $title . '</h1>';
+        $html .= '<p>Exportado em: ' . date('d/m/Y H:i:s') . ' | Registros: ' . count($data) . '</p>';
+        $html .= '<table>';
+
+        if (!empty($data) && is_array($data[0] ?? null)) {
+            $html .= '<thead><tr>';
+            foreach (array_keys($data[0]) as $col) {
+                $html .= '<th>' . htmlspecialchars($col) . '</th>';
+            }
+            $html .= '</tr></thead><tbody>';
+            foreach ($data as $row) {
+                $html .= '<tr>';
+                foreach ($row as $val) {
+                    $html .= '<td>' . htmlspecialchars(is_array($val) ? json_encode($val) : (string)$val) . '</td>';
+                }
+                $html .= '</tr>';
+            }
+            $html .= '</tbody>';
+        }
+
+        $html .= '</table></body></html>';
+        file_put_contents($path, $html);
+    }
+
+    private function exportToSql(array $data, string $path, array $config): void
+    {
+        $table = $config['sql_table_name'] ?? 'exported_data';
+        // Sanitizar nome da tabela
+        $table = preg_replace('/[^a-zA-Z0-9_.]/', '', $table);
+        if (empty($table)) $table = 'exported_data';
+
+        $lines = ['-- Exportação SQL gerada por DMC-DATALOAD Pipeline', '-- Data: ' . date('Y-m-d H:i:s'), ''];
+
+        if (!empty($data) && is_array($data[0] ?? null)) {
+            $cols = array_keys($data[0]);
+            foreach ($data as $row) {
+                $values = array_map(function ($v) {
+                    if ($v === null) return 'NULL';
+                    if (is_numeric($v)) return $v;
+                    return "'" . str_replace("'", "''", (string)$v) . "'";
+                }, array_values($row));
+                $lines[] = 'INSERT INTO ' . $table . ' (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $values) . ');';
+            }
+        }
+
+        file_put_contents($path, implode("\n", $lines));
     }
 }

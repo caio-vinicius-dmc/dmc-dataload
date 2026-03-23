@@ -77,6 +77,15 @@ class PipelineController
             return ['sucesso' => false, 'mensagem' => 'Nome é obrigatório'];
         }
 
+        // Empresa/projeto obrigatórios para regra de visibilidade
+        $rbacPresente = !empty($data['_rbac_presente']);
+        if ($rbacPresente) {
+            $empresasEnviadas = isset($data['empresas']) && is_array($data['empresas']) ? array_filter($data['empresas']) : [];
+            if (empty($empresasEnviadas)) {
+                return ['sucesso' => false, 'mensagem' => 'Selecione ao menos uma empresa para a visibilidade'];
+            }
+        }
+
         $descricao = $data['descricao'] ?? '';
         $modo = $data['modo'] ?? 'nocode';
         $ativo = isset($data['ativo']) ? (bool) $data['ativo'] : false;
@@ -111,11 +120,11 @@ class PipelineController
                          $tags, $id]);
 
             // Associar empresas/projetos
-            if (isset($data['empresas']) && is_array($data['empresas'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', (int)$id, array_map('intval', $data['empresas']));
-            }
-            if (isset($data['projetos']) && is_array($data['projetos'])) {
-                \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', (int)$id, array_map('intval', $data['projetos']));
+            if ($rbacPresente) {
+                $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+                $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+                \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', (int)$id, $idsEmpresas);
+                \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', (int)$id, $idsProjetos);
             }
 
             return ['sucesso' => true, 'mensagem' => 'Pipeline atualizado', 'id' => (int)$id];
@@ -137,11 +146,11 @@ class PipelineController
         $newId = (int)$s->fetchColumn();
 
         // Associar empresas/projetos
-        if (isset($data['empresas']) && is_array($data['empresas'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', $newId, array_map('intval', $data['empresas']));
-        }
-        if (isset($data['projetos']) && is_array($data['projetos'])) {
-            \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', $newId, array_map('intval', $data['projetos']));
+        if ($rbacPresente) {
+            $idsEmpresas = isset($data['empresas']) && is_array($data['empresas']) ? array_map('intval', $data['empresas']) : [];
+            $idsProjetos = isset($data['projetos']) && is_array($data['projetos']) ? array_map('intval', $data['projetos']) : [];
+            \App\Servicos\ServicoPermissao::associarRecursoEmpresas('pipeline', $newId, $idsEmpresas);
+            \App\Servicos\ServicoPermissao::associarRecursoProjetos('pipeline', $newId, $idsProjetos);
         }
 
         return ['sucesso' => true, 'mensagem' => 'Pipeline criado', 'id' => $newId];

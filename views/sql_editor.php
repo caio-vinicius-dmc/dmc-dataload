@@ -28,18 +28,6 @@ ob_start();
             <i class="bi bi-database-fill"></i>
             <span id="fullscreenTitle">SQL Editor - DBEaver Mode</span>
         </div>
-        <div class="fullscreen-controls">
-            <select class="form-select-fullscreen" id="selectRotinaFullscreen" style="min-width: 200px;">
-                <option value="">📋 Selecione uma rotina...</option>
-            </select>
-            <select class="form-select-fullscreen" id="selectConexaoFullscreen" style="min-width: 200px;">
-                <option value="">🔌 Selecione uma conexão...</option>
-            </select>
-            <button class="btn-execute-fullscreen" id="btnExecutarFullscreen" disabled>
-                <i class="bi bi-play-fill"></i>
-                Executar (F5)
-            </button>
-        </div>
         <button class="btn-exit-fullscreen" onclick="toggleFullscreen()">
             <i class="bi bi-fullscreen-exit"></i>
             Sair (ESC)

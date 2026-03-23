@@ -57,6 +57,14 @@ class RotinasController2
     {
         // debug dump incoming data
         @file_put_contents(__DIR__ . '/../../storage/rotina_debug.json', json_encode($data, JSON_PRETTY_PRINT));
+
+        // Empresa obrigatória para regra de visibilidade
+        if (!empty($data['_rbac_presente'])) {
+            $empresasEnviadas = isset($data['empresas']) && is_array($data['empresas']) ? array_filter($data['empresas']) : [];
+            if (empty($empresasEnviadas)) {
+                return ['sucesso' => false, 'erro' => 'Selecione ao menos uma empresa para a visibilidade'];
+            }
+        }
         
         try {
             $db = Database::getConexao();

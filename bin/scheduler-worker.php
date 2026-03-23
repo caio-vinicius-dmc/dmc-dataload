@@ -125,6 +125,61 @@ while (true) {
             }
         }
         
+        // 3. Buscar pipelines com trigger CRON ativas
+        $sqlPip = "SELECT id, nome, agendamento_cron
+                   FROM tb_pipelines
+                   WHERE ativo = true
+                     AND trigger_tipo = 'cron'
+                     AND agendamento_cron IS NOT NULL
+                     AND agendamento_cron != ''
+                   ORDER BY id";
+        $stmtPip = $db->query($sqlPip);
+        $pipelines = $stmtPip->fetchAll();
+
+        foreach ($pipelines as $pip) {
+            $pipKey = 'pip_' . $pip['id'] . '_' . $agoraMinuto;
+
+            if (isset($ultimasExecucoes[$pipKey])) {
+                continue;
+            }
+
+            if (shouldExecuteNow($pip['agendamento_cron'])) {
+                logMessage("Pipeline {$pip['nome']} (ID: {$pip['id']}) - CRON bate, executando...", 'info');
+                $ultimasExecucoes[$pipKey] = true;
+
+                try {
+                    // Simular sessão de sistema para execução
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_id('schedulerworker' . getmypid());
+                        session_start();
+                    }
+                    $_SESSION['usuario_id'] = 1;
+                    $_SESSION['usuario_nome'] = 'scheduler';
+                    $_SESSION['nivel_acesso'] = 'super_admin';
+                    $_SESSION['usuario_autenticado'] = true;
+                    $_SESSION['usuario'] = [
+                        'id' => 1,
+                        'nome' => 'scheduler',
+                        'email' => 'system@dmc.com',
+                        'nivel_acesso' => 'super_admin',
+                        'ativo' => true
+                    ];
+
+                    $pipeCtrl = new \App\Controllers\PipelineController();
+                    $resultado = $pipeCtrl->executar($pip['id']);
+
+                    $status = ($resultado['sucesso'] ?? false) ? 'sucesso' : 'erro';
+                    $duracao = $resultado['duracao_ms'] ?? 0;
+                    $nodesOk = $resultado['nodes_sucesso'] ?? 0;
+                    $nodesFail = $resultado['nodes_falha'] ?? 0;
+
+                    logMessage("Pipeline {$pip['nome']}: {$status} ({$duracao}ms, {$nodesOk} ok, {$nodesFail} falhas)", $status === 'sucesso' ? 'info' : 'error');
+                } catch (Exception $e) {
+                    logMessage("Erro ao executar pipeline {$pip['nome']}: " . $e->getMessage(), 'error');
+                }
+            }
+        }
+
         // Limpar execuções antigas (manter só último minuto)
         $minutoAnterior = date('Y-m-d H:i', strtotime('-2 minutes'));
         foreach (array_keys($ultimasExecucoes) as $key) {
@@ -141,7 +196,7 @@ while (true) {
             }
         }
         
-        // 3. Polling de APIs externas
+        // 4. Polling de APIs externas
         try {
             $pollingEngine = new \App\Core\ApiPollingEngine($db);
             $pollingResult = $pollingEngine->executarPolling();
