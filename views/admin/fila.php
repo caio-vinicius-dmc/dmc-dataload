@@ -63,21 +63,24 @@ ob_start();
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h5 class="mb-0"><i class="bi bi-list-task me-2"></i>Itens na Fila</h5>
-        <select class="form-select form-select-sm" id="filtroStatus" style="width: auto; min-width: 150px;">
-            <option value="">Todos os status</option>
-            <option value="pendente">Pendentes</option>
-            <option value="processando">Processando</option>
-            <option value="concluido">Concluídos</option>
-            <option value="falha">Falhas</option>
-            <option value="cancelado">Cancelados</option>
-        </select>
+<div class="card-modern">
+    <div class="card-modern-header">
+        <i class="bi bi-list-task me-2"></i>
+        <span>Itens na Fila</span>
+        <div class="ms-auto">
+            <select class="form-select form-select-sm" id="filtroStatus" style="width: auto; min-width: 150px;">
+                <option value="">Todos os status</option>
+                <option value="pendente">Pendentes</option>
+                <option value="processando">Processando</option>
+                <option value="concluido">Concluídos</option>
+                <option value="falha">Falhas</option>
+                <option value="cancelado">Cancelados</option>
+            </select>
+        </div>
     </div>
-    <div class="card-body">
+    <div class="card-modern-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover" id="tblFila">
+            <table class="table-modern" id="tblFila">
                 <thead><tr>
                     <th>#</th><th>Tipo</th><th>Recurso</th><th>Status</th><th>Tentativas</th>
                     <th>Usuário</th><th>Criado em</th><th width="80">Ações</th>
@@ -93,7 +96,7 @@ ob_start();
 <?php
 $content = ob_get_clean();
 
-$extraStyles = '<style>.stat-card .stat-value { font-size: 1.5rem; }</style>';
+$extraStyles = '';
 
 $extraScripts = '
 <script>

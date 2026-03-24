@@ -227,6 +227,16 @@ class SqlEditorController
                         'procedures' => (int)$row['procedures_count']
                     ];
                 }
+            } elseif ($tipo === 'sqlite') {
+                $tables = $targetDb->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchColumn();
+                $views = $targetDb->query("SELECT COUNT(*) FROM sqlite_master WHERE type='view'")->fetchColumn();
+                $dbName = basename($conexao['nome_banco'] ?? 'main');
+                $counts['schemas'][] = [
+                    'name' => $dbName,
+                    'tables' => (int)$tables,
+                    'views' => (int)$views,
+                    'functions' => 0
+                ];
             }
             
             return ['sucesso' => true, 'counts' => $counts];
@@ -289,6 +299,8 @@ class SqlEditorController
                 ");
                 $stmt->execute([$schema]);
                 $tabelas = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            } elseif ($tipo === 'sqlite') {
+                $tabelas = $targetDb->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
             }
             
             return ['sucesso' => true, 'tabelas' => $tabelas];
@@ -354,6 +366,8 @@ class SqlEditorController
                 ");
                 $stmt->execute([$schema]);
                 $views = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            } elseif ($tipo === 'sqlite') {
+                $views = $targetDb->query("SELECT name FROM sqlite_master WHERE type='view' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
             }
             
             return ['sucesso' => true, 'views' => $views];
@@ -419,6 +433,8 @@ class SqlEditorController
                 ");
                 $stmt->execute([$schema]);
                 $functions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            } elseif ($tipo === 'sqlite') {
+                $functions = [];
             }
             
             return ['sucesso' => true, 'functions' => $functions];
@@ -478,6 +494,8 @@ class SqlEditorController
                 ");
                 $stmt->execute([$schema]);
                 $procedures = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            } elseif ($tipo === 'sqlite') {
+                $procedures = [];
             }
             
             return ['sucesso' => true, 'procedures' => $procedures];
@@ -705,6 +723,11 @@ class SqlEditorController
                     ORDER BY schema_id, name
                 ")->fetchAll(PDO::FETCH_COLUMN);
                 $objetos['views'] = $views;
+            } elseif ($tipo === 'sqlite') {
+                $tabelas = $targetDb->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+                $objetos['tabelas'] = array_map(function($t) { return ['name' => $t]; }, $tabelas);
+                $views = $targetDb->query("SELECT name FROM sqlite_master WHERE type='view' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+                $objetos['views'] = $views;
             }
             
             return ['sucesso' => true, 'objetos' => $objetos];
@@ -867,6 +890,12 @@ class SqlEditorController
                 if ($currentTable !== null) {
                     $metadata['tables'][$currentTable] = $currentCols;
                 }
+            } elseif ($tipo === 'sqlite') {
+                $tables = $targetDb->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($tables as $table) {
+                    $cols = $targetDb->query("PRAGMA table_info(" . $targetDb->quote($table) . ")")->fetchAll(PDO::FETCH_ASSOC);
+                    $metadata['tables'][$table] = array_column($cols, 'name');
+                }
             }
             
             // Adicionar keywords SQL comuns
@@ -1022,6 +1051,22 @@ class SqlEditorController
                 } else {
                     throw new Exception("Conexão Oracle requer SID ou Service Name configurado");
                 }
+                break;
+            case 'sqlite':
+                $sqlitePath = $parametrosExtras['sqlite_path'] ?? $database ?? '';
+                if (empty($sqlitePath)) {
+                    throw new Exception('Caminho do banco SQLite é obrigatório');
+                }
+                if (!file_exists($sqlitePath)) {
+                    throw new Exception("Arquivo SQLite não encontrado: {$sqlitePath}");
+                }
+                $dsn = "sqlite:{$sqlitePath}";
+                $usuario = null;
+                $senha = null;
+                break;
+            case 'odbc':
+                $odbcDsn = $parametrosExtras['odbc_dsn'] ?? $database ?? '';
+                $dsn = "odbc:{$odbcDsn}";
                 break;
             default:
                 throw new Exception("Tipo de banco não suportado: $tipo");

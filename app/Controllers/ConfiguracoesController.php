@@ -312,12 +312,116 @@ class ConfiguracoesController
     }
 
     /**
+     * Upload de favicon
+     */
+    public function uploadFavicon(): void
+    {
+        header('Content-Type: application/json');
+        try {
+            if (empty($_FILES['favicon']) || $_FILES['favicon']['error'] !== UPLOAD_ERR_OK) {
+                throw new \Exception('Nenhum arquivo enviado ou erro no upload');
+            }
+
+            $file = $_FILES['favicon'];
+            $allowedMimes = ['image/x-icon', 'image/vnd.microsoft.icon', 'image/png', 'image/svg+xml', 'image/gif'];
+            $allowedExts = ['ico', 'png', 'svg', 'gif'];
+
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($file['tmp_name']);
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+            if (!in_array($mime, $allowedMimes, true) || !in_array($ext, $allowedExts, true)) {
+                throw new \Exception('Formato inválido. Use: .ico, .png, .svg ou .gif');
+            }
+
+            if ($file['size'] > 512 * 1024) {
+                throw new \Exception('Arquivo muito grande. Máximo: 512KB');
+            }
+
+            $uploadDir = __DIR__ . '/../../public/assets/uploads';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            // Remover favicon anterior
+            $stmtOld = $this->db->prepare("SELECT valor FROM tb_configuracoes WHERE chave = 'app_favicon'");
+            $stmtOld->execute();
+            $oldPath = $stmtOld->fetchColumn();
+            if ($oldPath) {
+                $oldFile = __DIR__ . '/../../public' . $oldPath;
+                if (is_file($oldFile)) {
+                    @unlink($oldFile);
+                }
+            }
+
+            $filename = 'favicon_' . time() . '.' . $ext;
+            $destPath = $uploadDir . '/' . $filename;
+
+            if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+                throw new \Exception('Erro ao salvar arquivo');
+            }
+
+            $relativePath = '/assets/uploads/' . $filename;
+            $idUsuario = AuthMiddleware::obterUsuarioId();
+
+            $stmt = $this->db->prepare("
+                INSERT INTO tb_configuracoes (chave, valor, grupo, atualizado_em, atualizado_por)
+                VALUES ('app_favicon', :valor, 'geral', NOW(), :uid)
+                ON CONFLICT (chave) DO UPDATE SET valor = :valor2, atualizado_em = NOW(), atualizado_por = :uid2
+            ");
+            $stmt->execute([
+                ':valor' => $relativePath, ':uid' => $idUsuario,
+                ':valor2' => $relativePath, ':uid2' => $idUsuario,
+            ]);
+
+            ServicoAuditoria::registrar('editar', 'configuracao', null, 'Upload favicon: ' . $filename);
+
+            echo json_encode(['sucesso' => true, 'mensagem' => 'Favicon atualizado com sucesso', 'caminho' => $relativePath]);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Remover favicon
+     */
+    public function removerFavicon(): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $stmt = $this->db->prepare("SELECT valor FROM tb_configuracoes WHERE chave = 'app_favicon'");
+            $stmt->execute();
+            $path = $stmt->fetchColumn();
+
+            if ($path) {
+                $fullPath = __DIR__ . '/../../public' . $path;
+                if (is_file($fullPath)) {
+                    @unlink($fullPath);
+                }
+            }
+
+            $idUsuario = AuthMiddleware::obterUsuarioId();
+            $stmt = $this->db->prepare("
+                INSERT INTO tb_configuracoes (chave, valor, grupo, atualizado_em, atualizado_por)
+                VALUES ('app_favicon', '', 'geral', NOW(), :uid)
+                ON CONFLICT (chave) DO UPDATE SET valor = '', atualizado_em = NOW(), atualizado_por = :uid2
+            ");
+            $stmt->execute([':uid' => $idUsuario, ':uid2' => $idUsuario]);
+
+            ServicoAuditoria::registrar('editar', 'configuracao', null, 'Favicon removido');
+            echo json_encode(['sucesso' => true, 'mensagem' => 'Favicon removido']);
+        } catch (\Exception $e) {
+            echo json_encode(['sucesso' => false, 'erro' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Campos permitidos por grupo (whitelist)
      */
     private function camposPorGrupo(string $grupo): ?array
     {
         return match ($grupo) {
-            'geral' => ['app_nome', 'app_url', 'app_timezone', 'app_idioma', 'app_descricao', 'modo_manutencao', 'login_bg_imagem'],
+            'geral' => ['app_nome', 'app_url', 'app_timezone', 'app_idioma', 'app_descricao', 'modo_manutencao', 'login_bg_imagem', 'app_favicon'],
             'email' => ['smtp_host', 'smtp_port', 'smtp_encryption', 'smtp_user', 'smtp_password', 'smtp_from_email', 'smtp_from_name'],
             'ldap' => ['ldap_ativo', 'ldap_host', 'ldap_port', 'ldap_ssl', 'ldap_base_dn', 'ldap_filter', 'ldap_bind_dn', 'ldap_bind_password'],
             'scheduler' => ['scheduler_ativo', 'scheduler_intervalo', 'scheduler_max_paralelo', 'scheduler_timeout', 'scheduler_retry', 'scheduler_max_tentativas', 'scheduler_intervalo_retry'],

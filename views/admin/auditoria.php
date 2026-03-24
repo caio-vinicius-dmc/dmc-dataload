@@ -71,8 +71,8 @@ ob_start();
 </div>
 
 <!-- Filtros -->
-<div class="card mb-4">
-    <div class="card-body">
+<div class="card-modern mb-4">
+    <div class="card-modern-body">
         <div class="row g-3">
             <div class="col-md-2">
                 <label class="form-label">Ação</label>
@@ -126,11 +126,15 @@ ob_start();
 </div>
 
 <!-- Tabela -->
-<div class="card">
-    <div class="card-body p-0">
+<div class="card-modern">
+    <div class="card-modern-header">
+        <i class="bi bi-shield-check me-2"></i>
+        <span>Registros de Auditoria</span>
+    </div>
+    <div class="card-modern-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0" id="tblAuditoria">
-                <thead class="table-light">
+            <table class="table-modern" id="tblAuditoria">
+                <thead>
                     <tr>
                         <th width="140">Data/Hora</th>
                         <th width="90">Ação</th>
@@ -148,7 +152,7 @@ ob_start();
             </table>
         </div>
     </div>
-    <div class="card-footer d-flex justify-content-between align-items-center">
+    <div class="card-modern-footer">
         <span class="text-muted" id="infoRegistros">-</span>
         <nav>
             <ul class="pagination pagination-sm mb-0" id="paginacao"></ul>
@@ -174,19 +178,14 @@ $content = ob_get_clean();
 
 $extraStyles = '
 <style>
-.stat-card .stat-value { font-size: 1.5rem; }
-.stat-card.info { border-left-color: #1e293b; background: #1e293b; }
-.stat-card.info .stat-icon { color: #ffffff; }
-.stat-card.info .stat-value { color: #ffffff; }
-.stat-card.info .stat-label { color: #cbd5e1; }
-.stat-card.danger { border-left-color: #ef4444; }
-.stat-card.danger .stat-icon { color: #ef4444; }
-.stat-card.secondary { border-left-color: #64748b; }
-.stat-card.secondary .stat-icon { color: #64748b; }
-.page-header-modern { background: white; padding: 1.75rem 2rem; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
-.page-icon-modern { width: 70px; height: 70px; border-radius: 16px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3); flex-shrink: 0; }
-.page-title-modern { font-size: 2rem; font-weight: 700; margin: 0 0 0.25rem 0; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.page-subtitle-modern { color: #64748b; margin: 0; font-size: 1rem; }
+.page-icon-modern {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+}
+.page-title-modern {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
 .badge-acao { font-size: 0.7rem; font-weight: 600; }
 </style>
 ';

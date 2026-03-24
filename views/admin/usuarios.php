@@ -63,10 +63,14 @@ ob_start();
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body">
+<div class="card-modern">
+    <div class="card-modern-header">
+        <i class="bi bi-people-fill me-2"></i>
+        <span>Lista de Usuários</span>
+    </div>
+    <div class="card-modern-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover" id="tblUsuarios">
+            <table class="table table-hover table-modern" id="tblUsuarios">
                 <thead>
                     <tr>
                         <th>Usuário</th>
@@ -207,24 +211,14 @@ $content = ob_get_clean();
 $extraStyles = '
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 <style>
-.stat-card .stat-value { font-size: 1.75rem; }
-.page-header-modern {
-    background: white; padding: 1.75rem 2rem; border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem;
-    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
-}
 .page-icon-modern {
-    width: 70px; height: 70px; border-radius: 16px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 2rem; color: white; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3); flex-shrink: 0;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
 }
 .page-title-modern {
-    font-size: 2rem; font-weight: 700; margin: 0 0 0.25rem 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.page-subtitle-modern { color: #64748b; margin: 0; font-size: 1rem; }
 .empresa-check, .projeto-check {
     border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.75rem;
     transition: all 0.2s; cursor: pointer;

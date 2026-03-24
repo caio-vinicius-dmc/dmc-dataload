@@ -77,6 +77,15 @@ $exibirRbac = in_array($nivelLogado, ['super_admin', 'admin', 'desenvolvedor']);
 .rbac-checkbox-dropdown {
     position: relative;
 }
+
+/* Garantir que o dropdown não seja cortado por overflow do container */
+.card-modern-body:has(.rbac-checkbox-dropdown),
+.modal-body-modern:has(.rbac-checkbox-dropdown) {
+    overflow: visible !important;
+}
+.card-modern:has(.rbac-checkbox-dropdown) {
+    overflow: visible !important;
+}
 .rbac-dropdown-trigger {
     display: flex;
     align-items: center;

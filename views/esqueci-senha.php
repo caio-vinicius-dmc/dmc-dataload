@@ -4,13 +4,26 @@
  * Tela pública para solicitar recuperação de senha
  */
 $loginBg = '';
+$appNome = 'DMC DataLoad';
+$appDescricao = 'Sistema de banco de dados';
+$appFavicon = '';
 try {
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("SELECT valor FROM tb_configuracoes WHERE chave = :chave LIMIT 1");
-    $stmt->execute([':chave' => 'login_bg_imagem']);
-    $loginBg = $stmt->fetchColumn() ?: '';
+    $stmt = $db->prepare("SELECT chave, valor FROM tb_configuracoes WHERE chave IN ('login_bg_imagem', 'app_nome', 'app_descricao', 'app_favicon')");
+    $stmt->execute();
+    foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+        if ($row['valor'] !== '' && $row['valor'] !== null) {
+            match ($row['chave']) {
+                'login_bg_imagem' => $loginBg = $row['valor'],
+                'app_nome' => $appNome = $row['valor'],
+                'app_descricao' => $appDescricao = $row['valor'],
+                'app_favicon' => $appFavicon = $row['valor'],
+            };
+        }
+    }
 } catch (\Exception $e) {}
 $bgCss = $loginBg ? "url('" . htmlspecialchars($loginBg, ENT_QUOTES) . "') center/cover no-repeat" : 'none';
+$baseUrl = defined('BASE_URL') ? BASE_URL : '';
 ?>
 <!doctype html>
 <html lang="pt-br">
@@ -19,7 +32,10 @@ $bgCss = $loginBg ? "url('" . htmlspecialchars($loginBg, ENT_QUOTES) . "') cente
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-  <title>Esqueci Minha Senha - DMC DataLoad</title>
+  <title>Esqueci Minha Senha - <?= htmlspecialchars($appNome) ?></title>
+  <?php if ($appFavicon): ?>
+  <link rel="icon" href="<?= $baseUrl . htmlspecialchars($appFavicon) ?>" type="image/x-icon">
+  <?php endif; ?>
   <style>
     :root {
       --login-primary: #667eea;
@@ -172,9 +188,15 @@ $bgCss = $loginBg ? "url('" . htmlspecialchars($loginBg, ENT_QUOTES) . "') cente
       <!-- Branding Side -->
       <div class="col-lg-7 d-none d-lg-block login-image-side">
         <div class="login-branding-overlay">
-          <div class="brand-logo"><i class="bi bi-database"></i></div>
-          <h1 class="text-white mt-2 fw-bold">DMC DataLoad</h1>
-          <p class="text-white-50 lead">Sistema de banco de dados</p>
+          <div class="brand-logo">
+            <?php if ($appFavicon): ?>
+              <img src="<?= $baseUrl . htmlspecialchars($appFavicon) ?>" alt="Logo" style="width:48px;height:48px;object-fit:contain;">
+            <?php else: ?>
+              <i class="bi bi-database"></i>
+            <?php endif; ?>
+          </div>
+          <h1 class="text-white mt-2 fw-bold"><?= htmlspecialchars($appNome) ?></h1>
+          <p class="text-white-50 lead"><?= htmlspecialchars($appDescricao) ?></p>
         </div>
       </div>
 
@@ -183,7 +205,13 @@ $bgCss = $loginBg ? "url('" . htmlspecialchars($loginBg, ENT_QUOTES) . "') cente
         <div class="login-card p-4 p-md-5">
           <div class="w-100">
             <div class="text-center mb-4 d-lg-none">
-              <div class="mobile-brand-logo"><i class="bi bi-database"></i></div>
+              <div class="mobile-brand-logo">
+                <?php if ($appFavicon): ?>
+                  <img src="<?= $baseUrl . htmlspecialchars($appFavicon) ?>" alt="Logo" style="width:32px;height:32px;object-fit:contain;">
+                <?php else: ?>
+                  <i class="bi bi-database"></i>
+                <?php endif; ?>
+              </div>
             </div>
 
             <div class="text-center login-stagger-1">
@@ -224,7 +252,7 @@ $bgCss = $loginBg ? "url('" . htmlspecialchars($loginBg, ENT_QUOTES) . "') cente
           </div>
         </div>
         <div class="login-footer">
-          <p class="mb-0">&copy; <?= date('Y') ?> DMC DataLoad. Todos os direitos reservados.</p>
+          <p class="mb-0">&copy; <?= date('Y') ?> <?= htmlspecialchars($appNome) ?>. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>

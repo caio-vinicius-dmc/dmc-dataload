@@ -55,6 +55,31 @@ ob_start();
                     <label class="form-label-modern">Descrição</label>
                     <textarea class="form-control-modern" name="descricao" id="rotina_descricao" rows="2"></textarea>
                 </div>
+
+                <!-- Opções de controle de erro -->
+                <div class="col-12">
+                    <label class="form-label-modern mb-2"><i class="bi bi-shield-exclamation me-1"></i>Comportamento em Caso de Erro</label>
+                    <div class="erro-options-container">
+                        <div class="erro-option">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chk_parar_em_erro" name="parar_em_erro" value="1">
+                                <label class="form-check-label" for="chk_parar_em_erro">
+                                    <strong>Parar execução em caso de erro</strong>
+                                    <small class="d-block text-muted">Se um bloco falhar, os blocos seguintes não serão executados. O status será "parcial".</small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="erro-option">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chk_rollback_em_erro" name="rollback_em_erro" value="1">
+                                <label class="form-check-label" for="chk_rollback_em_erro">
+                                    <strong>Rollback em caso de erro</strong>
+                                    <small class="d-block text-muted">Se um bloco falhar, todas as alterações anteriores (INSERT/UPDATE/DELETE) serão desfeitas. Requer "Parar execução" ativo. <span class="text-warning">DDL (CREATE/ALTER/DROP) pode não ser revertido em alguns bancos.</span></small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <?php include __DIR__ . '/../partials/recurso_empresa_projeto.php'; ?>
             </div>
@@ -87,6 +112,12 @@ ob_start();
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="#" onclick="addBloco('', 'PROCEDURE'); return false;"><i class="bi bi-code-square me-2"></i>PROCEDURE</a></li>
                 <li><a class="dropdown-item" href="#" onclick="addBloco('', 'FUNCTION'); return false;"><i class="bi bi-box me-2"></i>FUNCTION</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="addBloco('', 'GRANT'); return false;"><i class="bi bi-shield-check me-2"></i>GRANT</a></li>
+                <li><a class="dropdown-item" href="#" onclick="addBloco('', 'REVOKE'); return false;"><i class="bi bi-shield-x me-2"></i>REVOKE</a></li>
+                <li><a class="dropdown-item" href="#" onclick="addBloco('', 'CALL'); return false;"><i class="bi bi-telephone me-2"></i>CALL / EXEC</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="addBloco('', 'OUTROS'); return false;"><i class="bi bi-three-dots me-2"></i>OUTROS</a></li>
             </ul>
         </div>
     </div>
@@ -96,6 +127,40 @@ ob_start();
                 <i class="bi bi-inbox display-4 d-block mb-3"></i>
                 <p>Nenhum bloco adicionado ainda. Clique em "Adicionar Bloco" para começar.</p>
             </div>
+        </div>
+
+        <!-- Botões de ação no rodapé -->
+        <div class="blocos-bottom-actions" id="bottomActions" style="display:none;">
+            <div class="dropup">
+                <button class="btn-modern-outline btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-plus-lg me-2"></i>Adicionar Bloco
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'SELECT'); return false;"><i class="bi bi-search me-2"></i>SELECT</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'INSERT'); return false;"><i class="bi bi-plus-square me-2"></i>INSERT</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'UPDATE'); return false;"><i class="bi bi-pencil-square me-2"></i>UPDATE</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'DELETE'); return false;"><i class="bi bi-trash me-2"></i>DELETE</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'MERGE'); return false;"><i class="bi bi-arrow-down-up me-2"></i>MERGE</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'TRUNCATE'); return false;"><i class="bi bi-eraser me-2"></i>TRUNCATE</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'CREATE'); return false;"><i class="bi bi-file-earmark-plus me-2"></i>CREATE</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'ALTER'); return false;"><i class="bi bi-gear me-2"></i>ALTER</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'DROP'); return false;"><i class="bi bi-x-circle me-2"></i>DROP</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'PROCEDURE'); return false;"><i class="bi bi-code-square me-2"></i>PROCEDURE</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'FUNCTION'); return false;"><i class="bi bi-box me-2"></i>FUNCTION</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'GRANT'); return false;"><i class="bi bi-shield-check me-2"></i>GRANT</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'REVOKE'); return false;"><i class="bi bi-shield-x me-2"></i>REVOKE</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'CALL'); return false;"><i class="bi bi-telephone me-2"></i>CALL / EXEC</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="addBloco('', 'OUTROS'); return false;"><i class="bi bi-three-dots me-2"></i>OUTROS</a></li>
+                </ul>
+            </div>
+            <button type="button" class="btn-modern-primary btn-sm" onclick="$('#btnSalvar').click()">
+                <i class="bi bi-check-lg me-2"></i>Salvar Rotina
+            </button>
         </div>
     </div>
 </div>
@@ -169,7 +234,6 @@ $extraStyles = <<<'STYLES'
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     border: 1px solid #e2e8f0;
-    overflow: hidden;
 }
 
 .card-modern-header {
@@ -181,6 +245,7 @@ $extraStyles = <<<'STYLES'
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .card-modern-body {
@@ -261,7 +326,6 @@ textarea.form-control-modern {
     margin-bottom: 16px;
     border: 2px solid #e5e7eb;
     transition: all 0.3s;
-    overflow: hidden;
 }
 .bloco-item:hover {
     border-color: #6366f1;
@@ -276,6 +340,7 @@ textarea.form-control-modern {
     background: #f9fafb;
     cursor: pointer;
     user-select: none;
+    border-radius: 12px 12px 0 0;
 }
 .bloco-header:hover {
     background: #f3f4f6;
@@ -342,8 +407,75 @@ textarea.form-control-modern {
 .tipo-DROP { background: #fca5a5; color: #7f1d1d; }
 .tipo-PROCEDURE { background: #c7d2fe; color: #3730a3; }
 .tipo-FUNCTION { background: #bfdbfe; color: #1e3a8a; }
+.tipo-GRANT { background: #d1fae5; color: #047857; }
+.tipo-REVOKE { background: #fce7f3; color: #9d174d; }
+.tipo-CALL { background: #e0e7ff; color: #4338ca; }
+.tipo-OUTROS { background: #f3f4f6; color: #374151; }
 .sortable-container {
     min-height: 100px;
+}
+.card-modern .dropdown-menu,
+.blocos-bottom-actions .dropdown-menu {
+    max-height: 350px;
+    overflow-y: auto;
+    z-index: 1060;
+}
+.blocos-bottom-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border-top: 2px dashed #e5e7eb;
+    border-radius: 0 0 12px 12px;
+}
+.blocos-bottom-actions .btn-modern-outline {
+    background: white;
+    border: 2px solid #e2e8f0;
+    color: #64748b;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+.blocos-bottom-actions .btn-modern-outline:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+.erro-options-container {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.erro-option {
+    flex: 1;
+    min-width: 280px;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    transition: all 0.2s ease;
+}
+.erro-option:hover {
+    border-color: #cbd5e1;
+}
+.erro-option .form-check-input:checked ~ .form-check-label {
+    color: #1e293b;
+}
+.erro-option .form-check-input {
+    width: 3em;
+    height: 1.5em;
+    cursor: pointer;
+}
+.erro-option .form-check-label {
+    cursor: pointer;
+    margin-left: 0.5rem;
 }
 .ui-sortable-helper {
     opacity: 0.8;
@@ -389,6 +521,18 @@ $extraScripts .= <<<'SCRIPTS'
 
 <script>
 let blocoCounter = 0;
+
+// Vincular rollback ao parar_em_erro
+$("#chk_rollback_em_erro").on("change", function() {
+    if ($(this).is(":checked")) {
+        $("#chk_parar_em_erro").prop("checked", true);
+    }
+});
+$("#chk_parar_em_erro").on("change", function() {
+    if (!$(this).is(":checked")) {
+        $("#chk_rollback_em_erro").prop("checked", false);
+    }
+});
 
 function addBloco(codigo = "", tipo = "SELECT", sql = "") {
     blocoCounter++;
@@ -440,6 +584,10 @@ function addBloco(codigo = "", tipo = "SELECT", sql = "") {
                             <option value="DROP">DROP - Remover Objeto</option>
                             <option value="PROCEDURE">PROCEDURE - Procedimento</option>
                             <option value="FUNCTION">FUNCTION - Função</option>
+                            <option value="GRANT">GRANT - Conceder Permissão</option>
+                            <option value="REVOKE">REVOKE - Revogar Permissão</option>
+                            <option value="CALL">CALL / EXEC - Executar</option>
+                            <option value="OUTROS">OUTROS - Comando Livre</option>
                         </select>
                     </div>
                 </div>
@@ -453,6 +601,7 @@ function addBloco(codigo = "", tipo = "SELECT", sql = "") {
     `;
     
     $("#lista-blocos").append(blocoHtml);
+    $("#bottomActions").show();
     
     const blocoElement = $(`[data-bloco-id="${blocoId}"]`);
     const textarea = blocoElement.find(".sql-editor")[0];
@@ -505,6 +654,7 @@ function addBloco(codigo = "", tipo = "SELECT", sql = "") {
                 blocoElement.remove();
                 if ($("#lista-blocos .bloco-item").length === 0) {
                     $("#empty-message").show();
+                    $("#bottomActions").hide();
                 }
             }
         });
@@ -728,6 +878,14 @@ $(document).ready(function() {
                     
                     $("#rotina_descricao").val(res.rotina.descricao || "");
                     console.log("Campo rotina_descricao preenchido com:", $("#rotina_descricao").val());
+                    
+                    // Preencher opções de erro
+                    if (res.rotina.parar_em_erro === true || res.rotina.parar_em_erro === 't' || res.rotina.parar_em_erro === '1') {
+                        $("#chk_parar_em_erro").prop("checked", true);
+                    }
+                    if (res.rotina.rollback_em_erro === true || res.rotina.rollback_em_erro === 't' || res.rotina.rollback_em_erro === '1') {
+                        $("#chk_rollback_em_erro").prop("checked", true);
+                    }
                     
                     // Verificar se a conexão existe no select
                     const selectConexao = $("#select-conexao");

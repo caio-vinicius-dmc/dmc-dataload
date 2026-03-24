@@ -540,6 +540,12 @@ class SchedulerController
                 return;
             }
             
+            // Validar data de início obrigatória
+            if (empty($data['data_inicio'])) {
+                echo json_encode(['sucesso' => false, 'erro' => 'Data/Hora de Início é obrigatória']);
+                return;
+            }
+            
             // Verificar se a rotina existe
             $stmt = $this->db->prepare("SELECT id FROM tb_rotinas WHERE id = ?");
             $stmt->execute([$data['id_rotina']]);

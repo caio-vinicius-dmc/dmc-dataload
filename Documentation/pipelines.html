@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMC DataLoad — Documentação Completa do Pipeline Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #eef2ff;
+            --secondary: #1e293b;
+            --accent: #0891b2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --bg: #ffffff;
+            --bg-alt: #f8fafc;
+            --code-bg: #1e293b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        /* ===== COVER ===== */
+        .cover {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #0891b2 100%);
+            color: white;
+            padding: 100px 60px;
+            text-align: center;
+            page-break-after: always;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .cover-logo {
+            width: 120px; height: 120px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 28px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3.5rem;
+            margin-bottom: 40px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .cover h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+        }
+        .cover h2 {
+            font-size: 1.3rem;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 50px;
+        }
+        .cover-meta {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        .cover-meta span { margin: 0 12px; }
+        .cover-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 24px;
+            padding: 8px 20px;
+            font-size: 0.85rem;
+            margin-top: 24px;
+        }
+
+        /* ===== LAYOUT ===== */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 50px;
+        }
+
+        /* ===== TOC ===== */
+        .toc {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            page-break-after: always;
+        }
+        .toc h2 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 24px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .toc ol {
+            list-style: none;
+            counter-reset: toc-counter;
+        }
+        .toc > ol > li {
+            counter-increment: toc-counter;
+            margin-bottom: 8px;
+        }
+        .toc > ol > li > a::before {
+            content: counter(toc-counter) ".";
+            font-weight: 700;
+            color: var(--primary);
+            margin-right: 8px;
+            min-width: 24px;
+            display: inline-block;
+        }
+        .toc a {
+            text-decoration: none;
+            color: var(--text);
+            padding: 6px 0;
+            display: block;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .toc a:hover { color: var(--primary); }
+        .toc ol ol {
+            margin-left: 30px;
+            margin-top: 4px;
+        }
+        .toc ol ol li a {
+            font-weight: 400;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* ===== HEADINGS ===== */
+        h2.section-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--secondary);
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 12px;
+            margin: 60px 0 30px;
+            page-break-before: always;
+        }
+        h2.section-title:first-of-type { page-break-before: auto; }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin: 35px 0 16px;
+        }
+        h4 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 24px 0 12px;
+        }
+
+        p { margin-bottom: 14px; }
+
+        /* ===== COMPONENT CARDS ===== */
+        .component-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            margin-bottom: 28px;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+        .component-header {
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            color: white;
+        }
+        .component-header .icon-box {
+            width: 48px; height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+        .component-header .info h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: white;
+        }
+        .component-header .info p {
+            margin: 2px 0 0;
+            font-size: 0.8rem;
+            opacity: 0.85;
+        }
+        .component-header .badges {
+            margin-left: auto;
+            display: flex; gap: 6px; flex-shrink: 0;
+        }
+        .io-badge {
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .component-body {
+            padding: 20px 24px;
+        }
+
+        /* ===== TABLES ===== */
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 16px;
+            font-size: 0.88rem;
+        }
+        .config-table th {
+            background: var(--bg-alt);
+            text-align: left;
+            padding: 10px 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border);
+        }
+        .config-table td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+        }
+        .config-table tr:last-child td { border-bottom: none; }
+        .config-table code {
+            background: #f1f5f9;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.82rem;
+            color: var(--primary);
+        }
+
+        /* ===== CODE ===== */
+        pre {
+            background: var(--code-bg);
+            color: #e2e8f0;
+            padding: 18px 22px;
+            border-radius: 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 12px 0 16px;
+        }
+        pre .comment { color: #64748b; }
+        pre .keyword { color: #c084fc; }
+        pre .string { color: #34d399; }
+        pre .number { color: #fbbf24; }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85em;
+        }
+        p code, li code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--primary);
+        }
+
+        /* ===== EXAMPLE BOX ===== */
+        .example-box {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border: 1px solid #fde68a;
+            border-left: 4px solid var(--warning);
+            border-radius: 0 10px 10px 0;
+            padding: 18px 22px;
+            margin: 16px 0 20px;
+        }
+        .example-box .title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #92400e;
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .example-box p { margin-bottom: 6px; font-size: 0.9rem; }
+
+        /* ===== TIP BOX ===== */
+        .tip-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 1px solid #a7f3d0;
+            border-left: 4px solid var(--success);
+            border-radius: 0 10px 10px 0;
+            padding: 16px 20px;
+            margin: 14px 0;
+        }
+        .tip-box .title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #065f46;
+            margin-bottom: 6px;
+        }
+        .tip-box p { font-size: 0.88rem; margin-bottom: 4px; }
+
+        /* ===== WARNING BOX ===== */
+        .warn-box {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 1px solid #fca5a5;
+            border-left: 4px solid var(--danger);
+            border-radius: 0 10px 10px 0;
+            padding: 16px 20px;
+            margin: 14px 0;
+        }
+        .warn-box .title { font-weight: 700; font-size: 0.85rem; color: #991b1b; margin-bottom: 6px; }
+        .warn-box p { font-size: 0.88rem; margin-bottom: 4px; }
+
+        /* ===== INFO BOX ===== */
+        .info-box {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #93c5fd;
+            border-left: 4px solid #3b82f6;
+            border-radius: 0 10px 10px 0;
+            padding: 16px 20px;
+            margin: 14px 0;
+        }
+        .info-box .title { font-weight: 700; font-size: 0.85rem; color: #1e40af; margin-bottom: 6px; }
+        .info-box p { font-size: 0.88rem; margin-bottom: 4px; }
+
+        /* ===== FLOW DIAGRAMS ===== */
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 16px 0;
+            margin: 10px 0;
+        }
+        .flow-node {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+        }
+        .flow-arrow {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* ===== LISTS ===== */
+        ul, ol { margin: 8px 0 14px 24px; }
+        li { margin-bottom: 4px; }
+
+        /* ===== FOOTER ===== */
+        .doc-footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid var(--border);
+            margin-top: 60px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* ===== PRINT ===== */
+        @media print {
+            body { font-size: 11pt; }
+            .cover { min-height: auto; padding: 60px 40px; }
+            .container { padding: 0 30px; }
+            h2.section-title { page-break-before: always; }
+            .component-card { break-inside: avoid; }
+            pre { font-size: 8pt; }
+        }
+
+        /* ===== SHORTCUT TABLE ===== */
+        .shortcut-table {
+            margin: 12px 0;
+        }
+        .shortcut-table td:first-child {
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+        }
+        .kbd {
+            background: #f1f5f9;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            padding: 2px 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.78rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* ===== CATEGORY TAG ===== */
+        .cat-tag {
+            display: inline-block;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+        .cat-io { background: #dcfce7; color: #166534; }
+        .cat-data { background: #dbeafe; color: #1e40af; }
+        .cat-logic { background: #fef3c7; color: #92400e; }
+        .cat-action { background: #fce7f3; color: #9d174d; }
+    </style>
+</head>
+<body>
+
+<!-- ================ CAPA ================ -->
+<div class="cover">
+    <div class="cover-logo">
+        <i class="bi bi-diagram-3-fill"></i>
+    </div>
+    <h1>Pipeline Builder</h1>
+    <h2>Documentação Completa de Uso e Referência de Componentes</h2>
+    <div class="cover-badge">DMC DataLoad &mdash; Plataforma de Integração de Dados</div>
+    <div class="cover-meta" style="margin-top: 40px;">
+        <span>Versão 1.0</span> &bull;
+        <span>10 de Junho de 2025</span> &bull;
+        <span>24 Componentes Documentados</span>
+    </div>
+</div>
+
+<div class="container">
+
+<!-- ================ ÍNDICE ================ -->
+<div class="toc" id="toc">
+    <h2><i class="bi bi-list-nested"></i> Índice</h2>
+    <ol>
+        <li><a href="#visao-geral">Visão Geral do Pipeline Builder</a></li>
+        <li><a href="#interface">Interface e Controles da Tela</a>
+            <ol>
+                <li><a href="#toolbar">Barra de Ferramentas</a></li>
+                <li><a href="#paleta">Painel de Componentes (Paleta)</a></li>
+                <li><a href="#canvas">Área de Trabalho (Canvas)</a></li>
+                <li><a href="#propriedades">Painel de Propriedades</a></li>
+                <li><a href="#modos">Modos de Edição</a></li>
+                <li><a href="#atalhos">Atalhos de Teclado</a></li>
+            </ol>
+        </li>
+        <li><a href="#componentes-io">Componentes: Entrada / Saída</a>
+            <ol>
+                <li><a href="#comp-trigger">Trigger</a></li>
+                <li><a href="#comp-api-call">API Call</a></li>
+                <li><a href="#comp-end">End</a></li>
+                <li><a href="#comp-file-export">File Export</a></li>
+            </ol>
+        </li>
+        <li><a href="#componentes-data">Componentes: Dados</a>
+            <ol>
+                <li><a href="#comp-sql-query">SQL Query</a></li>
+                <li><a href="#comp-http-request">HTTP Request</a></li>
+                <li><a href="#comp-transform">Transform</a></li>
+                <li><a href="#comp-data-merge">Data Merge</a></li>
+                <li><a href="#comp-csv-parse">CSV Parse</a></li>
+                <li><a href="#comp-sql-upsert">SQL Upsert</a></li>
+                <li><a href="#comp-data-format">Data Format</a></li>
+                <li><a href="#comp-rotina">Rotina</a></li>
+            </ol>
+        </li>
+        <li><a href="#componentes-logic">Componentes: Lógica</a>
+            <ol>
+                <li><a href="#comp-condition">Condition</a></li>
+                <li><a href="#comp-try-catch">Try/Catch</a></li>
+                <li><a href="#comp-loop">Loop</a></li>
+                <li><a href="#comp-delay">Delay</a></li>
+                <li><a href="#comp-switch-case">Switch/Case</a></li>
+            </ol>
+        </li>
+        <li><a href="#componentes-action">Componentes: Ações</a>
+            <ol>
+                <li><a href="#comp-script">Script</a></li>
+                <li><a href="#comp-set-variable">Set Variable</a></li>
+                <li><a href="#comp-email">Email</a></li>
+                <li><a href="#comp-log">Log</a></li>
+                <li><a href="#comp-format-template">Format Template</a></li>
+                <li><a href="#comp-regex">Regex</a></li>
+                <li><a href="#comp-counter">Counter</a></li>
+            </ol>
+        </li>
+        <li><a href="#variaveis">Sistema de Variáveis</a></li>
+        <li><a href="#execucao">Como Funciona a Execução</a></li>
+        <li><a href="#exemplos">Exemplos Práticos com Combinações</a>
+            <ol>
+                <li><a href="#ex1">ETL: Extrair, Transformar e Carregar</a></li>
+                <li><a href="#ex2">Relatório por Email em PDF</a></li>
+                <li><a href="#ex3">Monitoramento de API com Alertas</a></li>
+                <li><a href="#ex4">Migração de Dados entre Bancos</a></li>
+                <li><a href="#ex5">Processamento de CSV com Validação</a></li>
+                <li><a href="#ex6">Pipeline com Tratamento de Erros</a></li>
+                <li><a href="#ex7">Geração de Múltiplos Formatos</a></li>
+                <li><a href="#ex8">Loop com Chamadas HTTP Individuais</a></li>
+            </ol>
+        </li>
+    </ol>
+</div>
+
+<!-- ================ 1. VISÃO GERAL ================ -->
+<h2 class="section-title" id="visao-geral">1. Visão Geral do Pipeline Builder</h2>
+
+<p>O <strong>Pipeline Builder</strong> é o editor visual de pipelines de dados do DMC DataLoad. Ele permite criar fluxos de automação complexos arrastando e conectando componentes em um canvas interativo, sem necessidade de programação.</p>
+
+<h3>O que você pode fazer:</h3>
+<ul>
+    <li><strong>Extrair dados</strong> — de bancos de dados (PostgreSQL, MySQL, SQL Server, Oracle, SQLite), APIs HTTP, arquivos CSV</li>
+    <li><strong>Transformar dados</strong> — filtrar, ordenar, mapear campos, agregar, mesclar datasets, aplicar regex</li>
+    <li><strong>Carregar dados</strong> — inserir/atualizar em bancos de dados, exportar para CSV/JSON/XML/PDF/HTML</li>
+    <li><strong>Automatizar ações</strong> — enviar emails com anexos, chamar APIs, executar rotinas ETL, registrar logs</li>
+    <li><strong>Controlar fluxo</strong> — condições if/else, switch/case, loops, try/catch com retentativas, delays</li>
+    <li><strong>Agendar execuções</strong> — triggers manuais, cron (agendamento), webhooks, eventos de API</li>
+</ul>
+
+<div class="info-box">
+    <div class="title"><i class="bi bi-info-circle-fill"></i> Nota</div>
+    <p>O pipeline suporta <strong>24 tipos de componentes</strong> distribuídos em 4 categorias: Entrada/Saída, Dados, Lógica e Ações. Cada componente pode ser configurado individualmente e conectado a outros para criar fluxos complexos.</p>
+</div>
+
+<!-- ================ 2. INTERFACE ================ -->
+<h2 class="section-title" id="interface">2. Interface e Controles da Tela</h2>
+
+<h3 id="toolbar">2.1 Barra de Ferramentas (Toolbar)</h3>
+<p>A barra superior contém todos os controles principais do editor:</p>
+
+<table class="config-table">
+    <thead><tr><th>Controle</th><th>Ícone</th><th>Descrição</th></tr></thead>
+    <tbody>
+        <tr><td><strong>Voltar</strong></td><td><i class="bi bi-arrow-left"></i></td><td>Volta para a lista de pipelines</td></tr>
+        <tr><td><strong>Nome do Pipeline</strong></td><td>—</td><td>Campo editável. Altere o nome do pipeline diretamente</td></tr>
+        <tr><td><strong>Modo No-Code</strong></td><td><i class="bi bi-grid-3x3-gap"></i></td><td>Editor visual drag-and-drop (padrão)</td></tr>
+        <tr><td><strong>Modo Low-Code</strong></td><td><i class="bi bi-braces"></i></td><td>Formato estruturado tipo YAML</td></tr>
+        <tr><td><strong>Modo Code</strong></td><td><i class="bi bi-code-slash"></i></td><td>JSON bruto do Drawflow (avançado)</td></tr>
+        <tr><td><strong>Zoom In / Out</strong></td><td><i class="bi bi-zoom-in"></i> <i class="bi bi-zoom-out"></i></td><td>Controla o nível de zoom do canvas (mostra percentual)</td></tr>
+        <tr><td><strong>Auto Layout</strong></td><td><i class="bi bi-grid-1x2"></i></td><td>Reorganiza os nós automaticamente em layout organizado</td></tr>
+        <tr><td><strong>Limpar Canvas</strong></td><td><i class="bi bi-trash3"></i></td><td>Remove todos os nós (com confirmação)</td></tr>
+        <tr><td><strong>Compartilhar</strong></td><td><i class="bi bi-share"></i></td><td>Abre modal de compartilhamento (RBAC)</td></tr>
+        <tr><td><strong>Validar</strong></td><td><i class="bi bi-check2-all"></i></td><td>Verifica erros no pipeline (nós desconectados, campos obrigatórios)</td></tr>
+        <tr><td><strong>Executar</strong></td><td><i class="bi bi-play-fill"></i></td><td>Executa o pipeline imediatamente (botão verde)</td></tr>
+        <tr><td><strong>Salvar</strong></td><td><i class="bi bi-save"></i></td><td>Salva o pipeline (botão azul principal)</td></tr>
+        <tr><td><strong>Visibilidade RBAC</strong></td><td><i class="bi bi-building"></i></td><td>Define empresa/projeto para controle de acesso</td></tr>
+    </tbody>
+</table>
+
+<h3 id="paleta">2.2 Painel de Componentes (Paleta Lateral)</h3>
+<p>No lado esquerdo da tela, os componentes estão organizados em <strong>4 grupos colapsáveis</strong>:</p>
+
+<table class="config-table">
+    <thead><tr><th>Grupo</th><th>Qtd</th><th>Componentes</th></tr></thead>
+    <tbody>
+        <tr><td><strong><i class="bi bi-arrow-down-up"></i> Entrada / Saída</strong></td><td>4</td><td>Trigger, API Call, File Export, End</td></tr>
+        <tr><td><strong><i class="bi bi-database"></i> Dados</strong></td><td>8</td><td>SQL Query, HTTP Request, Transform, Data Merge, CSV Parse, SQL Upsert, Data Format, Rotina</td></tr>
+        <tr><td><strong><i class="bi bi-signpost-split"></i> Lógica</strong></td><td>5</td><td>Condition, Try/Catch, Loop, Delay, Switch/Case</td></tr>
+        <tr><td><strong><i class="bi bi-lightning"></i> Ações</strong></td><td>7</td><td>Script, Set Variable, Email, Log, Format Template, Regex, Counter</td></tr>
+    </tbody>
+</table>
+
+<p>Para adicionar um componente ao canvas:</p>
+<ul>
+    <li><strong>Arrastar e soltar</strong> — arraste o componente da paleta para a área de trabalho</li>
+    <li><strong>Duplo-clique</strong> — clique duas vezes no componente para adicioná-lo automaticamente</li>
+</ul>
+
+<p>Use a <strong>barra de busca</strong> no topo da paleta para filtrar componentes pelo nome.</p>
+
+<h3 id="canvas">2.3 Área de Trabalho (Canvas)</h3>
+<p>O canvas é onde você monta o pipeline visualmente:</p>
+<ul>
+    <li><strong>Mover nós</strong> — clique e arraste qualquer nó</li>
+    <li><strong>Conectar nós</strong> — clique na <strong>saída</strong> (bolinha à direita) de um nó e arraste até a <strong>entrada</strong> (bolinha à esquerda) de outro</li>
+    <li><strong>Selecionar</strong> — clique em um nó para selecioná-lo e abrir suas propriedades</li>
+    <li><strong>Deletar</strong> — selecione o nó e pressione <span class="kbd">Delete</span></li>
+    <li><strong>Zoom</strong> — use a roda do mouse ou os botões da toolbar</li>
+    <li><strong>Pan/Mover</strong> — clique em área vazia e arraste para mover o canvas</li>
+</ul>
+
+<div class="tip-box">
+    <div class="title"><i class="bi bi-lightbulb-fill"></i> Dica</div>
+    <p>Os nós com <strong>2 saídas</strong> (Condition, Try/Catch, API Call) têm a saída superior para o caminho de <strong>sucesso/verdadeiro</strong> e a inferior para <strong>erro/falso</strong>. O Switch/Case tem <strong>3 saídas</strong>.</p>
+</div>
+
+<h3 id="propriedades">2.4 Painel de Propriedades</h3>
+<p>Ao selecionar um nó no canvas, o painel de propriedades aparece à direita com os campos de configuração específicos daquele componente. Todos os nós possuem:</p>
+<ul>
+    <li><strong>Label</strong> — nome de exibição do nó (pode ser renomeado)</li>
+    <li><strong>Parar ao falhar</strong> — se ativado, erros neste nó interrompem o pipeline todo</li>
+    <li><strong>Variável de saída</strong> — nome da variável que receberá o resultado (componentes de dados)</li>
+</ul>
+
+<h3 id="modos">2.5 Modos de Edição</h3>
+
+<h4>Modo No-Code (Visual)</h4>
+<p>O modo padrão. Arraste componentes, conecte-os visualmente e configure propriedades no painel lateral. Ideal para a maioria dos usuários.</p>
+
+<h4>Modo Low-Code (Estruturado)</h4>
+<p>Um formato texto onde cada nó é representado como:</p>
+<pre>[tipo_componente] id=N label="Nome" pos=(X, Y)
+  campo1 = valor1
+  campo2 = valor2
+  -> output_1 => 2.input_1</pre>
+
+<h4>Modo Code (JSON)</h4>
+<p>Acesso direto ao JSON do Drawflow. Para usuários avançados que precisam manipular a estrutura internamente. Possui botões de <strong>Formatar</strong> (pretty-print) e <strong>Aplicar</strong> (carregar no canvas).</p>
+
+<div class="info-box">
+    <div class="title"><i class="bi bi-arrows-angle-expand"></i> Sincronização Bidirecional</div>
+    <p>Ao trocar entre modos, o sistema sincroniza automaticamente. Alterações feitas em qualquer modo são preservadas.</p>
+</div>
+
+<h3 id="atalhos">2.6 Atalhos de Teclado</h3>
+<table class="config-table shortcut-table">
+    <thead><tr><th>Atalho</th><th>Ação</th></tr></thead>
+    <tbody>
+        <tr><td><span class="kbd">Ctrl</span> + <span class="kbd">S</span></td><td>Salvar pipeline</td></tr>
+        <tr><td><span class="kbd">Delete</span></td><td>Remover nó selecionado</td></tr>
+        <tr><td>Roda do mouse</td><td>Zoom in/out no canvas</td></tr>
+    </tbody>
+</table>
+
+
+<!-- ================ 3. ENTRADA / SAÍDA ================ -->
+<h2 class="section-title" id="componentes-io">3. Componentes: Entrada / Saída</h2>
+
+<!-- TRIGGER -->
+<div class="component-card" id="comp-trigger">
+    <div class="component-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+        <div class="icon-box"><i class="bi bi-play-circle"></i></div>
+        <div class="info">
+            <h4>Trigger <span class="cat-tag cat-io">I/O</span></h4>
+            <p>Ponto de início de todo pipeline. Define como e quando o pipeline é acionado.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">0 entradas</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <h4>Campos de Configuração</h4>
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>trigger_type</code></td><td>Seleção</td><td>Tipo de disparo: <strong>Manual</strong>, <strong>Cron</strong> (agendamento), <strong>Evento de API</strong>, <strong>Webhook</strong></td></tr>
+                <tr><td><code>cron_expression</code></td><td>Texto</td><td>Expressão CRON (apenas se tipo = Cron). Ex: <code>0 8 * * *</code> = todos os dias às 8h</td></tr>
+                <tr><td><code>evento_api_id</code></td><td>Seleção</td><td>Evento de API cadastrado (apenas se tipo = Evento de API)</td></tr>
+                <tr><td><code>webhook_secret</code></td><td>Texto</td><td>Chave secreta para validação do webhook (opcional)</td></tr>
+            </tbody>
+        </table>
+
+        <h4>Presets de CRON disponíveis:</h4>
+        <table class="config-table">
+            <thead><tr><th>Expressão</th><th>Significado</th></tr></thead>
+            <tbody>
+                <tr><td><code>* * * * *</code></td><td>A cada minuto</td></tr>
+                <tr><td><code>*/5 * * * *</code></td><td>A cada 5 minutos</td></tr>
+                <tr><td><code>0 * * * *</code></td><td>A cada hora</td></tr>
+                <tr><td><code>0 8 * * *</code></td><td>Todos os dias às 8h</td></tr>
+                <tr><td><code>0 0 * * 1</code></td><td>Toda segunda-feira à meia-noite</td></tr>
+                <tr><td><code>0 0 1 * *</code></td><td>Primeiro dia de cada mês</td></tr>
+            </tbody>
+        </table>
+
+        <div class="tip-box">
+            <div class="title"><i class="bi bi-lightbulb-fill"></i> Dica</div>
+            <p>Todo pipeline precisa começar com um <strong>Trigger</strong>. Ele é sempre o primeiro nó a ser executado.</p>
+        </div>
+    </div>
+</div>
+
+<!-- API CALL -->
+<div class="component-card" id="comp-api-call">
+    <div class="component-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
+        <div class="icon-box"><i class="bi bi-cloud-check"></i></div>
+        <div class="info">
+            <h4>API Call <span class="cat-tag cat-io">I/O</span></h4>
+            <p>Chama uma API externa cadastrada e avalia o resultado com condição. Bifurca o fluxo.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">2 saídas</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>api_id</code></td><td>Seleção</td><td>API cadastrada em &ldquo;APIs Externas&rdquo;</td></tr>
+                <tr><td><code>jsonpath</code></td><td>Texto</td><td>Caminho JSONPath para extrair valor. Ex: <code>$.data.status</code>, <code>$.results[0].value</code></td></tr>
+                <tr><td><code>condition_op</code></td><td>Seleção</td><td>Operador: <code>equals</code>, <code>not_equals</code>, <code>contains</code>, <code>greater_than</code>, <code>less_than</code>, <code>is_true</code>, <code>is_false</code>, <code>is_null</code>, <code>is_not_null</code></td></tr>
+                <tr><td><code>condition_value</code></td><td>Texto</td><td>Valor esperado para a comparação</td></tr>
+                <tr><td><code>output_variable</code></td><td>Texto</td><td>Variável para guardar resultado (padrão: <code>api_result</code>)</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Saída 1</strong> (superior): condição <strong>verdadeira</strong> &mdash; <strong>Saída 2</strong> (inferior): condição <strong>falsa</strong></p>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
+            <p>API Call para verificar se um serviço está online: JSONPath = <code>$.status</code>, Condição = <code>equals</code>, Valor = <code>healthy</code>. Se verdadeiro, segue o fluxo normal; se falso, envia alerta por email.</p>
+        </div>
+    </div>
+</div>
+
+<!-- FILE EXPORT -->
+<div class="component-card" id="comp-file-export">
+    <div class="component-header" style="background: linear-gradient(135deg, #16a34a, #15803d);">
+        <div class="icon-box"><i class="bi bi-file-earmark-arrow-down"></i></div>
+        <div class="info">
+            <h4>File Export <span class="cat-tag cat-io">I/O</span></h4>
+            <p>Exporta dados para arquivo em diversos formatos. Ideal para gerar relatórios.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>input_variable</code></td><td>Texto</td><td>Variável com os dados (array)</td></tr>
+                <tr><td><code>export_format</code></td><td>Seleção</td><td><code>csv</code>, <code>json</code>, <code>xml</code>, <code>txt</code>, <code>html</code>, <code>sql</code></td></tr>
+                <tr><td><code>export_directory</code></td><td>Diretório</td><td>Pasta de destino (browser com seleção)</td></tr>
+                <tr><td><code>filename</code></td><td>Texto</td><td>Nome com placeholders: <code>{date}</code>, <code>{time}</code>, <code>{datetime}</code>, <code>{seq}</code>, <code>{timestamp}</code>, <code>{{variavel}}</code></td></tr>
+                <tr><td><code>csv_delimiter</code></td><td>Texto</td><td>Separador para CSV (padrão: <code>,</code>)</td></tr>
+                <tr><td><code>json_pretty</code></td><td>Seleção</td><td>JSON formatado com indentação (sim/não)</td></tr>
+                <tr><td><code>xml_root</code></td><td>Texto</td><td>Elemento raiz XML (padrão: <code>data</code>)</td></tr>
+                <tr><td><code>xml_row</code></td><td>Texto</td><td>Elemento por registro (padrão: <code>row</code>)</td></tr>
+                <tr><td><code>html_title</code></td><td>Texto</td><td>Título da página HTML</td></tr>
+                <tr><td><code>sql_table_name</code></td><td>Texto</td><td>Nome da tabela para CREATE TABLE + INSERT</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Saída:</strong> <code>{ file_path, filename, format, records, file_size, file_size_formatted }</code></p>
+    </div>
+</div>
+
+<!-- END -->
+<div class="component-card" id="comp-end">
+    <div class="component-header" style="background: linear-gradient(135deg, #dc2626, #b91c1c);">
+        <div class="icon-box"><i class="bi bi-stop-circle"></i></div>
+        <div class="info">
+            <h4>End <span class="cat-tag cat-io">I/O</span></h4>
+            <p>Nó terminal que marca o fim de um fluxo. Opcional — usado para organização visual.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">0 saídas</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <p>Não possui campos de configuração. Serve como ponto de finalização visual do pipeline. Quando atingido, indica que aquele ramo do fluxo foi completado com sucesso.</p>
+    </div>
+</div>
+
+
+<!-- ================ 4. DADOS ================ -->
+<h2 class="section-title" id="componentes-data">4. Componentes: Dados</h2>
+
+<!-- SQL QUERY -->
+<div class="component-card" id="comp-sql-query">
+    <div class="component-header" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+        <div class="icon-box"><i class="bi bi-database"></i></div>
+        <div class="info">
+            <h4>SQL Query <span class="cat-tag cat-data">Dados</span></h4>
+            <p>Executa consultas SQL em bancos de dados conectados. Suporta PostgreSQL, MySQL, SQL Server, Oracle e SQLite.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>connection_id</code></td><td>Seleção</td><td>Conexão de banco de dados configurada</td></tr>
+                <tr><td><code>sql_query</code></td><td>Textarea</td><td>Comando SQL. Suporta <code>{{variáveis}}</code></td></tr>
+                <tr><td><code>max_rows</code></td><td>Número</td><td>Limite de resultados (padrão: 1000, máx: 10.000)</td></tr>
+                <tr><td><code>timeout</code></td><td>Número</td><td>Timeout em segundos (padrão: 30, máx: 120)</td></tr>
+                <tr><td><code>output_variable</code></td><td>Texto</td><td>Variável de saída com os resultados</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Saída para SELECT:</strong> <code>{ rows: [...], total: N, truncated: bool }</code></p>
+        <p><strong>Saída para INSERT/UPDATE/DELETE:</strong> <code>{ affected_rows: N, type: "INSERT" }</code></p>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
+            <p>SQL: <code>SELECT * FROM clientes WHERE estado = 'SP' ORDER BY nome</code></p>
+            <p>Variável de saída: <code>clientes_sp</code> &mdash; pode ser usado nos próximos nós como <code>{{clientes_sp}}</code></p>
+        </div>
+    </div>
+</div>
+
+<!-- HTTP REQUEST -->
+<div class="component-card" id="comp-http-request">
+    <div class="component-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+        <div class="icon-box"><i class="bi bi-cloud-arrow-up"></i></div>
+        <div class="info">
+            <h4>HTTP Request <span class="cat-tag cat-data">Dados</span></h4>
+            <p>Faz requisições HTTP para qualquer URL. Ideal para consumir APIs REST e webhooks.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>method</code></td><td>Seleção</td><td><code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>, <code>PATCH</code></td></tr>
+                <tr><td><code>url</code></td><td>Texto</td><td>URL de destino (suporta <code>{{variáveis}}</code>)</td></tr>
+                <tr><td><code>auth_type</code></td><td>Seleção</td><td><code>none</code>, <code>bearer</code>, <code>basic</code></td></tr>
+                <tr><td><code>auth_token</code></td><td>Texto</td><td>Token Bearer (se auth = bearer)</td></tr>
+                <tr><td><code>auth_user</code> / <code>auth_pass</code></td><td>Texto</td><td>Credenciais Basic Auth (se auth = basic)</td></tr>
+                <tr><td><code>headers</code></td><td>Textarea (JSON)</td><td>Headers customizados. Ex: <code>{"Accept": "application/json"}</code></td></tr>
+                <tr><td><code>body</code></td><td>Textarea</td><td>Corpo da requisição (POST/PUT/PATCH)</td></tr>
+                <tr><td><code>timeout</code></td><td>Número</td><td>Timeout em segundos (padrão: 30, máx: 60)</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Saída:</strong> <code>{ status_code, body, is_json }</code></p>
+
+        <div class="warn-box">
+            <div class="title"><i class="bi bi-shield-exclamation"></i> Segurança</div>
+            <p>Requisições para IPs privados (127.0.0.1, 10.x, 172.16-31.x, 192.168.x) são <strong>bloqueadas</strong> por proteção contra SSRF. Apenas HTTP e HTTPS são permitidos.</p>
+        </div>
+    </div>
+</div>
+
+<!-- TRANSFORM -->
+<div class="component-card" id="comp-transform">
+    <div class="component-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+        <div class="icon-box"><i class="bi bi-arrow-left-right"></i></div>
+        <div class="info">
+            <h4>Transform <span class="cat-tag cat-data">Dados</span></h4>
+            <p>Transforma arrays de dados: mapear campos, filtrar, ordenar, limitar ou agregar.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>transform_type</code></td><td>Seleção</td><td><code>map</code>, <code>filter</code>, <code>sort</code>, <code>limit</code>, <code>aggregate</code></td></tr>
+                <tr><td><code>input_variable</code></td><td>Texto</td><td>Variável contendo o array a transformar</td></tr>
+            </tbody>
+        </table>
+
+        <h4>Operações disponíveis:</h4>
+
+        <p><strong>Map (Mapear campos)</strong> — Renomeia ou seleciona campos:</p>
+        <pre>field_mapping: { "nome_antigo": "nome_novo", "email": "contato_email" }</pre>
+
+        <p><strong>Filter (Filtrar)</strong> — Remove registros que não atendem a condição:</p>
+        <table class="config-table">
+            <tbody>
+                <tr><td><code>filter_field</code></td><td>Campo a avaliar</td></tr>
+                <tr><td><code>filter_operator</code></td><td><code>equals</code>, <code>not_equals</code>, <code>contains</code>, <code>greater</code>, <code>less</code>, <code>is_null</code>, <code>not_null</code></td></tr>
+                <tr><td><code>filter_value</code></td><td>Valor comparar</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Sort (Ordenar)</strong> — <code>sort_field</code> + <code>sort_direction</code> (<code>asc</code> / <code>desc</code>)</p>
+        <p><strong>Limit (Limitar)</strong> — <code>limit_count</code> (qtd) + <code>limit_offset</code> (pular N primeiros)</p>
+        <p><strong>Aggregate (Agregar)</strong> — <code>agg_field</code> + <code>agg_operation</code> (<code>count</code>, <code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code>)</p>
+    </div>
+</div>
+
+<!-- DATA MERGE -->
+<div class="component-card" id="comp-data-merge">
+    <div class="component-header" style="background: linear-gradient(135deg, #0ea5e9, #0284c7);">
+        <div class="icon-box"><i class="bi bi-intersect"></i></div>
+        <div class="info">
+            <h4>Data Merge <span class="cat-tag cat-data">Dados</span></h4>
+            <p>Combina dois datasets usando operações de junção: inner join, left join, union e diff.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>left_variable</code></td><td>Texto</td><td>Primeiro dataset (variável)</td></tr>
+                <tr><td><code>right_variable</code></td><td>Texto</td><td>Segundo dataset (variável)</td></tr>
+                <tr><td><code>merge_type</code></td><td>Seleção</td><td><code>inner_join</code>, <code>left_join</code>, <code>full_join</code>, <code>union</code>, <code>diff</code></td></tr>
+                <tr><td><code>left_key</code></td><td>Texto</td><td>Campo-chave do dataset esquerdo (para joins)</td></tr>
+                <tr><td><code>right_key</code></td><td>Texto</td><td>Campo-chave do dataset direito (para joins)</td></tr>
+            </tbody>
+        </table>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo: Inner Join</div>
+            <p>Combinando <code>clientes</code> com <code>pedidos</code>: left_variable = <code>clientes</code>, right_variable = <code>pedidos</code>, merge_type = <code>inner_join</code>, left_key = <code>id</code>, right_key = <code>cliente_id</code></p>
+        </div>
+    </div>
+</div>
+
+<!-- CSV PARSE -->
+<div class="component-card" id="comp-csv-parse">
+    <div class="component-header" style="background: linear-gradient(135deg, #059669, #047857);">
+        <div class="icon-box"><i class="bi bi-filetype-csv"></i></div>
+        <div class="info">
+            <h4>CSV Parse <span class="cat-tag cat-data">Dados</span></h4>
+            <p>Analisa texto CSV e converte em array de objetos. Suporta delimitadores e aspas customizados.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>input_variable</code></td><td>Texto</td><td>Variável com texto CSV ou array de dados</td></tr>
+                <tr><td><code>delimiter</code></td><td>Texto</td><td>Separador (padrão: <code>,</code>). Outros comuns: <code>;</code>, <code>\t</code></td></tr>
+                <tr><td><code>enclosure</code></td><td>Texto</td><td>Caractere de aspas (padrão: <code>"</code>)</td></tr>
+                <tr><td><code>has_header</code></td><td>Seleção</td><td>A primeira linha é cabeçalho? (sim/não)</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Saída:</strong> Array de objetos com chaves do cabeçalho, ou array de arrays simples.</p>
+    </div>
+</div>
+
+<!-- SQL UPSERT -->
+<div class="component-card" id="comp-sql-upsert">
+    <div class="component-header" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+        <div class="icon-box"><i class="bi bi-database-add"></i></div>
+        <div class="info">
+            <h4>SQL Upsert <span class="cat-tag cat-data">Dados</span></h4>
+            <p>Insere ou atualiza registros em lote em uma tabela. Suporta INSERT e UPSERT (ON CONFLICT).</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>connection_id</code></td><td>Seleção</td><td>Conexão de banco de destino</td></tr>
+                <tr><td><code>target_table</code></td><td>Texto</td><td>Tabela de destino (aceita <code>schema.tabela</code>)</td></tr>
+                <tr><td><code>input_variable</code></td><td>Texto</td><td>Array de dados a inserir/atualizar</td></tr>
+                <tr><td><code>operation</code></td><td>Seleção</td><td><code>insert</code> ou <code>upsert</code></td></tr>
+                <tr><td><code>conflict_keys</code></td><td>Texto</td><td>Colunas de conflito (para upsert). Ex: <code>id,email</code></td></tr>
+                <tr><td><code>field_mapping</code></td><td>Texto (JSON)</td><td>Mapeamento campo-coluna. Vazio = usar nomes iguais</td></tr>
+                <tr><td><code>batch_size</code></td><td>Número</td><td>Registros por lote (padrão: 100, máx: 1000)</td></tr>
+                <tr><td><code>on_error</code></td><td>Seleção</td><td><code>skip_row</code> (pular) ou <code>abort</code> (parar)</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Saída:</strong> <code>{ inserted, updated, failed, total, errors[] }</code></p>
+        <p><strong>Compatibilidade:</strong> PostgreSQL (<code>ON CONFLICT</code>), MySQL (<code>ON DUPLICATE KEY</code>), SQL Server, Oracle, SQLite.</p>
+    </div>
+</div>
+
+<!-- DATA FORMAT -->
+<div class="component-card" id="comp-data-format">
+    <div class="component-header" style="background: linear-gradient(135deg, #0891b2, #0e7490);">
+        <div class="icon-box"><i class="bi bi-file-earmark-richtext"></i></div>
+        <div class="info">
+            <h4>Data Format <span class="cat-tag cat-data">Dados</span></h4>
+            <p>Converte dados em arquivo formatado (CSV, JSON, HTML tabular, PDF). Pode ser anexado a emails.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>input_variable</code></td><td>Texto</td><td>Variável com os dados (array ou resultado de SQL Query)</td></tr>
+                <tr><td><code>format</code></td><td>Seleção</td><td><code>csv</code>, <code>json</code>, <code>html_table</code>, <code>pdf</code></td></tr>
+                <tr><td><code>title</code></td><td>Texto</td><td>Título do relatório (para HTML e PDF)</td></tr>
+                <tr><td><code>filename</code></td><td>Texto</td><td>Nome do arquivo com placeholders (<code>{date}</code>, <code>{datetime}</code>, etc.)</td></tr>
+                <tr><td><code>csv_delimiter</code></td><td>Texto</td><td>Separador CSV (padrão: <code>;</code>)</td></tr>
+                <tr><td><code>json_pretty</code></td><td>Seleção</td><td>JSON formatado (sim/não)</td></tr>
+                <tr><td><code>accent_color</code></td><td>Cor</td><td>Cor de destaque do cabeçalho (HTML/PDF)</td></tr>
+                <tr><td><code>show_row_numbers</code></td><td>Seleção</td><td>Mostrar numeração de linhas (HTML/PDF)</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Saída:</strong> <code>{ file_path, filename, format, records, file_size, file_size_formatted }</code></p>
+
+        <div class="tip-box">
+            <div class="title"><i class="bi bi-lightbulb-fill"></i> Integração com Email</div>
+            <p>Use a variável de saída do Data Format no campo <strong>Anexos</strong> do componente Email para enviar o arquivo por email automaticamente.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ROTINA -->
+<div class="component-card" id="comp-rotina">
+    <div class="component-header" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+        <div class="icon-box"><i class="bi bi-gear-wide-connected"></i></div>
+        <div class="info">
+            <h4>Rotina <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Executa uma rotina ETL completa (da tela de Rotinas) dentro do pipeline.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>rotina_id</code></td><td>Seleção</td><td>Rotina ETL cadastrada. O painel exibe nome, descrição, conexão e status</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Saída:</strong> <code>{ rotina_id, blocos_executados, blocos_sucesso, blocos_falha, registros_total, duracao_ms }</code></p>
+    </div>
+</div>
+
+
+<!-- ================ 5. LÓGICA ================ -->
+<h2 class="section-title" id="componentes-logic">5. Componentes: Lógica</h2>
+
+<!-- CONDITION -->
+<div class="component-card" id="comp-condition">
+    <div class="component-header" style="background: linear-gradient(135deg, #eab308, #ca8a04);">
+        <div class="icon-box"><i class="bi bi-signpost-split"></i></div>
+        <div class="info">
+            <h4>Condition (Se/Senão) <span class="cat-tag cat-logic">Lógica</span></h4>
+            <p>Avalia uma condição e bifurca o fluxo: verdadeiro ou falso.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">2 saídas</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>left_operand</code></td><td>Texto</td><td>Valor da esquerda (suporta <code>{{variável}}</code>)</td></tr>
+                <tr><td><code>operator</code></td><td>Seleção</td><td><code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>contains</code>, <code>starts_with</code>, <code>ends_with</code>, <code>is_empty</code>, <code>not_empty</code>, <code>matches</code> (regex)</td></tr>
+                <tr><td><code>right_operand</code></td><td>Texto</td><td>Valor da direita</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Saída 1</strong> (superior) = condição <strong>VERDADEIRA</strong> &mdash; <strong>Saída 2</strong> (inferior) = condição <strong>FALSA</strong></p>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
+            <p>Verificar se há registros: left = <code>{{total_registros}}</code>, operator = <code>&gt;</code>, right = <code>0</code>. Se verdadeiro, prossegue com export; se falso, envia alerta &ldquo;sem dados&rdquo;.</p>
+        </div>
+    </div>
+</div>
+
+<!-- TRY/CATCH -->
+<div class="component-card" id="comp-try-catch">
+    <div class="component-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">
+        <div class="icon-box"><i class="bi bi-shield-check"></i></div>
+        <div class="info">
+            <h4>Try/Catch <span class="cat-tag cat-logic">Lógica</span></h4>
+            <p>Executa uma ação com tratamento de erros. Suporta retentativas automáticas.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">2 saídas</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>action_type</code></td><td>Seleção</td><td><code>http_request</code>, <code>sql_query</code>, <code>script</code>, <code>sql_upsert</code></td></tr>
+                <tr><td>(campos dinâmicos)</td><td>—</td><td>Campos específicos baseados no action_type selecionado</td></tr>
+                <tr><td><code>max_retries</code></td><td>Número</td><td>Tentativas máximas (padrão: 0, máx: 3)</td></tr>
+                <tr><td><code>retry_delay_seconds</code></td><td>Número</td><td>Intervalo entre tentativas em segundos (padrão: 1, máx: 10)</td></tr>
+                <tr><td><code>error_variable</code></td><td>Texto</td><td>Nome da variável que receberá a mensagem de erro (padrão: <code>last_error</code>)</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Saída 1</strong> = tudo OK &mdash; <strong>Saída 2</strong> = erro (após esgotar retentativas)</p>
+    </div>
+</div>
+
+<!-- LOOP -->
+<div class="component-card" id="comp-loop">
+    <div class="component-header" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+        <div class="icon-box"><i class="bi bi-arrow-repeat"></i></div>
+        <div class="info">
+            <h4>Loop <span class="cat-tag cat-logic">Lógica</span></h4>
+            <p>Itera sobre cada item de um array, executando os nós seguintes para cada elemento.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>input_variable</code></td><td>Texto</td><td>Array para iterar</td></tr>
+                <tr><td><code>iterator_variable</code></td><td>Texto</td><td>Nome da variável do item atual (padrão: <code>item</code>)</td></tr>
+                <tr><td><code>max_iterations</code></td><td>Número</td><td>Limite de iterações (padrão: 100, máx: 1000)</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Variáveis disponíveis dentro do loop:</strong></p>
+        <ul>
+            <li><code>{{item}}</code> — O item da iteração atual (ou o nome customizado)</li>
+            <li><code>{{_index}}</code> — Índice da iteração atual (começa em 0)</li>
+        </ul>
+    </div>
+</div>
+
+<!-- DELAY -->
+<div class="component-card" id="comp-delay">
+    <div class="component-header" style="background: linear-gradient(135deg, #9ca3af, #6b7280);">
+        <div class="icon-box"><i class="bi bi-clock"></i></div>
+        <div class="info">
+            <h4>Delay <span class="cat-tag cat-logic">Lógica</span></h4>
+            <p>Pausa a execução por um tempo determinado. Útil para rate limiting de APIs.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>delay_seconds</code></td><td>Número</td><td>Tempo de espera em segundos (padrão: 1, máx: 30)</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SWITCH/CASE -->
+<div class="component-card" id="comp-switch-case">
+    <div class="component-header" style="background: linear-gradient(135deg, #d97706, #b45309);">
+        <div class="icon-box"><i class="bi bi-diagram-3"></i></div>
+        <div class="info">
+            <h4>Switch/Case <span class="cat-tag cat-logic">Lógica</span></h4>
+            <p>Direciona o fluxo para 1 de 3 caminhos baseado no valor de uma variável.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">3 saídas</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>switch_variable</code></td><td>Texto</td><td>Variável a avaliar (suporta <code>{{var}}</code>)</td></tr>
+                <tr><td><code>case_1</code></td><td>Texto</td><td>Se valor = case_1), saída 1</td></tr>
+                <tr><td><code>case_2</code></td><td>Texto</td><td>Se valor = case_2, saída 2</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Saída 1</strong> = Case 1 &mdash; <strong>Saída 2</strong> = Case 2 &mdash; <strong>Saída 3</strong> = Default (nenhum match)</p>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
+            <p>Variável: <code>{{tipo_cliente}}</code>. Case 1: <code>PJ</code> → gera nota fiscal. Case 2: <code>PF</code> → gera recibo. Default → log de erro.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ================ 6. AÇÕES ================ -->
+<h2 class="section-title" id="componentes-action">6. Componentes: Ações</h2>
+
+<!-- SCRIPT -->
+<div class="component-card" id="comp-script">
+    <div class="component-header" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+        <div class="icon-box"><i class="bi bi-code-slash"></i></div>
+        <div class="info">
+            <h4>Script <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Executa expressões ou SQL customizado. Para cenários avançados que não cabem nos outros componentes.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>script_language</code></td><td>Seleção</td><td><code>expression</code> (expressão PHP) ou <code>sql</code> (SQL direto)</td></tr>
+                <tr><td><code>script_code</code></td><td>Textarea</td><td>Código da expressão ou SQL. Suporta <code>{{variáveis}}</code></td></tr>
+                <tr><td><code>connection_id</code></td><td>Seleção</td><td>Conexão (apenas para modo SQL)</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Exemplos de expressões:</strong></p>
+        <pre><span class="comment">// Contar registros</span>
+count({{resultado}})
+
+<span class="comment">// Somar campo</span>
+array_sum(array_column({{dados}}, <span class="string">'valor'</span>))
+
+<span class="comment">// Formatar data</span>
+date(<span class="string">'Y-m-d'</span>, strtotime({{data_base}}))</pre>
+
+        <div class="warn-box">
+            <div class="title"><i class="bi bi-shield-exclamation"></i> Segurança</div>
+            <p>Funções perigosas são <strong>bloqueadas</strong>: <code>exec</code>, <code>eval</code>, <code>system</code>, <code>shell_exec</code>, <code>file_put_contents</code>, <code>curl_exec</code>, etc.</p>
+        </div>
+    </div>
+</div>
+
+<!-- SET VARIABLE -->
+<div class="component-card" id="comp-set-variable">
+    <div class="component-header" style="background: linear-gradient(135deg, #14b8a6, #0d9488);">
+        <div class="icon-box"><i class="bi bi-braces"></i></div>
+        <div class="info">
+            <h4>Set Variable <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Define ou atualiza o valor de uma variável no contexto do pipeline.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>variable_name</code></td><td>Texto</td><td>Nome da variável (sem <code>{{}}</code>)</td></tr>
+                <tr><td><code>variable_value</code></td><td>Texto</td><td>Valor a definir (suporta <code>{{variáveis}}</code> para compor valores)</td></tr>
+            </tbody>
+        </table>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
+            <p>Nome: <code>titulo_relatorio</code>, Valor: <code>Relatório de {{mes}} - {{ano}}</code></p>
+        </div>
+    </div>
+</div>
+
+<!-- EMAIL -->
+<div class="component-card" id="comp-email">
+    <div class="component-header" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+        <div class="icon-box"><i class="bi bi-envelope"></i></div>
+        <div class="info">
+            <h4>Email <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Envia email via SMTP com corpo HTML e suporte a anexos de arquivos gerados no pipeline.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>email_to</code></td><td>Texto</td><td>Destinatário (suporta <code>{{variável}}</code>)</td></tr>
+                <tr><td><code>email_subject</code></td><td>Texto</td><td>Assunto (suporta variáveis)</td></tr>
+                <tr><td><code>email_body</code></td><td>Textarea</td><td>Corpo HTML. Use <code>{{variáveis}}</code> e <code>{{resultado.campo}}</code></td></tr>
+                <tr><td><code>email_attachments</code></td><td>Texto</td><td>Variável contendo <code>file_path</code> do Data Format ou File Export</td></tr>
+            </tbody>
+        </table>
+
+        <div class="tip-box">
+            <div class="title"><i class="bi bi-paperclip"></i> Enviando Anexos</div>
+            <p>Para enviar um arquivo em anexo: 1) Use o <strong>Data Format</strong> ou <strong>File Export</strong> para gerar o arquivo. 2) No campo &ldquo;Anexos&rdquo; do Email, informe o <strong>nome da variável de saída</strong> do componente que gerou o arquivo. O sistema resolverá o caminho automaticamente.</p>
+        </div>
+    </div>
+</div>
+
+<!-- LOG -->
+<div class="component-card" id="comp-log">
+    <div class="component-header" style="background: linear-gradient(135deg, #6b7280, #4b5563);">
+        <div class="icon-box"><i class="bi bi-journal-text"></i></div>
+        <div class="info">
+            <h4>Log <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Registra mensagem no log do sistema. Útil para debug e auditoria durante a execução.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>message</code></td><td>Textarea</td><td>Mensagem (suporta <code>{{variáveis}}</code>)</td></tr>
+                <tr><td><code>level</code></td><td>Seleção</td><td><code>info</code>, <code>warning</code>, <code>error</code></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- FORMAT TEMPLATE -->
+<div class="component-card" id="comp-format-template">
+    <div class="component-header" style="background: linear-gradient(135deg, #a855f7, #9333ea);">
+        <div class="icon-box"><i class="bi bi-file-earmark-text"></i></div>
+        <div class="info">
+            <h4>Format Template <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Cria texto formatado a partir de um template com variáveis. Ideal para montar corpos de email, SQL dinâmico, etc.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>template</code></td><td>Textarea</td><td>Texto com <code>{{variáveis}}</code>. Resultado é salvo na variável de saída</td></tr>
+            </tbody>
+        </table>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
+<pre>Olá {{nome_usuario}},
+
+Seu relatório de {{data_inicio}} a {{data_fim}} está pronto.
+Total de registros: {{total_registros}}
+Status: {{status_processamento}}</pre>
+        </div>
+    </div>
+</div>
+
+<!-- REGEX -->
+<div class="component-card" id="comp-regex">
+    <div class="component-header" style="background: linear-gradient(135deg, #e11d48, #be123c);">
+        <div class="icon-box"><i class="bi bi-regex"></i></div>
+        <div class="info">
+            <h4>Regex <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Aplica expressões regulares para extrair, testar ou substituir padrões em textos.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>regex_mode</code></td><td>Seleção</td><td><code>match</code>, <code>match_all</code>, <code>replace</code>, <code>test</code></td></tr>
+                <tr><td><code>input_variable</code></td><td>Texto</td><td>Variável com o texto a processar</td></tr>
+                <tr><td><code>pattern</code></td><td>Texto</td><td>Padrão PCRE. Ex: <code>/(\d{3})\.(\d{3})\.(\d{3})-(\d{2})/</code></td></tr>
+                <tr><td><code>replacement</code></td><td>Texto</td><td>Texto de substituição (modo replace). Suporta backreferences: <code>$1</code>, <code>$2</code></td></tr>
+            </tbody>
+        </table>
+
+        <h4>Modos:</h4>
+        <ul>
+            <li><strong>match</strong> — Retorna o primeiro match e grupos de captura</li>
+            <li><strong>match_all</strong> — Retorna todos os matches encontrados</li>
+            <li><strong>replace</strong> — Substitui as ocorrências pelo replacement</li>
+            <li><strong>test</strong> — Retorna <code>true</code> ou <code>false</code> se o padrão existe</li>
+        </ul>
+    </div>
+</div>
+
+<!-- COUNTER -->
+<div class="component-card" id="comp-counter">
+    <div class="component-header" style="background: linear-gradient(135deg, #0d9488, #0f766e);">
+        <div class="icon-box"><i class="bi bi-plus-slash-minus"></i></div>
+        <div class="info">
+            <h4>Counter <span class="cat-tag cat-action">Ação</span></h4>
+            <p>Gerencia contadores numéricos. Incrementar, decrementar, resetar ou definir valor.</p>
+        </div>
+        <div class="badges">
+            <span class="io-badge">1 entrada</span>
+            <span class="io-badge">1 saída</span>
+        </div>
+    </div>
+    <div class="component-body">
+        <table class="config-table">
+            <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>counter_name</code></td><td>Texto</td><td>Nome do contador (padrão: <code>counter</code>)</td></tr>
+                <tr><td><code>counter_action</code></td><td>Seleção</td><td><code>increment</code>, <code>decrement</code>, <code>reset</code>, <code>set</code></td></tr>
+                <tr><td><code>counter_value</code></td><td>Número</td><td>Valor para definir (apenas ação = set)</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ================ 7. VARIÁVEIS ================ -->
+<h2 class="section-title" id="variaveis">7. Sistema de Variáveis</h2>
+
+<p>O Pipeline Builder possui um sistema de variáveis que permite que os nós compartilhem dados entre si durante a execução.</p>
+
+<h3>Como usar variáveis</h3>
+<p>Use a sintaxe <code>{{nome_da_variavel}}</code> em qualquer campo de texto para referenciar o valor de uma variável.</p>
+
+<h3>Como criar variáveis</h3>
+<ul>
+    <li><strong>Variável de saída</strong> — Componentes de dados (SQL Query, HTTP Request, Transform, etc.) têm campo <code>output_variable</code> que define o nome da variável com os resultados</li>
+    <li><strong>Set Variable</strong> — Define manualmente variáveis com valores fixos ou compostos</li>
+    <li><strong>Loop</strong> — Cria automaticamente <code>{{item}}</code> e <code>{{_index}}</code> dentro do loop</li>
+    <li><strong>Counter</strong> — Cria/atualiza um contador numérico</li>
+</ul>
+
+<h3>Acessando propriedades de variáveis</h3>
+<p>Quando uma variável contém um objeto, você pode acessar suas propriedades:</p>
+<pre><span class="comment">// Variável de SQL Query (output_variable = "dados")</span>
+{{dados}}          <span class="comment">→ o array completo de resultados</span>
+{{dados.rows}}     <span class="comment">→ array de registros</span>
+{{dados.total}}    <span class="comment">→ número total de registros</span>
+
+<span class="comment">// Variável de Data Format (output_variable = "arquivo")</span>
+{{arquivo.file_path}}   <span class="comment">→ caminho do arquivo gerado</span>
+{{arquivo.records}}     <span class="comment">→ quantidade de registros</span>
+{{arquivo.file_size_formatted}}  <span class="comment">→ tamanho formatado (ex: "1.2 KB")</span></pre>
+
+<h3>Placeholders para nomes de arquivo</h3>
+<p>Nos componentes File Export e Data Format, o campo <code>filename</code> aceita placeholders especiais:</p>
+<table class="config-table">
+    <thead><tr><th>Placeholder</th><th>Resultado</th><th>Exemplo</th></tr></thead>
+    <tbody>
+        <tr><td><code>{date}</code></td><td>Data atual</td><td>2026-03-24</td></tr>
+        <tr><td><code>{time}</code></td><td>Hora atual</td><td>14-30-15</td></tr>
+        <tr><td><code>{datetime}</code></td><td>Data e hora</td><td>2026-03-24_14-30-15</td></tr>
+        <tr><td><code>{timestamp}</code></td><td>Unix timestamp</td><td>1774357200</td></tr>
+        <tr><td><code>{seq}</code></td><td>Sequencial único</td><td>a4f2b1</td></tr>
+        <tr><td><code>{Y}</code>, <code>{m}</code>, <code>{d}</code></td><td>Ano, mês, dia</td><td>2026, 03, 24</td></tr>
+        <tr><td><code>{H}</code>, <code>{i}</code>, <code>{s}</code></td><td>Hora, minuto, segundo</td><td>14, 30, 15</td></tr>
+        <tr><td><code>{{variavel}}</code></td><td>Valor da variável</td><td>(dinâmico)</td></tr>
+    </tbody>
+</table>
+
+
+<!-- ================ 8. EXECUÇÃO ================ -->
+<h2 class="section-title" id="execucao">8. Como Funciona a Execução</h2>
+
+<p>Ao clicar em <strong>Executar</strong> <i class="bi bi-play-fill" style="color: #10b981;"></i>, o pipeline segue estas etapas:</p>
+
+<ol>
+    <li><strong>Carregamento</strong> — O sistema lê a definição do pipeline (nós e conexões)</li>
+    <li><strong>Ordenação Topológica</strong> — Os nós são colocados na ordem correta de execução usando o algoritmo de Kahn (respeita as dependências)</li>
+    <li><strong>Execução sequencial</strong> — Cada nó é executado na ordem determinada:
+        <ul>
+            <li>O resultado de cada nó é salvo no <strong>contexto</strong> (variáveis)</li>
+            <li>O próximo nó pode usar os resultados anteriores via <code>{{variáveis}}</code></li>
+        </ul>
+    </li>
+    <li><strong>Tratamento de Ramificações</strong> — Nós condicionais (Condition, Try/Catch, API Call, Switch/Case) determinam qual ramo é executado. O ramo inativo é marcado como &ldquo;pulado&rdquo;</li>
+    <li><strong>Log detalhado</strong> — Cada nó gera um log com: status, duração, preview do resultado</li>
+    <li><strong>Registro</strong> — O resultado completo é salvo em <code>tb_pipeline_execucoes</code> e pode ser consultado na tela de Histórico</li>
+</ol>
+
+<h3>Tratamento de Erros</h3>
+<table class="config-table">
+    <thead><tr><th>Cenário</th><th>Comportamento</th></tr></thead>
+    <tbody>
+        <tr><td><strong>stop_on_error = true</strong> (padrão)</td><td>Pipeline para imediatamente ao encontrar erro</td></tr>
+        <tr><td><strong>stop_on_error = false</strong></td><td>Pipeline continua para o próximo nó, erro é registrado</td></tr>
+        <tr><td><strong>Try/Catch com retentativas</strong></td><td>Tenta novamente N vezes com delay configurável antes de seguir para o catch</td></tr>
+        <tr><td><strong>Notificação de falha</strong></td><td>Sistema envia notificação automática ao criador quando o pipeline falha</td></tr>
+    </tbody>
+</table>
+
+
+<!-- ================ 9. EXEMPLOS ================ -->
+<h2 class="section-title" id="exemplos">9. Exemplos Práticos com Combinações de Componentes</h2>
+
+<!-- EXEMPLO 1 -->
+<div class="example-box" id="ex1" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-1-circle-fill"></i> ETL Completo: Extrair, Transformar e Carregar</div>
+    <p><strong>Cenário:</strong> Extrair clientes de um banco PostgreSQL, filtrar apenas os ativos, e carregar em uma tabela de outro banco MySQL.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Manual)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query (PostgreSQL)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (Filter)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (MySQL)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (Notificação)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+
+    <p><strong>Configurações:</strong></p>
+    <ul>
+        <li><strong>SQL Query:</strong> <code>SELECT * FROM clientes WHERE data_cadastro >= '2026-01-01'</code> → variável: <code>clientes</code></li>
+        <li><strong>Transform (Filter):</strong> input = <code>clientes</code>, campo = <code>status</code>, operador = <code>equals</code>, valor = <code>ativo</code></li>
+        <li><strong>SQL Upsert:</strong> tabela = <code>clientes_ativos</code>, operação = <code>upsert</code>, conflict_keys = <code>cpf</code></li>
+        <li><strong>Email:</strong> assunto = <code>ETL Concluído - {{total_inseridos}} registros</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 2 -->
+<div class="example-box" id="ex2" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-2-circle-fill"></i> Relatório Diário por Email com CSV em Anexo</div>
+    <p><strong>Cenário:</strong> Todo dia às 8h, gerar relatório CSV dos pedidos do dia anterior e enviar por email.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron 0 8 * * *)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (com anexo)</span>
+    </div>
+
+    <ul>
+        <li><strong>Trigger:</strong> Cron = <code>0 8 * * *</code></li>
+        <li><strong>SQL Query:</strong> <code>SELECT * FROM pedidos WHERE data_pedido = CURRENT_DATE - 1</code> → variável: <code>pedidos</code></li>
+        <li><strong>Data Format:</strong> input = <code>pedidos</code>, formato = <code>csv</code>, delimiter = <code>;</code>, filename = <code>pedidos_{date}</code> → variável: <code>arquivo</code></li>
+        <li><strong>Email:</strong> assunto = <code>Relatório de Pedidos - {date}</code>, corpo = <code>&lt;h2&gt;Relatório Diário&lt;/h2&gt;&lt;p&gt;{{arquivo.records}} pedidos em anexo.&lt;/p&gt;</code>, anexos = <code>arquivo</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 3 -->
+<div class="example-box" id="ex3" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-3-circle-fill"></i> Monitoramento de API com Alerta Condicional</div>
+    <p><strong>Cenário:</strong> A cada 5 minutos, verificar se API de pagamento está online. Se cair, enviar alerta.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron */5)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">API Call</span>
+        <span class="flow-arrow">→</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left: 40px;">✅ Saída 1 →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("API OK")</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left: 40px;">❌ Saída 2 →</span>
+        <span class="flow-node" style="background:#ec4899;">Email (Alerta Crítico)</span>
+    </div>
+
+    <ul>
+        <li><strong>API Call:</strong> API = "API Pagamentos", JSONPath = <code>$.status</code>, operador = <code>equals</code>, valor = <code>healthy</code></li>
+        <li><strong>Email (Saída 2/Falso):</strong> assunto = <code>⚠️ ALERTA: API de Pagamentos FORA DO AR</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 4 -->
+<div class="example-box" id="ex4" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-4-circle-fill"></i> Migração entre Bancos com Merge</div>
+    <p><strong>Cenário:</strong> Pegar dados de 2 fontes diferentes, fazer join e inserir no destino.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query 1 (Produtos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query 2 (Preços)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (Inner Join)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+    </div>
+
+    <ul>
+        <li><strong>SQL 1:</strong> <code>SELECT id, nome, categoria FROM produtos</code> → <code>produtos</code></li>
+        <li><strong>SQL 2:</strong> <code>SELECT produto_id, preco, desconto FROM tabela_precos</code> → <code>precos</code></li>
+        <li><strong>Data Merge:</strong> left = <code>produtos</code>, right = <code>precos</code>, tipo = <code>inner_join</code>, left_key = <code>id</code>, right_key = <code>produto_id</code></li>
+        <li><strong>SQL Upsert:</strong> tabela = <code>catalogo_completo</code>, operation = <code>upsert</code>, conflict = <code>id</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 5 -->
+<div class="example-box" id="ex5" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-5-circle-fill"></i> Processamento de CSV com Validação</div>
+    <p><strong>Cenário:</strong> Ler CSV com dados de funcionários, validar CPF com regex, separar válidos e inválidos.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query (dados brutos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#059669;">CSV Parse</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop (cada funcionário)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (validar CPF)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+
+    <ul>
+        <li><strong>CSV Parse:</strong> delimiter = <code>;</code>, has_header = <code>true</code></li>
+        <li><strong>Regex:</strong> mode = <code>test</code>, pattern = <code>/^\d{3}\.\d{3}\.\d{3}-\d{2}$/</code></li>
+        <li><strong>Condition:</strong> Se regex = true → SQL Upsert (salvar). Se false → Log ("CPF inválido: {{item.nome}}")</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 6 -->
+<div class="example-box" id="ex6" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-6-circle-fill"></i> Pipeline com Tratamento de Erros Robusto</div>
+    <p><strong>Cenário:</strong> Chamar API externa que pode falhar. Tentar 3 vezes, e se falhar, registrar erro e notificar.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch (HTTP Request)</span>
+        <span class="flow-arrow">→</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left: 40px;">✅ Sucesso →</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query (salvar dados)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("OK")</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left: 40px;">❌ Erro →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Falha: {{last_error}}")</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (Alerta)</span>
+    </div>
+
+    <ul>
+        <li><strong>Try/Catch:</strong> action = <code>http_request</code>, max_retries = <code>3</code>, retry_delay = <code>5</code> segundos, error_variable = <code>last_error</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 7 -->
+<div class="example-box" id="ex7" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-7-circle-fill"></i> Geração de Relatórios em Múltiplos Formatos</div>
+    <p><strong>Cenário:</strong> Gerar relatório mensal de vendas em 3 formatos: CSV para arquivo, HTML para visualização e PDF para email.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query (vendas)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (CSV)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0; margin-left: 180px;">
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (HTML Table)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (PDF)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (PDF em anexo)</span>
+    </div>
+
+    <ul>
+        <li>Cada Data Format lê da mesma variável <code>vendas</code>, mas gera em formato diferente</li>
+        <li>O Email recebe a variável do último Data Format (PDF) como anexo</li>
+        <li>Os 3 arquivos ficam salvos em <code>storage/exports/</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 8 -->
+<div class="example-box" id="ex8" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-8-circle-fill"></i> Loop com Chamadas HTTP Individuais e Delay</div>
+    <p><strong>Cenário:</strong> Para cada cliente novo, chamar API de enriquecimento de dados com rate limit de 1 req/segundo.</p>
+
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query (clientes novos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP Request</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#9ca3af;">Delay (1s)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (incrementa)</span>
+    </div>
+
+    <ul>
+        <li><strong>Loop:</strong> input = <code>novos_clientes</code>, iterator_variable = <code>cliente</code></li>
+        <li><strong>HTTP Request:</strong> URL = <code>https://api.enrich.com/company/{{cliente.cnpj}}</code></li>
+        <li><strong>Delay:</strong> 1 segundo (respeita rate limit da API)</li>
+        <li><strong>Counter:</strong> Conta quantas chamadas foram feitas</li>
+    </ul>
+</div>
+
+
+<!-- ================ FOOTER ================ -->
+<div class="doc-footer">
+    <p><strong>DMC DataLoad — Pipeline Builder</strong></p>
+    <p>Documentação gerada em 10 de Junho de 2025 &bull; Versão 1.0</p>
+    <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 8px;">Dynamic Motion Century &copy; 2025. Todos os direitos reservados.</p>
+</div>
+
+</div><!-- /container -->
+
+</body>
+</html>

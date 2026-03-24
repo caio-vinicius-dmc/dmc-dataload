@@ -423,15 +423,25 @@ ob_start();
 <div class="card-modern mb-4">
     <div class="card-modern-body py-3">
         <div class="row g-3 align-items-center">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control border-start-0" id="searchApis" placeholder="Buscar APIs...">
                 </div>
             </div>
             <div class="col-md-2">
+                <select class="form-select" id="filterEmpresa">
+                    <option value="">Todas as Empresas</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="filterProjeto">
+                    <option value="">Todos os Projetos</option>
+                </select>
+            </div>
+            <div class="col-md-1">
                 <select class="form-select" id="filterMetodo">
-                    <option value="">Todos os Métodos</option>
+                    <option value="">Método</option>
                     <option value="GET">GET</option>
                     <option value="POST">POST</option>
                     <option value="PUT">PUT</option>
@@ -439,16 +449,16 @@ ob_start();
                     <option value="PATCH">PATCH</option>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <select class="form-select" id="filterStatus">
-                    <option value="">Todos</option>
+                    <option value="">Status</option>
                     <option value="1">Ativas</option>
                     <option value="0">Inativas</option>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <select class="form-select" id="filterAuth">
-                    <option value="">Todas as Auth</option>
+                    <option value="">Auth</option>
                     <option value="none">Nenhuma</option>
                     <option value="bearer">Bearer</option>
                     <option value="basic">Basic</option>
@@ -678,10 +688,35 @@ function carregarApis() {
             apis = res.dados || [];
             renderizarApis(apis);
             atualizarEstatisticas();
+            preencherFiltrosEmpresaProjeto();
         }
     }).fail(function() {
         $('#listaApis').html('<div class="col-12 text-center py-5 text-danger">Erro ao carregar APIs</div>');
     });
+}
+
+// Preencher filtros de Empresa e Projeto a partir dos dados retornados
+function preencherFiltrosEmpresaProjeto() {
+    const empresasMap = {};
+    const projetosMap = {};
+    apis.forEach(api => {
+        (api.empresas || []).forEach(e => { empresasMap[e.id] = e.nome; });
+        (api.projetos || []).forEach(p => { projetosMap[p.id] = p.nome; });
+    });
+    const selE = $('#filterEmpresa');
+    const selP = $('#filterProjeto');
+    const curE = selE.val();
+    const curP = selP.val();
+    selE.find('option:not(:first)').remove();
+    selP.find('option:not(:first)').remove();
+    Object.entries(empresasMap).sort((a,b) => a[1].localeCompare(b[1])).forEach(([id, nome]) => {
+        selE.append('<option value="'+id+'">'+$('<span>').text(nome).html()+'</option>');
+    });
+    Object.entries(projetosMap).sort((a,b) => a[1].localeCompare(b[1])).forEach(([id, nome]) => {
+        selP.append('<option value="'+id+'">'+$('<span>').text(nome).html()+'</option>');
+    });
+    if (curE) selE.val(curE);
+    if (curP) selP.val(curP);
 }
 
 // Renderizar APIs
@@ -691,8 +726,8 @@ function renderizarApis(lista) {
     if (!lista || lista.length === 0) {
         container.html('<div class="col-12"><div class="empty-state">' +
             '<div class="empty-state-icon"><i class="bi bi-cloud-arrow-down-fill"></i></div>' +
-            '<h4>Nenhuma API cadastrada</h4>' +
-            '<p>Cadastre sua primeira API externa e comece a integrar seus dados</p>' +
+            '<h4>Nenhuma API encontrada</h4>' +
+            '<p>Cadastre sua primeira API externa ou ajuste os filtros</p>' +
             '<button class="btn-modern-primary" onclick="abrirModalApi()"><i class="bi bi-plus-lg me-2"></i>Cadastrar Primeira API</button></div></div>');
         return;
     }
@@ -712,7 +747,26 @@ function renderizarApis(lista) {
         const safeDesc = $('<div>').text(api.descricao||'Sem descrição').html();
         const descTrunc = safeDesc.length>80 ? safeDesc.substring(0,80)+'...' : safeDesc;
         
-        html += '<div class="col-12 col-md-6 col-xl-4" data-nome="'+safeNome.toLowerCase()+'" data-metodo="'+m+'" data-ativo="'+(isA?'1':'0')+'" data-auth="'+(api.auth_tipo||'none')+'">' +
+        // Badges de empresa e projeto
+        const empresas = api.empresas || [];
+        const projetos = api.projetos || [];
+        let rbacBadges = '';
+        if (empresas.length > 0) {
+            const nomes = empresas.map(e => $('<span>').text(e.nome).html());
+            const display = nomes.length <= 2 ? nomes.join(', ') : nomes[0] + ' +' + (nomes.length - 1);
+            rbacBadges += '<span class="auth-badge" style="background:#fef3c7;color:#92400e" title="' + nomes.join(', ') + '"><i class="bi bi-building me-1"></i>' + display + '</span>';
+        }
+        if (projetos.length > 0) {
+            const nomes = projetos.map(p => $('<span>').text(p.nome).html());
+            const display = nomes.length <= 2 ? nomes.join(', ') : nomes[0] + ' +' + (nomes.length - 1);
+            rbacBadges += '<span class="auth-badge" style="background:#e0e7ff;color:#3730a3" title="' + nomes.join(', ') + '"><i class="bi bi-folder me-1"></i>' + display + '</span>';
+        }
+        
+        // Data attributes com IDs de empresa/projeto para filtro
+        const empresaIds = empresas.map(e => e.id).join(',');
+        const projetoIds = projetos.map(p => p.id).join(',');
+        
+        html += '<div class="col-12 col-md-6 col-xl-4" data-nome="'+safeNome.toLowerCase()+'" data-metodo="'+m+'" data-ativo="'+(isA?'1':'0')+'" data-auth="'+(api.auth_tipo||'none')+'" data-empresas="'+empresaIds+'" data-projetos="'+projetoIds+'">' +
             '<div class="api-card method-'+mLow+'">' +
             '<div class="api-card-accent"></div>' +
             '<div class="api-card-body" onclick="editarApi('+api.id+')">' +
@@ -725,9 +779,10 @@ function renderizarApis(lista) {
             '<div class="api-card-url" title="'+safeUrl+'">'+safeUrl+'</div></div>' +
             '<span class="method-badge method-'+m+'">'+m+'</span></div>' +
             '<div class="api-card-desc">'+descTrunc+'</div>' +
-            '<div class="d-flex gap-2 align-items-center mb-0 mt-2">' +
+            '<div class="d-flex flex-wrap gap-2 align-items-center mb-0 mt-2">' +
             '<span class="auth-badge '+authClass+'"><i class="bi bi-shield-lock me-1"></i>'+authLabel+'</span>' +
             (eventos>0?'<span class="auth-badge" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-bell me-1"></i>'+eventos+' evento(s)</span>':'')+
+            rbacBadges +
             '</div>' +
             '<div class="api-card-stats">' +
             '<div class="api-stat"><i class="bi bi-arrow-repeat"></i> <strong>'+polling+'s</strong> polling</div>' +
@@ -899,6 +954,9 @@ function abrirModalApi(id) {
         }});
     } else {
         $('#modalApiTitulo').text('Nova API');
+        // Carregar opções RBAC para nova API
+        window._rbacCarregado = false;
+        rbacCarregarOpcoes();
         new bootstrap.Modal('#modalApi').show();
     }
 }
@@ -956,10 +1014,20 @@ function salvarApi(e) {
         data.api_key_header = $('#apiKeyHeader').val();
     }
     
-    // Empresas/Projetos RBAC
+    // Empresas/Projetos RBAC (obrigatório)
     if (typeof rbacGetSelectedIds === 'function') {
         data.empresas = rbacGetSelectedIds('empresas');
         data.projetos = rbacGetSelectedIds('projetos');
+        data._rbac_presente = '1';
+        
+        if (data.empresas.length === 0) {
+            mostrarErro('Selecione ao menos uma empresa na seção de Visibilidade.');
+            return false;
+        }
+        if (data.projetos.length === 0) {
+            mostrarErro('Selecione ao menos um projeto na seção de Visibilidade.');
+            return false;
+        }
     }
     
     const btnSalvar = $('#formApi button[type="submit"]');
@@ -1140,12 +1208,22 @@ function filterApis() {
     const m = $('#filterMetodo').val();
     const st = $('#filterStatus').val();
     const au = $('#filterAuth').val();
+    const fe = $('#filterEmpresa').val();
+    const fp = $('#filterProjeto').val();
     const filtered = apis.filter(a => {
         if(s && !a.nome.toLowerCase().includes(s) && !a.url.toLowerCase().includes(s) && !(a.descricao||'').toLowerCase().includes(s)) return false;
         if(m && (a.metodo||'GET')!==m) return false;
         if(st==='1' && !a.ativo) return false;
         if(st==='0' && a.ativo) return false;
         if(au && (a.auth_tipo||'none')!==au) return false;
+        if(fe) {
+            const empresaIds = (a.empresas || []).map(e => String(e.id));
+            if (!empresaIds.includes(fe)) return false;
+        }
+        if(fp) {
+            const projetoIds = (a.projetos || []).map(p => String(p.id));
+            if (!projetoIds.includes(fp)) return false;
+        }
         return true;
     });
     renderizarApis(filtered);
@@ -1155,6 +1233,8 @@ $('#searchApis').on('input', filterApis);
 $('#filterMetodo').on('change', filterApis);
 $('#filterStatus').on('change', filterApis);
 $('#filterAuth').on('change', filterApis);
+$('#filterEmpresa').on('change', filterApis);
+$('#filterProjeto').on('change', filterApis);
 
 // Inicializar
 $(document).ready(function() {

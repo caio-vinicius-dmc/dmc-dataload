@@ -57,6 +57,7 @@ ob_start();
                 <select class="form-select-modern" id="filtroStatus">
                     <option value="">Todos</option>
                     <option value="sucesso">✓ Sucesso</option>
+                    <option value="parcial">◐ Parcial</option>
                     <option value="falha">✗ Falha</option>
                     <option value="erro">⚠ Erro</option>
                     <option value="executando">⟳ Executando</option>
@@ -162,7 +163,7 @@ ob_start();
                         <th><i class="bi bi-check-circle me-1"></i>Status</th>
                         <th><i class="bi bi-calendar3 me-1"></i>Início</th>
                         <th><i class="bi bi-clock me-1"></i>Duração</th>
-                        <th><i class="bi bi-layers me-1"></i>Nós</th>
+                        <th><i class="bi bi-layers me-1"></i>Registros</th>
                         <th><i class="bi bi-three-dots me-1"></i>Ações</th>
                     </tr>
                 </thead>
@@ -537,38 +538,6 @@ $extraStyles = <<<'STYLES'
 .primary-trend {
     background: rgba(102, 126, 234, 0.1);
     color: #667eea;
-}
-
-/* ==== MODERN TABLE ==== */
-.table-modern {
-    width: 100%;
-    margin-bottom: 0;
-}
-
-.table-modern thead th {
-    background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
-    color: #4b5563;
-    font-weight: 700;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 1rem 1.25rem;
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.table-modern tbody td {
-    padding: 1rem 1.25rem;
-    vertical-align: middle;
-    border-bottom: 1px solid #f3f4f6;
-    font-size: 0.95rem;
-}
-
-.table-modern tbody tr {
-    transition: var(--transition);
-}
-
-.table-modern tbody tr:hover {
-    background: rgba(102, 126, 234, 0.03);
 }
 
 /* ==== BADGES ==== */
@@ -1035,6 +1004,10 @@ $extraScripts .= <<<'SCRIPTS'
     background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
 }
 
+.warning-border {
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+}
+
 .bloco-header {
     padding: 1rem 1.25rem;
     cursor: pointer;
@@ -1052,6 +1025,25 @@ $extraScripts .= <<<'SCRIPTS'
 .header-error {
     background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
     color: #991b1b;
+}
+
+.header-warning {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    color: #92400e;
+}
+
+.secondary-border {
+    background: linear-gradient(180deg, #9ca3af 0%, #6b7280 100%);
+}
+
+.header-secondary {
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    color: #4b5563;
+}
+
+.status-secondary {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+    color: white;
 }
 
 .bloco-header:hover {
@@ -1096,6 +1088,11 @@ $extraScripts .= <<<'SCRIPTS'
 
 .status-error {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.status-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: white;
 }
 
@@ -1353,9 +1350,11 @@ function renderizarDetalhes(dados) {
     
     // Determinar classe do status
     const statusClass = dados.status === "sucesso" ? "success" : 
-                       (dados.status === "falha" || dados.status === "erro" ? "error" : "warning");
+                       (dados.status === "parcial" ? "warning" :
+                       (dados.status === "falha" || dados.status === "erro" ? "error" : "warning"));
     const statusIcon = dados.status === "sucesso" ? "check-circle-fill" : 
-                      (dados.status === "falha" || dados.status === "erro" ? "x-circle-fill" : "hourglass-split");
+                      (dados.status === "parcial" ? "exclamation-triangle-fill" :
+                      (dados.status === "falha" || dados.status === "erro" ? "x-circle-fill" : "hourglass-split"));
     
     let html = `
         <!-- Cards de Informação -->
@@ -1428,6 +1427,22 @@ function renderizarDetalhes(dados) {
         </div>
     `;
     
+    // Banner de opções de execução (interrompido / rollback / iniciar_de_bloco / selecionados)
+    if (dados.opcoes_execucao) {
+        const opcoes = dados.opcoes_execucao;
+        if (opcoes.interrompido || opcoes.rollback_realizado || opcoes.iniciar_de_bloco || opcoes.blocos_selecionados) {
+            let msgs = [];
+            if (opcoes.iniciar_de_bloco) msgs.push(`<i class="bi bi-skip-end-fill me-1"></i>Execução iniciada a partir do step ${opcoes.iniciar_de_bloco} (blocos anteriores foram pulados)`);
+            if (opcoes.blocos_selecionados) msgs.push(`<i class="bi bi-ui-checks me-1"></i>Execução seletiva: somente os steps [${opcoes.blocos_selecionados.join(', ')}] foram executados`);
+            if (opcoes.interrompido) msgs.push('<i class="bi bi-stop-circle-fill me-1"></i>Execução interrompida ao encontrar erro (opção "parar em caso de erro" ativa)');
+            if (opcoes.rollback_realizado) msgs.push('<i class="bi bi-arrow-counterclockwise me-1"></i>Rollback realizado: todas as alterações DML foram desfeitas');
+            html += `
+            <div class="alert alert-warning d-flex flex-column gap-1 mb-3" style="border-radius:12px;">
+                ${msgs.map(m => '<div>' + m + '</div>').join('')}
+            </div>`;
+        }
+    }
+    
     // Mensagem de erro (se houver)
     if (dados.mensagem_erro) {
         html += `
@@ -1449,7 +1464,9 @@ function renderizarDetalhes(dados) {
         const stats = {
             total: dados.logs.length,
             sucesso: dados.logs.filter(l => l.status === 'sucesso').length,
-            erro: dados.logs.filter(l => l.status !== 'sucesso').length,
+            erro: dados.logs.filter(l => l.status !== 'sucesso' && l.status !== 'ignorado' && l.status !== 'pulado').length,
+            ignorado: dados.logs.filter(l => l.status === 'ignorado').length,
+            pulado: dados.logs.filter(l => l.status === 'pulado').length,
             tipos: {}
         };
         
@@ -1489,6 +1506,25 @@ function renderizarDetalhes(dados) {
                         <button class="btn btn-sm btn-outline-danger filtro-bloco" data-filtro="erro" onclick="filtrarBlocos('erro')">
                             <i class="bi bi-x-circle"></i> Erros <span class="badge bg-danger ms-1">${stats.erro}</span>
                         </button>
+                        ${stats.ignorado > 0 ? `<button class="btn btn-sm btn-outline-warning filtro-bloco" data-filtro="ignorado" onclick="filtrarBlocos('ignorado')">
+                            <i class="bi bi-skip-forward"></i> Ignorados <span class="badge bg-warning text-dark ms-1">${stats.ignorado}</span>
+                        </button>` : ''}
+                        ${stats.pulado > 0 ? `<button class="btn btn-sm btn-outline-secondary filtro-bloco" data-filtro="pulado" onclick="filtrarBlocos('pulado')">
+                            <i class="bi bi-skip-end"></i> Pulados <span class="badge bg-secondary ms-1">${stats.pulado}</span>
+                        </button>` : ''}
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                        <div class="position-relative flex-grow-1" style="min-width:200px;max-width:340px;">
+                            <i class="bi bi-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none;"></i>
+                            <input type="text" id="filtro-bloco-nome" class="form-control-modern" placeholder="Buscar step por nome..." oninput="aplicarFiltrosBlocos()" style="padding:0.5rem 0.75rem 0.5rem 2.25rem;font-size:0.8125rem;border-width:1.5px;">
+                        </div>
+                        <div class="position-relative" style="min-width:150px;">
+                            <i class="bi bi-funnel" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none;"></i>
+                            <select id="filtro-bloco-tipo" class="form-select-modern" onchange="aplicarFiltrosBlocos()" style="padding:0.5rem 2rem 0.5rem 2.25rem;font-size:0.8125rem;border-width:1.5px;appearance:auto;width:auto;">
+                                <option value="">Todos os tipos</option>
+                                ${Object.keys(stats.tipos).sort().map(t => `<option value="${t.toLowerCase()}">${t} (${stats.tipos[t]})</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1498,25 +1534,32 @@ function renderizarDetalhes(dados) {
         
         dados.logs.forEach((log, index) => {
             const isSuccess = log.status === "sucesso";
-            const icon = isSuccess ? "check-circle-fill" : "x-circle-fill";
+            const isIgnorado = log.status === "ignorado";
+            const isPulado = log.status === "pulado";
+            const icon = isSuccess ? "check-circle-fill" : (isIgnorado ? "skip-forward-fill" : (isPulado ? "skip-end-fill" : "x-circle-fill"));
+            const borderClass = isSuccess ? 'success-border' : (isIgnorado ? 'warning-border' : (isPulado ? 'secondary-border' : 'error-border'));
+            const headerClass = isSuccess ? 'header-success' : (isIgnorado ? 'header-warning' : (isPulado ? 'header-secondary' : 'header-error'));
+            const statusBadgeClass = isSuccess ? 'status-success' : (isIgnorado ? 'status-warning' : (isPulado ? 'status-secondary' : 'status-error'));
             const tipo = (log.tipo || 'SQL').toUpperCase();
             const duracao = log.duracao_ms || 0;
             
+            const nomeBloco = log.bloco || `Bloco ${index + 1}`;
             html += `
             <div class="bloco-card mb-3 bloco-item" 
                  data-status="${log.status}" 
                  data-tipo="${tipo.toLowerCase()}"
+                 data-nome="${(nomeBloco).toLowerCase()}"
                  data-duracao="${duracao}">
-                <div class="bloco-card-border ${isSuccess ? 'success-border' : 'error-border'}"></div>
-                <div class="bloco-header ${isSuccess ? 'header-success' : 'header-error'}" onclick="toggleBlocoCollapse(${index})">
+                <div class="bloco-card-border ${borderClass}"></div>
+                <div class="bloco-header ${headerClass}" onclick="toggleBlocoCollapse(${index})">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-${icon}"></i>
-                            <strong>${log.bloco || `Bloco ${index + 1}`}</strong>
+                            <strong>${nomeBloco}</strong>
                             <span class="bloco-tipo-badge">${tipo}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="bloco-status-badge ${isSuccess ? 'status-success' : 'status-error'}">${(log.status || 'desconhecido').toUpperCase()}</span>
+                            <span class="bloco-status-badge ${statusBadgeClass}">${(log.status || 'desconhecido').toUpperCase()}</span>
                             ${log.duracao_ms ? `<span class="bloco-time-badge"><i class="bi bi-clock"></i> ${formatDuracao(log.duracao_ms)}</span>` : ''}
                             <i class="bi bi-chevron-up bloco-toggle" id="toggle-icon-${index}"></i>
                         </div>
@@ -1582,18 +1625,46 @@ function renderizarDetalhes(dados) {
                         </div>`;
             }
 
-            // Arquivo CSV
+            // Arquivo CSV / Arquivo gerado
             if (log.arquivo_csv) {
-                html += `
+                const nomeArquivo = log.arquivo_csv.split(/[/\\]/).pop();
+                const ext = (nomeArquivo.split('.').pop() || '').toUpperCase();
+                const iconMap = {CSV:'bi-filetype-csv',JSON:'bi-filetype-json',HTML:'bi-filetype-html',PDF:'bi-filetype-pdf',XML:'bi-filetype-xml'};
+                const fileIcon = iconMap[ext] || 'bi-file-earmark-text';
+                const arquivoExiste = log.arquivo_existe !== false;
+                // Determinar URL de download: rotina usa download-csv-bloco, pipeline usa download-pipeline-file
+                const downloadUrl = (tipoExec === 'pipeline')
+                    ? `${baseUrl}/api/download-pipeline-file/${currentLogId}/${index}`
+                    : `${baseUrl}/api/download-csv-bloco/${currentLogId}/${index}`;
+                
+                if (arquivoExiste) {
+                    html += `
                         <div class="alert alert-info mb-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi ${fileIcon} fs-5"></i>
+                                    <div>
+                                        <strong>Arquivo Gerado:</strong><br>
+                                        <code>${escapeHtml(nomeArquivo)}</code>
+                                    </div>
+                                </div>
+                                <a href="${downloadUrl}" class="btn btn-sm btn-success" title="Download do arquivo">
+                                    <i class="bi bi-download me-1"></i>Download
+                                </a>
+                            </div>
+                        </div>`;
+                } else {
+                    html += `
+                        <div class="alert alert-warning mb-0">
                             <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-file-earmark-text fs-5"></i>
+                                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
                                 <div>
-                                    <strong>Arquivo Gerado:</strong><br>
-                                    <code>${escapeHtml(log.arquivo_csv)}</code>
+                                    <strong>Arquivo não disponível</strong><br>
+                                    <small class="text-muted">O arquivo <code>${escapeHtml(nomeArquivo)}</code> não está mais disponível no servidor. Pode ter sido removido por uma política de retenção ou limpeza manual.</small>
                                 </div>
                             </div>
                         </div>`;
+                }
             }
             
             html += `
@@ -1727,9 +1798,11 @@ function colapsarTodosBlocos() {
     });
 }
 
+// Filtro de status ativo (botões)
+let _filtroStatusAtivo = 'todos';
+
 function filtrarBlocos(filtro) {
-    const blocos = document.querySelectorAll('.bloco-item');
-    let visibleCount = 0;
+    _filtroStatusAtivo = filtro;
     
     // Atualizar botões ativos
     document.querySelectorAll('.filtro-bloco').forEach(btn => {
@@ -1739,23 +1812,44 @@ function filtrarBlocos(filtro) {
         }
     });
     
+    aplicarFiltrosBlocos();
+}
+
+function aplicarFiltrosBlocos() {
+    const blocos = document.querySelectorAll('.bloco-item');
+    const filtro = _filtroStatusAtivo;
+    const termoNome = (document.getElementById('filtro-bloco-nome')?.value || '').toLowerCase().trim();
+    const filtroTipo = (document.getElementById('filtro-bloco-tipo')?.value || '').toLowerCase();
+    let visibleCount = 0;
+    
     blocos.forEach(bloco => {
-        let mostrar = false;
         const status = bloco.getAttribute('data-status');
         const tipo = bloco.getAttribute('data-tipo');
+        const nome = bloco.getAttribute('data-nome') || '';
         
+        // Filtro de status (botões)
+        let passaStatus = false;
         if (filtro === 'todos') {
-            mostrar = true;
+            passaStatus = true;
         } else if (filtro === 'sucesso') {
-            mostrar = status === 'sucesso';
+            passaStatus = status === 'sucesso';
         } else if (filtro === 'erro') {
-            mostrar = status !== 'sucesso';
+            passaStatus = status !== 'sucesso' && status !== 'ignorado' && status !== 'pulado';
+        } else if (filtro === 'ignorado') {
+            passaStatus = status === 'ignorado';
+        } else if (filtro === 'pulado') {
+            passaStatus = status === 'pulado';
         } else if (filtro.startsWith('tipo-')) {
-            const tipoFiltro = filtro.replace('tipo-', '');
-            mostrar = tipo === tipoFiltro;
+            passaStatus = tipo === filtro.replace('tipo-', '');
         }
         
-        if (mostrar) {
+        // Filtro por nome
+        const passaNome = !termoNome || nome.includes(termoNome);
+        
+        // Filtro por tipo (dropdown)
+        const passaTipo = !filtroTipo || tipo === filtroTipo;
+        
+        if (passaStatus && passaNome && passaTipo) {
             bloco.style.display = 'block';
             visibleCount++;
         } else {
@@ -1843,6 +1937,7 @@ $(document).ready(function() {
                 var sucesso = 0, falhas = 0, executando = 0, tempoTotal = 0, tempoCount = 0;
                 dados.forEach(function(d) {
                     if (d.status === 'sucesso') sucesso++;
+                    else if (d.status === 'parcial') falhas++; // parcial conta como falha parcial
                     else if (d.status === 'falha' || d.status === 'erro') falhas++;
                     else if (d.status === 'executando') executando++;
                     if (d.duracao_ms) { tempoTotal += parseFloat(d.duracao_ms); tempoCount++; }
@@ -1873,6 +1968,7 @@ $(document).ready(function() {
                 render: function(data) {
                     const classes = {
                         sucesso: "badge-success",
+                        parcial: "badge-warning",
                         falha: "badge-danger",
                         erro: "badge-danger",
                         executando: "badge-warning",

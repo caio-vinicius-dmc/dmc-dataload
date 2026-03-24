@@ -824,6 +824,7 @@ function salvarWorkflow() {
     if (typeof rbacGetSelectedIds === 'function') {
         data.empresas = rbacGetSelectedIds('empresas').map(Number);
         data.projetos = rbacGetSelectedIds('projetos').map(Number);
+        data._rbac_presente = '1';
     }
     
     const url = workflowId ? baseUrl + '/api/workflows/update/' + workflowId : baseUrl + '/api/workflows/create';

@@ -106,6 +106,21 @@ ob_start();
                                     Cole a URL de uma imagem para personalizar o fundo da tela de login. Deixe vazio para usar o gradiente padrão.
                                 </small>
                             </div>
+                            <div class="col-12">
+                                <label class="form-label-modern">Favicon</label>
+                                <div class="d-flex align-items-center gap-3 mb-2" id="faviconPreviewArea" style="display:none!important;">
+                                    <img id="faviconPreview" src="" alt="Favicon" style="width:32px;height:32px;border-radius:4px;border:1px solid #dee2e6;">
+                                    <span id="faviconFilename" class="text-muted small"></span>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerFavicon()">
+                                        <i class="bi bi-trash me-1"></i>Remover
+                                    </button>
+                                </div>
+                                <input type="file" class="form-control-modern" id="inputFavicon" accept=".ico,.png,.svg,.gif">
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Formatos aceitos: .ico, .png, .svg, .gif (máx. 512KB). Recomendado: 32x32 ou 64x64 pixels.
+                                </small>
+                            </div>
                         </div>
                         <hr>
                         <button type="submit" class="btn-modern-primary">
@@ -664,6 +679,79 @@ function carregarConfiguracoes() {
                     }
                 }
             });
+            // Mostrar preview do favicon se existir
+            if (res.configs.app_favicon) {
+                $("#faviconPreview").attr("src", baseUrl + res.configs.app_favicon);
+                $("#faviconFilename").text(res.configs.app_favicon.split("/").pop());
+                $("#faviconPreviewArea").css("display", "flex!important").removeClass("d-none").attr("style", "");
+            }
+        }
+    });
+}
+
+// Upload de favicon
+$("#inputFavicon").on("change", function() {
+    const file = this.files[0];
+    if (!file) return;
+
+    if (file.size > 512 * 1024) {
+        Swal.fire("Erro!", "Arquivo muito grande. Máximo: 512KB", "error");
+        this.value = "";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("favicon", file);
+
+    Swal.fire({ title: "Enviando favicon...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    $.ajax({
+        url: baseUrl + "/api/configuracoes/upload-favicon",
+        method: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json",
+        success: function(res) {
+            if (res.sucesso) {
+                Swal.fire("Sucesso!", res.mensagem, "success");
+                $("#faviconPreview").attr("src", baseUrl + res.caminho);
+                $("#faviconFilename").text(res.caminho.split("/").pop());
+                $("#faviconPreviewArea").attr("style", "").css("display", "flex");
+            } else {
+                Swal.fire("Erro!", res.erro, "error");
+            }
+            $("#inputFavicon").val("");
+        },
+        error: function() {
+            Swal.fire("Erro!", "Falha ao enviar favicon", "error");
+            $("#inputFavicon").val("");
+        }
+    });
+});
+
+// Remover favicon
+function removerFavicon() {
+    Swal.fire({
+        title: "Remover favicon?",
+        text: "O favicon personalizado será removido.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#ef4444",
+        confirmButtonText: "Remover",
+        cancelButtonText: "Cancelar"
+    }).then(result => {
+        if (result.isConfirmed) {
+            $.post(baseUrl + "/api/configuracoes/remover-favicon", {}, function(res) {
+                if (res.sucesso) {
+                    Swal.fire("Removido!", res.mensagem, "success");
+                    $("#faviconPreviewArea").hide();
+                    $("#faviconPreview").attr("src", "");
+                    $("#faviconFilename").text("");
+                } else {
+                    Swal.fire("Erro!", res.erro, "error");
+                }
+            }, "json");
         }
     });
 }

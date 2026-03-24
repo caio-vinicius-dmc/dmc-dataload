@@ -414,6 +414,7 @@ class ServicoPermissao
             'conexao'     => ['tabela' => 'tb_perfis_conexao',  'coluna' => 'criado_por'],
             'rotina'      => ['tabela' => 'tb_rotinas',         'coluna' => 'id_usuario_criador'],
             'pipeline'    => ['tabela' => 'tb_pipelines',       'coluna' => 'criado_por'],
+            'api'         => ['tabela' => 'tb_api_externas',    'coluna' => 'criado_por'],
             'api_externa' => ['tabela' => 'tb_api_externas',    'coluna' => 'criado_por'],
             'workflow'    => ['tabela' => 'tb_workflows',       'coluna' => 'criado_por'],
         ];

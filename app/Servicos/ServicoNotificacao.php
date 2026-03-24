@@ -24,15 +24,20 @@ class ServicoNotificacao
     }
 
     /**
-     * Cria notificações para todos os usuários que pertencem às empresas/projetos do recurso
+     * Cria notificações para todos os usuários que pertencem às empresas/projetos do recurso.
+     * Respeita RBAC: só usuários vinculados à empresa/projeto do recurso recebem.
+     * Se nenhum usuário estiver associado, notifica apenas super_admins.
      */
     public static function criarParaUsuariosDoRecurso(string $tipoRecurso, int $idRecurso, string $tipo, string $titulo, string $mensagem, array $dados = []): void
     {
         try {
             $usuarios = self::obterUsuariosDoRecurso($tipoRecurso, $idRecurso);
             if (empty($usuarios)) {
-                // Fallback: notificação global
-                self::criar($tipo, $titulo, $mensagem, $dados, null);
+                // Fallback: notifica apenas super_admins (não cria global)
+                $superAdmins = self::obterSuperAdmins();
+                foreach ($superAdmins as $idSA) {
+                    self::criar($tipo, $titulo, $mensagem, $dados, $idSA);
+                }
                 return;
             }
             foreach ($usuarios as $idUsuario) {
@@ -40,8 +45,26 @@ class ServicoNotificacao
             }
         } catch (\Throwable $e) {
             error_log("Erro ao criar notificações por recurso: " . $e->getMessage());
-            self::criar($tipo, $titulo, $mensagem, $dados, null);
+            // Fallback em caso de erro: notifica super_admins
+            try {
+                $superAdmins = self::obterSuperAdmins();
+                foreach ($superAdmins as $idSA) {
+                    self::criar($tipo, $titulo, $mensagem, $dados, $idSA);
+                }
+            } catch (\Throwable $e2) {
+                error_log("Erro no fallback de notificação: " . $e2->getMessage());
+            }
         }
+    }
+
+    /**
+     * Retorna IDs de todos os super_admins
+     */
+    private static function obterSuperAdmins(): array
+    {
+        $db = Database::getConexao();
+        $stmt = $db->query("SELECT id FROM tb_usuarios WHERE nivel_acesso = 'super_admin'");
+        return $stmt->fetchAll(\PDO::FETCH_COLUMN);
     }
 
     /**

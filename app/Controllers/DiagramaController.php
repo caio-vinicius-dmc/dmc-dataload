@@ -258,6 +258,15 @@ class DiagramaController
                         'completo' => $row['TABLE_SCHEMA'] . '.' . $row['TABLE_NAME']
                     ];
                 }
+            } elseif ($tipo === 'sqlite') {
+                $result = $targetDb->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($result as $name) {
+                    $tabelas[] = [
+                        'schema' => 'main',
+                        'nome' => $name,
+                        'completo' => $name
+                    ];
+                }
             }
             
             return ['sucesso' => true, 'tabelas' => $tabelas];
@@ -480,6 +489,27 @@ class DiagramaController
                     }, $colunas)
                 ];
             }
+        } elseif ($tipo === 'sqlite') {
+            $tables = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($tables as $tableName) {
+                $cols = $db->query("PRAGMA table_info(" . $db->quote($tableName) . ")")->fetchAll(PDO::FETCH_ASSOC);
+                $tabelas[] = [
+                    'schema' => 'main',
+                    'nome' => $tableName,
+                    'completo' => $tableName,
+                    'comentario' => null,
+                    'colunas' => array_map(function($col) {
+                        return [
+                            'nome' => $col['name'],
+                            'tipo' => $col['type'] ?: 'TEXT',
+                            'nulo' => !$col['notnull'],
+                            'pk' => (bool)$col['pk'],
+                            'default' => $col['dflt_value'],
+                            'comentario' => null
+                        ];
+                    }, $cols)
+                ];
+            }
         }
         
         return $tabelas;
@@ -598,6 +628,20 @@ class DiagramaController
                     'nome' => $row['constraint_name']
                 ];
             }
+        } elseif ($tipo === 'sqlite') {
+            $tables = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($tables as $tableName) {
+                $fks = $db->query("PRAGMA foreign_key_list(" . $db->quote($tableName) . ")")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($fks as $fk) {
+                    $relacionamentos[] = [
+                        'from_table' => $tableName,
+                        'from_column' => $fk['from'],
+                        'to_table' => $fk['table'],
+                        'to_column' => $fk['to'],
+                        'nome' => 'fk_' . $tableName . '_' . $fk['from']
+                    ];
+                }
+            }
         }
         
         return $relacionamentos;
@@ -696,6 +740,19 @@ class DiagramaController
                 break;
             case 'sqlserver':
                 $dsn = "sqlsrv:Server={$host},{$porta};Database={$banco}";
+                break;
+            case 'sqlite':
+                $extras = json_decode($conexao['parametros_extras'] ?? '{}', true) ?: [];
+                $sqlitePath = $extras['sqlite_path'] ?? $banco ?? '';
+                if (empty($sqlitePath)) {
+                    throw new Exception('Caminho do banco SQLite é obrigatório');
+                }
+                if (!file_exists($sqlitePath)) {
+                    throw new Exception("Arquivo SQLite não encontrado: {$sqlitePath}");
+                }
+                $dsn = "sqlite:{$sqlitePath}";
+                $usuario = null;
+                $senha = null;
                 break;
             default:
                 throw new Exception("Tipo de banco não suportado: {$tipo}");

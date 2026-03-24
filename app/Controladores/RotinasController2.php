@@ -7,12 +7,12 @@ use PDO;
 
 class RotinasController2
 {
-    public function executar(int $id): array
+    public function executar(int $id, int $iniciarDeBloco = 1, array $blocosSelecionados = []): array
     {
         try {
-            error_log("RotinasController2::executar - ID: {$id}");
+            error_log("RotinasController2::executar - ID: {$id} | iniciarDeBloco: {$iniciarDeBloco} | blocosSelecionados: " . json_encode($blocosSelecionados));
             $svc = new ServicoExecucao();
-            $result = $svc->executarRotina($id);
+            $result = $svc->executarRotina($id, $iniciarDeBloco, $blocosSelecionados);
             error_log("RotinasController2::executar - Resultado: " . json_encode($result));
             return $result;
         } catch (\Exception $e) {

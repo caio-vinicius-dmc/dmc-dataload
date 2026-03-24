@@ -8,8 +8,13 @@ class ServicoEmail
 {
     /**
      * Envia um e-mail via SMTP usando sockets (sem dependência externa)
+     * @param string $para Destinatário
+     * @param string $assunto Assunto
+     * @param string $corpo Corpo HTML ou texto
+     * @param bool $html Se true, envia como text/html
+     * @param array $anexos Lista de caminhos de arquivo para anexar (opcional)
      */
-    public static function enviar(string $para, string $assunto, string $corpo, bool $html = true): array
+    public static function enviar(string $para, string $assunto, string $corpo, bool $html = true, array $anexos = []): array
     {
         $config = self::obterConfigSmtp();
 
@@ -59,18 +64,53 @@ class ServicoEmail
             self::sendCommand($socket, "RCPT TO:<$para>");
             self::sendCommand($socket, "DATA");
 
-            $boundary = md5(uniqid((string) time()));
-            $contentType = $html ? "text/html; charset=UTF-8" : "text/plain; charset=UTF-8";
+            // Filtrar anexos válidos
+            $anexosValidos = [];
+            foreach ($anexos as $filePath) {
+                if (is_string($filePath) && file_exists($filePath) && is_readable($filePath)) {
+                    $anexosValidos[] = $filePath;
+                }
+            }
 
             $headers = "From: $fromName <$fromEmail>\r\n";
             $headers .= "To: $para\r\n";
             $headers .= "Subject: =?UTF-8?B?" . base64_encode($assunto) . "?=\r\n";
             $headers .= "MIME-Version: 1.0\r\n";
-            $headers .= "Content-Type: $contentType\r\n";
             $headers .= "Date: " . date('r') . "\r\n";
             $headers .= "Message-ID: <" . md5(uniqid((string) mt_rand(), true)) . "@" . gethostname() . ">\r\n";
 
-            $message = $headers . "\r\n" . $corpo . "\r\n.\r\n";
+            if (empty($anexosValidos)) {
+                // Email simples sem anexos
+                $contentType = $html ? "text/html; charset=UTF-8" : "text/plain; charset=UTF-8";
+                $headers .= "Content-Type: $contentType\r\n";
+                $message = $headers . "\r\n" . $corpo . "\r\n.\r\n";
+            } else {
+                // Email multipart com anexos
+                $boundary = md5(uniqid((string) time()));
+                $headers .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n";
+
+                $bodyPart = "--$boundary\r\n";
+                $bodyContentType = $html ? "text/html; charset=UTF-8" : "text/plain; charset=UTF-8";
+                $bodyPart .= "Content-Type: $bodyContentType\r\n";
+                $bodyPart .= "Content-Transfer-Encoding: base64\r\n\r\n";
+                $bodyPart .= chunk_split(base64_encode($corpo)) . "\r\n";
+
+                $attachParts = '';
+                foreach ($anexosValidos as $filePath) {
+                    $fileName = basename($filePath);
+                    $mimeType = self::detectMimeType($filePath);
+                    $fileContent = file_get_contents($filePath);
+
+                    $attachParts .= "--$boundary\r\n";
+                    $attachParts .= "Content-Type: $mimeType; name=\"=?UTF-8?B?" . base64_encode($fileName) . "?=\"\r\n";
+                    $attachParts .= "Content-Disposition: attachment; filename=\"=?UTF-8?B?" . base64_encode($fileName) . "?=\"\r\n";
+                    $attachParts .= "Content-Transfer-Encoding: base64\r\n\r\n";
+                    $attachParts .= chunk_split(base64_encode($fileContent)) . "\r\n";
+                }
+
+                $message = $headers . "\r\n" . $bodyPart . $attachParts . "--$boundary--\r\n.\r\n";
+            }
+
             fwrite($socket, $message);
             $response = self::readResponse($socket);
 
@@ -81,6 +121,28 @@ class ServicoEmail
         } catch (\Exception $e) {
             return ['sucesso' => false, 'erro' => 'Erro ao enviar e-mail: ' . $e->getMessage()];
         }
+    }
+
+    /**
+     * Detecta o MIME type de um arquivo
+     */
+    private static function detectMimeType(string $filePath): string
+    {
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeMap = [
+            'csv' => 'text/csv',
+            'json' => 'application/json',
+            'xml' => 'application/xml',
+            'html' => 'text/html',
+            'htm' => 'text/html',
+            'pdf' => 'application/pdf',
+            'txt' => 'text/plain',
+            'sql' => 'text/plain',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'xls' => 'application/vnd.ms-excel',
+            'zip' => 'application/zip',
+        ];
+        return $mimeMap[$ext] ?? 'application/octet-stream';
     }
 
     /**

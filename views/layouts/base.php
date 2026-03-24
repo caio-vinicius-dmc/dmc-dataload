@@ -7,6 +7,22 @@ $pageTitle = $pageTitle ?? 'DMC DataLoad';
 $currentPage = $currentPage ?? '';
 $usuario = $_SESSION['usuario'] ?? [];
 $base = defined('BASE_URL') ? BASE_URL : '';
+
+// Carregar branding configs (app_nome, app_descricao, app_favicon)
+$_brandCfg = ['app_nome' => 'DMC DataLoad', 'app_descricao' => 'Database system', 'app_favicon' => ''];
+try {
+    $_brandDb = \App\Core\Database::getConexao();
+    $_brandStmt = $_brandDb->prepare("SELECT chave, valor FROM tb_configuracoes WHERE chave IN ('app_nome', 'app_descricao', 'app_favicon')");
+    $_brandStmt->execute();
+    foreach ($_brandStmt->fetchAll(\PDO::FETCH_ASSOC) as $_r) {
+        if ($_r['valor'] !== '' && $_r['valor'] !== null) {
+            $_brandCfg[$_r['chave']] = $_r['valor'];
+        }
+    }
+} catch (\Exception $e) {}
+$appNome = $_brandCfg['app_nome'];
+$appDescricao = $_brandCfg['app_descricao'];
+$appFavicon = $_brandCfg['app_favicon'];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -14,7 +30,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a1f2e">
-    <title><?= htmlspecialchars($pageTitle) ?> - DMC DataLoad</title>
+    <title><?= htmlspecialchars($pageTitle) ?> - <?= htmlspecialchars($appNome) ?></title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -834,6 +850,103 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         .badge-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
         .badge-info { background: rgba(14, 165, 233, 0.1); color: var(--secondary); }
 
+        /* ========== CARD MODERN ========== */
+        .card-modern {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid rgba(0,0,0,0.04);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-modern:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .card-modern-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 2px solid #f3f4f6;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #1a202c;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-modern-body {
+            padding: 1.5rem;
+        }
+
+        .card-modern-body.p-0 {
+            padding: 0 !important;
+        }
+
+        .card-modern-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ========== TABLE MODERN ========== */
+        .table-modern {
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: collapse;
+        }
+
+        .table-modern thead th {
+            background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
+            color: #4b5563;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid #e5e7eb;
+            border-top: none;
+            white-space: nowrap;
+        }
+
+        .table-modern tbody td {
+            padding: 0.875rem 1.25rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.9375rem;
+            color: #374151;
+        }
+
+        .table-modern tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .table-modern tbody tr:hover {
+            background-color: rgba(99, 102, 241, 0.04);
+        }
+
+        .table-modern tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* DataTables com table-modern */
+        .table-modern.dataTable thead th {
+            background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%) !important;
+            border-bottom: 2px solid #e5e7eb !important;
+        }
+
+        .table-modern.dataTable.table-hover tbody tr:hover > * {
+            --bs-table-bg-state: rgba(99, 102, 241, 0.04);
+        }
+
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            padding: 0.75rem 1.25rem;
+        }
+
         /* ========== MOBILE OVERLAY ========== */
         .sidebar-overlay {
             position: fixed;
@@ -1256,6 +1369,28 @@ $base = defined('BASE_URL') ? BASE_URL : '';
 
         body.dark-mode .card-modern-body {
             color: var(--dm-text);
+        }
+
+        body.dark-mode .card-modern-footer {
+            background: var(--dm-bg-secondary);
+            border-top-color: var(--dm-border);
+            color: var(--dm-text-secondary);
+        }
+
+        /* Table-modern dark */
+        body.dark-mode .table-modern thead th {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.06) 100%);
+            color: var(--dm-text-secondary);
+            border-bottom-color: var(--dm-border);
+        }
+
+        body.dark-mode .table-modern tbody td {
+            border-bottom-color: var(--dm-border);
+            color: var(--dm-text);
+        }
+
+        body.dark-mode .table-modern tbody tr:hover {
+            background-color: rgba(255,255,255,0.04);
         }
 
         /* Tables dark */
@@ -1721,6 +1856,10 @@ $base = defined('BASE_URL') ? BASE_URL : '';
     <!-- SweetAlert2 -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     
+    <?php if ($appFavicon): ?>
+    <link rel="icon" href="<?= $base . htmlspecialchars($appFavicon) ?>" type="image/x-icon">
+    <?php endif; ?>
+    
     <?php if (isset($extraStyles)) echo $extraStyles; ?>
 </head>
 <body>
@@ -1732,11 +1871,15 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         <div class="sidebar-header">
             <a href="<?= $base ?>/dashboard" class="sidebar-brand">
                 <div class="sidebar-brand-icon">
-                    <i class="bi bi-database"></i>
+                    <?php if ($appFavicon): ?>
+                        <img src="<?= $base . htmlspecialchars($appFavicon) ?>" alt="Logo" style="width:28px;height:28px;object-fit:contain;">
+                    <?php else: ?>
+                        <i class="bi bi-database"></i>
+                    <?php endif; ?>
                 </div>
                 <div class="sidebar-brand-text">
-                    DMC - DataLoad
-                    <small>Database system</small>
+                    <?= htmlspecialchars($appNome) ?>
+                    <small><?= htmlspecialchars($appDescricao) ?></small>
                 </div>
             </a>
             <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Recolher menu">
@@ -1949,6 +2092,12 @@ $base = defined('BASE_URL') ? BASE_URL : '';
                         <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>" data-tooltip="Fila Execução">
                             <i class="bi bi-collection"></i>
                             <span>Fila Execução</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/arquivos-gerados" class="menu-link <?= $currentPage === 'arquivos-gerados' ? 'active' : '' ?>" data-tooltip="Arquivos Gerados">
+                            <i class="bi bi-folder2-open"></i>
+                            <span>Arquivos Gerados</span>
                         </a>
                     </div>
                     <?php if ($ehSuperAdminSidebar): ?>

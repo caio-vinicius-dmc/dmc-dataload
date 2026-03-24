@@ -402,22 +402,22 @@ class ApiPollingEngine
                 $valorStr
             );
             
-            // Inserir notificação no banco
-            $stmt = $this->db->prepare("
-                INSERT INTO tb_notificacoes (tipo, titulo, mensagem, dados, created_at)
-                VALUES ('api_event', ?, ?, ?, NOW())
-            ");
-            $stmt->execute([
+            $dados = [
+                'evento_id' => $evento['id'],
+                'api_id' => $evento['id_api'],
+                'valor' => $valorExtraido,
+                'operador' => $evento['operador'],
+                'valor_esperado' => $evento['valor_esperado']
+            ];
+
+            // Criar notificação respeitando RBAC (só para usuários da empresa/projeto da API)
+            \App\Servicos\ServicoNotificacao::criarParaUsuariosDoRecurso(
+                'api', (int)$evento['id_api'],
+                'api_event',
                 'Evento: ' . $evento['nome'],
                 $mensagem,
-                json_encode([
-                    'evento_id' => $evento['id'],
-                    'api_id' => $evento['id_api'],
-                    'valor' => $valorExtraido,
-                    'operador' => $evento['operador'],
-                    'valor_esperado' => $evento['valor_esperado']
-                ])
-            ]);
+                $dados
+            );
             
             // Log de auditoria
             Logger::info("Notificação criada", [

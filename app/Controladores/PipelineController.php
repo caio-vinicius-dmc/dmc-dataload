@@ -1142,11 +1142,12 @@ class PipelineController
         $subject = $this->replaceVariables($subject, $context['variables']);
         $body = $this->replaceVariables($body, $context['variables']);
 
-        $headers = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n";
+        $resultado = \App\Servicos\ServicoEmail::enviar($to, $subject, $body);
+        if (!($resultado['sucesso'] ?? false)) {
+            throw new \RuntimeException('Falha ao enviar e-mail: ' . ($resultado['erro'] ?? 'erro desconhecido'));
+        }
 
-        $sent = @mail($to, $subject, $body, $headers);
-
-        return ['data' => ['sent' => $sent, 'to' => $to]];
+        return ['data' => ['sent' => true, 'to' => $to]];
     }
 
     /**

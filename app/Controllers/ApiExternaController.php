@@ -28,7 +28,7 @@ class ApiExternaController
     public function listarApis(): array
     {
         try {
-            $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('api_externa', 'a', 'criado_por');
+            $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('api', 'a', 'criado_por');
             $stmt = $this->db->prepare("
                 SELECT 
                     a.*,
@@ -38,9 +38,49 @@ class ApiExternaController
                 ORDER BY a.nome ASC
             ");
             $stmt->execute($filtro['params']);
+            $apis = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Buscar associações empresa/projeto de todas as APIs de uma vez
+            $ids = array_column($apis, 'id');
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+                $stmtE = $this->db->prepare("
+                    SELECT re.id_recurso, re.id_empresa, e.nome 
+                    FROM tb_recurso_empresas re 
+                    JOIN tb_empresas e ON e.id = re.id_empresa
+                    WHERE re.tipo_recurso = 'api' AND re.id_recurso IN ($placeholders)
+                    ORDER BY e.nome
+                ");
+                $stmtE->execute($ids);
+                $empresasMap = [];
+                foreach ($stmtE->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                    $empresasMap[$row['id_recurso']][] = ['id' => (int)$row['id_empresa'], 'nome' => $row['nome']];
+                }
+
+                $stmtP = $this->db->prepare("
+                    SELECT rp.id_recurso, rp.id_projeto, p.nome 
+                    FROM tb_recurso_projetos rp 
+                    JOIN tb_projetos p ON p.id = rp.id_projeto
+                    WHERE rp.tipo_recurso = 'api' AND rp.id_recurso IN ($placeholders)
+                    ORDER BY p.nome
+                ");
+                $stmtP->execute($ids);
+                $projetosMap = [];
+                foreach ($stmtP->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                    $projetosMap[$row['id_recurso']][] = ['id' => (int)$row['id_projeto'], 'nome' => $row['nome']];
+                }
+
+                foreach ($apis as &$api) {
+                    $api['empresas'] = $empresasMap[$api['id']] ?? [];
+                    $api['projetos'] = $projetosMap[$api['id']] ?? [];
+                }
+                unset($api);
+            }
+
             return [
                 'sucesso' => true,
-                'dados' => $stmt->fetchAll(\PDO::FETCH_ASSOC)
+                'dados' => $apis
             ];
         } catch (\Exception $e) {
             return ErrorHandler::tratarErro($e, 'Erro ao listar APIs');
@@ -307,7 +347,7 @@ class ApiExternaController
     public function listarEventos(int $idApi = null): array
     {
         try {
-            $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('api_externa', 'a', 'criado_por');
+            $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('api', 'a', 'criado_por');
             $sql = "
                 SELECT 
                     e.*,

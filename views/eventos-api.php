@@ -196,37 +196,6 @@ ob_start();
     font-weight: 500;
 }
 
-.table-modern {
-    width: 100%;
-    margin-bottom: 0;
-}
-
-.table-modern thead th {
-    background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
-    color: #4b5563;
-    font-weight: 700;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 1rem 1.25rem;
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.table-modern tbody td {
-    padding: 1rem 1.25rem;
-    vertical-align: middle;
-    border-bottom: 1px solid #f3f4f6;
-    font-size: 0.95rem;
-}
-
-.table-modern tbody tr {
-    transition: var(--transition);
-}
-
-.table-modern tbody tr:hover {
-    background: rgba(102, 126, 234, 0.03);
-}
-
 /* ==== ESTILOS ESPECÍFICOS ==== */
 .operator-badge {
     font-size: 0.75rem;

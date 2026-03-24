@@ -1,9 +1,0 @@
-{
-    "sql": "INSERT INTO tb_rotinas (nome, descricao, id_conexao, id_usuario_criador) VALUES (?, ?, ?, ?) RETURNING id",
-    "params": [
-        "TESTE_Nova_Conexao_MySQL",
-        "Rotina teste",
-        "18",
-        null
-    ]
-}

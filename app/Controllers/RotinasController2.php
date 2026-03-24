@@ -7,12 +7,12 @@ use PDO;
 
 class RotinasController2
 {
-    public function executar(int $id): array
+    public function executar(int $id, int $iniciarDeBloco = 1, array $blocosSelecionados = []): array
     {
         try {
-            error_log("RotinasController2::executar - ID: {$id}");
+            error_log("RotinasController2::executar - ID: {$id} | iniciarDeBloco: {$iniciarDeBloco} | blocosSelecionados: " . json_encode($blocosSelecionados));
             $svc = new ServicoExecucao();
-            $result = $svc->executarRotina($id);
+            $result = $svc->executarRotina($id, $iniciarDeBloco, $blocosSelecionados);
             error_log("RotinasController2::executar - Resultado: " . json_encode($result));
             return $result;
         } catch (\Exception $e) {
@@ -102,16 +102,21 @@ class RotinasController2
                 ];
                 @file_put_contents(__DIR__ . '/../../storage/update_params.json', json_encode($debugParams, JSON_PRETTY_PRINT));
                 
-                $u = $db->prepare('UPDATE tb_rotinas SET nome=?, descricao=?, id_conexao=?, webhook_sucesso=?, webhook_falha=?, ativa=?::boolean, agendamento_cron=?, max_tentativas=? WHERE id=?');
+                $pararEmErro = !empty($data['parar_em_erro']);
+                $rollbackEmErro = !empty($data['rollback_em_erro']);
+                
+                $u = $db->prepare('UPDATE tb_rotinas SET nome=?, descricao=?, id_conexao=?, webhook_sucesso=?, webhook_falha=?, ativa=?::boolean, agendamento_cron=?, max_tentativas=?, parar_em_erro=?::boolean, rollback_em_erro=?::boolean WHERE id=?');
                 $u->execute([
                     $data['nome'], 
                     $data['descricao'], 
                     $data['id_conexao'], 
                     $webhookSucesso, 
                     $webhookFalha,
-                    $ativa ? 't' : 'f',  // PostgreSQL boolean
+                    $ativa ? 't' : 'f',
                     $agendamentoCron,
                     $maxTentativas,
+                    $pararEmErro ? 't' : 'f',
+                    $rollbackEmErro ? 't' : 'f',
                     $data['id']
                 ]);
             
@@ -155,6 +160,15 @@ class RotinasController2
             $placeholders[] = '?';
             $params[] = $data['webhook_falha'];
         }
+
+        // Opções de erro
+        $cols[] = 'parar_em_erro';
+        $placeholders[] = '?::boolean';
+        $params[] = !empty($data['parar_em_erro']) ? 't' : 'f';
+        
+        $cols[] = 'rollback_em_erro';
+        $placeholders[] = '?::boolean';
+        $params[] = !empty($data['rollback_em_erro']) ? 't' : 'f';
 
         $sql = 'INSERT INTO tb_rotinas (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $placeholders) . ') RETURNING id';
         $ins = $db->prepare($sql);

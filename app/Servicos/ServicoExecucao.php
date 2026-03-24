@@ -61,6 +61,8 @@ class ServicoExecucao
                 return "CREATE TABLE tb_auditoria_rotina (id NUMBER(10) PRIMARY KEY, id_rotina NUMBER(10), bloco_codigo VARCHAR2(100), data_execucao TIMESTAMP, resultado CLOB, caminho_csv VARCHAR2(4000))";
             case 'sqlserver':
                 return "IF OBJECT_ID('dbo.tb_auditoria_rotina','U') IS NULL CREATE TABLE tb_auditoria_rotina (id INT IDENTITY(1,1) PRIMARY KEY, id_rotina INT, bloco_codigo VARCHAR(100), data_execucao DATETIME, resultado VARCHAR(MAX), caminho_csv VARCHAR(MAX))";
+            case 'sqlite':
+                return "CREATE TABLE IF NOT EXISTS tb_auditoria_rotina (id INTEGER PRIMARY KEY AUTOINCREMENT, id_rotina INTEGER, bloco_codigo TEXT, data_execucao TEXT DEFAULT (datetime('now')), resultado TEXT, caminho_csv TEXT)";
             case 'postgres':
             default:
                 return "CREATE TABLE IF NOT EXISTS tb_auditoria_rotina (id BIGSERIAL PRIMARY KEY, id_rotina BIGINT, bloco_codigo TEXT, data_execucao TIMESTAMPTZ, resultado TEXT, caminho_csv TEXT)";
@@ -98,6 +100,14 @@ class ServicoExecucao
                 case 'odbc':
                     $dsn = "odbc:{$db}";
                     return new PDO($dsn, $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                case 'sqlite':
+                    $extras = json_decode($perfil['parametros_extras'] ?? '{}', true) ?: [];
+                    $sqlitePath = $extras['sqlite_path'] ?? $db ?? '';
+                    if (empty($sqlitePath) || !file_exists($sqlitePath)) {
+                        error_log("ServicoExecucao: Arquivo SQLite não encontrado: {$sqlitePath}");
+                        return null;
+                    }
+                    return new PDO("sqlite:{$sqlitePath}", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                 default:
                     error_log("ServicoExecucao: Tipo de banco desconhecido: {$tipo}");
                     return null;
@@ -203,7 +213,7 @@ class ServicoExecucao
         }
     }
 
-    public function executarRotina(int $idRotina): array
+    public function executarRotina(int $idRotina, int $iniciarDeBloco = 1, array $blocosSelecionados = []): array
     {
         $db = Database::getConexao();
         $inicioExecucao = microtime(true);
@@ -226,12 +236,18 @@ class ServicoExecucao
         $u = $db->prepare('UPDATE tb_rotinas SET esta_executando = true, ultima_verificacao = now() WHERE id = ?');
         $u->execute([$idRotina]);
 
+        // Opções de controle de erro
+        $pararEmErro = !empty($rotina['parar_em_erro']);
+        $rollbackEmErro = !empty($rotina['rollback_em_erro']);
+
         $logs = [];
         $blocosExecutados = 0;
         $blocosSucesso = 0;
         $blocosFalha = 0;
         $registrosTotal = 0;
         $detalhesExecucao = [];
+        $interrompido = false;
+        $rollbackRealizado = false;
         try {
             // obter perfil de conexao
             $ps = $db->prepare('SELECT * FROM tb_perfis_conexao WHERE id = ?');
@@ -242,7 +258,7 @@ class ServicoExecucao
             $pdoAlvo = $this->criarConexaoAlvo($perfil);
             if (!$pdoAlvo) throw new \RuntimeException('Não foi possível conectar ao banco alvo');
 
-            // garantir tabela de auditoria no alvo
+            // garantir tabela de auditoria no alvo (fora da transação)
             $ddl = $this->gerarAuditoriaDDL($perfil['tipo_banco']);
             $pdoAlvo->exec($ddl);
 
@@ -251,9 +267,70 @@ class ServicoExecucao
             $bs->execute([$idRotina]);
             $blocos = $bs->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($blocos as $bloco) {
+            // Iniciar transação se rollback estiver ativo
+            $emTransacao = false;
+            if ($rollbackEmErro) {
+                try {
+                    $pdoAlvo->beginTransaction();
+                    $emTransacao = true;
+                } catch (\Throwable $e) {
+                    error_log("ServicoExecucao: Não foi possível iniciar transação: " . $e->getMessage());
+                }
+            }
+
+            // Modo de execução: selecionados ou a partir de
+            $modoSelecionados = !empty($blocosSelecionados);
+
+            foreach ($blocos as $idx => $bloco) {
                 $codigo = $bloco['codigo_bloco'] ?? $bloco['id'];
+                $tipoBlocoUpper = strtoupper($bloco['tipo_bloco'] ?? 'SELECT');
+                $ordemBloco = (int)($bloco['ordem'] ?? ($idx + 1));
+
+                // Determinar se deve pular este bloco
+                $deveExecutar = true;
+                if ($modoSelecionados) {
+                    $deveExecutar = in_array($ordemBloco, $blocosSelecionados);
+                } elseif ($ordemBloco < $iniciarDeBloco) {
+                    $deveExecutar = false;
+                }
+
+                if (!$deveExecutar) {
+                    $detalhesExecucao[] = [
+                        'id_bloco' => $bloco['id'],
+                        'bloco' => $codigo,
+                        'tipo' => $bloco['tipo_bloco'] ?? 'UNKNOWN',
+                        'ordem' => $ordemBloco,
+                        'sql' => $bloco['script_sql'] ?? '',
+                        'duracao_ms' => 0,
+                        'registros' => 0,
+                        'erro' => null,
+                        'resultado' => '',
+                        'arquivo_csv' => null,
+                        'status' => 'pulado'
+                    ];
+                    continue;
+                }
+                
+                // DDL causa auto-commit em MySQL/MariaDB — reiniciar transação após DDL
+                $isDDL = in_array($tipoBlocoUpper, ['CREATE', 'ALTER', 'DROP', 'TRUNCATE']);
+                if ($isDDL && $emTransacao) {
+                    // Commit antes do DDL, pois DDL força commit implícito em MySQL
+                    try { $pdoAlvo->commit(); } catch (\Throwable $e) { /* ignore */ }
+                    $emTransacao = false;
+                }
+                
                 $res = $this->executarBloco($pdoAlvo, $bloco, $idRotina, $codigo);
+                
+                // Reiniciar transação após DDL se rollback está ativo
+                if ($isDDL && $rollbackEmErro && !$emTransacao) {
+                    try {
+                        $pdoAlvo->beginTransaction();
+                        $emTransacao = true;
+                    } catch (\Throwable $e) {
+                        error_log("ServicoExecucao: Não foi possível reiniciar transação após DDL: " . $e->getMessage());
+                    }
+                }
+                
                 $logs[] = ['bloco' => $codigo, 'res' => $res];
                 
                 $blocosExecutados++;
@@ -278,24 +355,117 @@ class ServicoExecucao
                     'arquivo_csv' => $res['arquivo'] ?? null,
                     'status' => $res['sucesso'] ? 'sucesso' : 'falha'
                 ];
+
+                // Se o bloco falhou e a opção de parar está ativa
+                if (!$res['sucesso'] && $pararEmErro) {
+                    $interrompido = true;
+
+                    // Marcar os blocos restantes como "ignorado"
+                    $blocoIdx = array_search($bloco, $blocos);
+                    $restantes = array_slice($blocos, $blocoIdx + 1);
+                    foreach ($restantes as $blocoIgnorado) {
+                        $codigoIgnorado = $blocoIgnorado['codigo_bloco'] ?? $blocoIgnorado['id'];
+                        $detalhesExecucao[] = [
+                            'id_bloco' => $blocoIgnorado['id'],
+                            'bloco' => $codigoIgnorado,
+                            'tipo' => $blocoIgnorado['tipo_bloco'] ?? 'UNKNOWN',
+                            'ordem' => $blocoIgnorado['ordem'] ?? 0,
+                            'sql' => $blocoIgnorado['script_sql'] ?? '',
+                            'duracao_ms' => 0,
+                            'registros' => 0,
+                            'erro' => 'Bloco ignorado: execução interrompida por erro no bloco ' . $codigo,
+                            'resultado' => '',
+                            'arquivo_csv' => null,
+                            'status' => 'ignorado'
+                        ];
+                    }
+
+                    // Rollback se ativo
+                    if ($rollbackEmErro && $emTransacao) {
+                        try {
+                            $pdoAlvo->rollBack();
+                            $emTransacao = false;
+                            $rollbackRealizado = true;
+                            error_log("ServicoExecucao: Rollback realizado para rotina #{$idRotina} após erro no bloco {$codigo}");
+                        } catch (\Throwable $rbEx) {
+                            error_log("ServicoExecucao: Erro ao realizar rollback: " . $rbEx->getMessage());
+                        }
+                    }
+
+                    break; // Parar execução dos blocos
+                }
+            }
+
+            // Commit se transação está aberta e não houve erro
+            if ($emTransacao) {
+                try {
+                    $pdoAlvo->commit();
+                    $emTransacao = false;
+                } catch (\Throwable $commitEx) {
+                    error_log("ServicoExecucao: Erro ao commitar transação: " . $commitEx->getMessage());
+                }
             }
 
             $fimExecucao = microtime(true);
             $duracaoTotal = round(($fimExecucao - $inicioExecucao) * 1000);
 
+            // Determinar status final
+            // - "sucesso": todos os blocos passaram
+            // - "parcial": alguns blocos falharam (mesmo que não tenha parar_em_erro)
+            // - "falha": todos falharam ou erro fatal
+            if ($blocosFalha === 0) {
+                $statusFinal = 'sucesso';
+            } elseif ($blocosSucesso > 0) {
+                $statusFinal = 'parcial';
+            } else {
+                $statusFinal = 'falha';
+            }
+
+            // Adicionar info extra no meta
+            $metaExtra = [
+                'parar_em_erro' => $pararEmErro,
+                'rollback_em_erro' => $rollbackEmErro,
+                'interrompido' => $interrompido,
+                'rollback_realizado' => $rollbackRealizado,
+                'iniciar_de_bloco' => (!$modoSelecionados && $iniciarDeBloco > 1) ? $iniciarDeBloco : null,
+                'blocos_selecionados' => $modoSelecionados ? $blocosSelecionados : null,
+            ];
+            $metaCompleto = [
+                'blocos' => $detalhesExecucao,
+                'opcoes' => $metaExtra,
+            ];
+
             // registrar log execução com todas as métricas
-            $insLog = $db->prepare('INSERT INTO tb_logs_execucao (id_rotina, data_inicio, data_fim, status, duracao_ms, blocos_executados, blocos_sucesso, blocos_falha, registros_processados, meta) VALUES (?, now(), now(), ?, ?, ?, ?, ?, ?, ?::jsonb)');
-            $insLog->execute([$idRotina, 'sucesso', $duracaoTotal, $blocosExecutados, $blocosSucesso, $blocosFalha, $registrosTotal, json_encode($detalhesExecucao)]);
+            $mensagemErro = null;
+            if ($interrompido) {
+                $ultimoErro = end($logs);
+                $mensagemErro = 'Execução interrompida' . ($rollbackRealizado ? ' (rollback realizado)' : '') . ': ' . ($ultimoErro['res']['erro'] ?? 'erro desconhecido');
+            }
+            
+            $insLog = $db->prepare('INSERT INTO tb_logs_execucao (id_rotina, data_inicio, data_fim, status, mensagem_erro, duracao_ms, blocos_executados, blocos_sucesso, blocos_falha, registros_processados, meta) VALUES (?, now(), now(), ?, ?, ?, ?, ?, ?, ?, ?::jsonb)');
+            $insLog->execute([$idRotina, $statusFinal, $mensagemErro, $duracaoTotal, $blocosExecutados, $blocosSucesso, $blocosFalha, $registrosTotal, json_encode($metaCompleto)]);
 
-            ServicoWebhook::notificarSucesso('rotina', $rotina['nome'] ?? "Rotina #{$idRotina}", $idRotina, [
-                'blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso,
-                'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal
-            ]);
-            ServicoCanalNotificacao::notificar('sucesso', "Sucesso: " . ($rotina['nome'] ?? "Rotina #{$idRotina}"), [
-                'blocos' => "{$blocosSucesso}/{$blocosExecutados}", 'registros' => $registrosTotal, 'duracao' => "{$duracaoTotal}ms"
-            ], 'rotina');
+            // Notificações baseadas no status
+            if ($statusFinal === 'sucesso') {
+                ServicoWebhook::notificarSucesso('rotina', $rotina['nome'] ?? "Rotina #{$idRotina}", $idRotina, [
+                    'blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso,
+                    'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal
+                ]);
+                ServicoCanalNotificacao::notificar('sucesso', "Sucesso: " . ($rotina['nome'] ?? "Rotina #{$idRotina}"), [
+                    'blocos' => "{$blocosSucesso}/{$blocosExecutados}", 'registros' => $registrosTotal, 'duracao' => "{$duracaoTotal}ms"
+                ], 'rotina');
+            } else {
+                // Parcial ou com falhas
+                $msgNotif = $statusFinal === 'parcial' ? 'Parcial' : 'Falha';
+                $rollbackMsg = $rollbackRealizado ? ' (rollback realizado)' : '';
+                ServicoWebhook::notificarFalha('rotina', $rotina['nome'] ?? "Rotina #{$idRotina}", $mensagemErro ?? 'Erro em blocos', $idRotina);
+                ServicoCanalNotificacao::notificar($statusFinal === 'parcial' ? 'aviso' : 'falha', "{$msgNotif}{$rollbackMsg}: " . ($rotina['nome'] ?? "Rotina #{$idRotina}"), [
+                    'blocos' => "{$blocosSucesso}/{$blocosExecutados}", 'falhas' => $blocosFalha, 'registros' => $registrosTotal, 'duracao' => "{$duracaoTotal}ms"
+                ], 'rotina');
+            }
 
-            return ['sucesso' => true, 'logs' => $logs, 'metricas' => ['blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso, 'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal]];
+            $sucessoGeral = $statusFinal === 'sucesso';
+            return ['sucesso' => $sucessoGeral, 'status' => $statusFinal, 'logs' => $logs, 'metricas' => ['blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso, 'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal, 'interrompido' => $interrompido, 'rollback_realizado' => $rollbackRealizado]];
         } catch (\Throwable $e) {
             $fimExecucao = microtime(true);
             $duracaoTotal = round(($fimExecucao - $inicioExecucao) * 1000);
@@ -311,10 +481,10 @@ class ServicoExecucao
                 ['blocos_falha' => $blocosFalha, 'duracao_ms' => $duracaoTotal]
             );
 
-            return ['sucesso' => false, 'erro' => $e->getMessage(), 'logs' => $logs, 'metricas' => ['blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso, 'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal]];
+            return ['sucesso' => false, 'status' => 'falha', 'erro' => $e->getMessage(), 'logs' => $logs, 'metricas' => ['blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso, 'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal]];
         } finally {
-            // liberar
-            $db->prepare('UPDATE tb_rotinas SET esta_executando = false, ultima_verificacao = now() WHERE id = ?')->execute([$idRotina]);
+            // liberar e registrar data da última execução
+            $db->prepare('UPDATE tb_rotinas SET esta_executando = false, ultima_verificacao = now(), ultima_execucao = now() WHERE id = ?')->execute([$idRotina]);
         }
     }
 }

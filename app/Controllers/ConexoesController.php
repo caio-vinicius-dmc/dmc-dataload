@@ -80,6 +80,18 @@ class ConexoesController
                     $pdo = new PDO("odbc:{$dsn}", $user, $senha, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                     break;
                     
+                case 'sqlite':
+                    $sqlitePath = $data['sqlite_path'] ?? $data['nome_banco'] ?? '';
+                    if (empty($sqlitePath)) {
+                        return ['sucesso' => false, 'mensagem' => 'Caminho do banco SQLite é obrigatório'];
+                    }
+                    $dir = dirname($sqlitePath);
+                    if (!is_dir($dir)) {
+                        return ['sucesso' => false, 'mensagem' => "Diretório não existe: {$dir}"];
+                    }
+                    $pdo = new PDO("sqlite:{$sqlitePath}", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                    break;
+                    
                 default:
                     return ['sucesso' => false, 'mensagem' => 'Tipo de banco desconhecido'];
             }
@@ -138,6 +150,14 @@ class ConexoesController
             $parametrosExtras['sid'] = $data['sid'] ?? '';
         } elseif ($data['tipo_banco'] === 'sqlserver') {
             $parametrosExtras['instance_name'] = $data['instance_name'] ?? '';
+        } elseif ($data['tipo_banco'] === 'sqlite') {
+            $parametrosExtras['sqlite_path'] = $data['sqlite_path'] ?? '';
+            $data['nome_banco'] = $parametrosExtras['sqlite_path'];
+            $data['host'] = '';
+            $data['usuario'] = '';
+        } elseif ($data['tipo_banco'] === 'odbc') {
+            $parametrosExtras['odbc_dsn'] = $data['odbc_dsn'] ?? '';
+            $data['nome_banco'] = $parametrosExtras['odbc_dsn'];
         }
         
         // Regras: testar conexão antes de salvar

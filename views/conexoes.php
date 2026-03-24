@@ -167,15 +167,17 @@ ob_start();
                                 <option value="mariadb">MariaDB</option>
                                 <option value="sqlserver">SQL Server</option>
                                 <option value="oracle">Oracle</option>
+                                <option value="sqlite">SQLite</option>
+                                <option value="odbc">ODBC</option>
                             </select>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-8" id="campo_host">
                             <label class="form-label-modern">Host *</label>
                             <input type="text" class="form-control-modern" name="host" id="host" placeholder="localhost" required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4" id="campo_porta">
                             <label class="form-label-modern">Porta *</label>
-                            <input type="number" class="form-control-modern" name="porta" id="porta" placeholder="5432" required>
+                            <input type="number" class="form-control-modern" name="porta" id="porta" required>
                         </div>
                         
                         <!-- Campo para PostgreSQL, MySQL, MariaDB, SQL Server -->
@@ -205,11 +207,25 @@ ob_start();
                             <small class="text-muted">Deixe vazio se não houver instância específica</small>
                         </div>
                         
-                        <div class="col-md-6">
+                        <!-- Campo para SQLite (caminho do arquivo .db) -->
+                        <div class="col-12" id="campo_sqlite_path" style="display: none;">
+                            <label class="form-label-modern">Caminho do Banco de Dados *</label>
+                            <input type="text" class="form-control-modern" name="sqlite_path" id="sqlite_path" placeholder="Ex: C:\dados\meu_banco.db ou /var/data/banco.sqlite">
+                            <small class="text-muted">Caminho absoluto para o arquivo SQLite. Se não existir, será criado automaticamente.</small>
+                        </div>
+                        
+                        <!-- Campo para ODBC (DSN) -->
+                        <div class="col-12" id="campo_odbc_dsn" style="display: none;">
+                            <label class="form-label-modern">DSN (Data Source Name) *</label>
+                            <input type="text" class="form-control-modern" name="odbc_dsn" id="odbc_dsn" placeholder="Ex: Driver={ODBC Driver 17 for SQL Server};Server=host;Database=db;">
+                            <small class="text-muted">String de conexão ODBC completa ou nome do DSN configurado no sistema.</small>
+                        </div>
+                        
+                        <div class="col-md-6" id="campo_usuario">
                             <label class="form-label-modern">Usuário *</label>
                             <input type="text" class="form-control-modern" name="usuario" id="usuario" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-12" id="campo_senha">
                             <label class="form-label-modern">Senha</label>
                             <div class="input-group">
                                 <input type="password" class="form-control-modern" name="senha" id="senha" placeholder="Deixe vazio para manter a atual">
@@ -508,6 +524,20 @@ textarea.form-control-modern {
     min-height: 80px;
 }
 
+.input-group .form-control-modern {
+    width: auto;
+    flex: 1 1 auto;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.input-group .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border: 2px solid #e2e8f0;
+    border-left: 0;
+}
+
 .modal-modern .modal-header-modern {
     background: var(--gradient-primary);
     color: white;
@@ -737,13 +767,15 @@ function editarConexao(id) {
         document.getElementById("conexaoId").value = r.id;
         document.getElementById("nome_conexao").value = r.nome_conexao;
         document.getElementById("tipo_banco").value = r.tipo_banco;
-        document.getElementById("host").value = r.host;
-        document.getElementById("porta").value = r.porta;
+        document.getElementById("host").value = r.host || "";
+        document.getElementById("porta").value = r.porta || "";
         document.getElementById("nome_banco").value = r.nome_banco || "";
         document.getElementById("sid").value = r.sid || "";
         document.getElementById("tipo_conexao_oracle").value = r.tipo_conexao_oracle || "sid";
         document.getElementById("instance_name").value = r.instance_name || "";
-        document.getElementById("usuario").value = r.usuario;
+        document.getElementById("sqlite_path").value = r.sqlite_path || r.nome_banco || "";
+        document.getElementById("odbc_dsn").value = r.odbc_dsn || r.nome_banco || "";
+        document.getElementById("usuario").value = r.usuario || "";
         document.getElementById("senha").value = "";
         document.getElementById("modalTitle").textContent = "Editar Conexão";
         document.getElementById("resultadoTeste").style.display = "none";
@@ -981,34 +1013,63 @@ function mostrarErro(res) {
 // Alterar porta padrão e campos específicos ao mudar tipo de banco
 document.getElementById("tipo_banco").addEventListener("change", function() {
     const tipoBanco = this.value;
-    // Só preenche porta padrão se o campo estiver vazio (nova conexão)
-    if (!document.getElementById("porta").value) {
-        document.getElementById("porta").value = portasPadrao[tipoBanco] || "";
-    }
+    // Sempre sugere a porta padrão ao trocar o tipo de banco
+    document.getElementById("porta").value = portasPadrao[tipoBanco] || "";
     
     // Ocultar todos os campos específicos
     document.getElementById("campo_nome_banco").style.display = "none";
     document.getElementById("campo_tipo_conexao_oracle").style.display = "none";
     document.getElementById("campo_sid").style.display = "none";
     document.getElementById("campo_instance").style.display = "none";
+    document.getElementById("campo_sqlite_path").style.display = "none";
+    document.getElementById("campo_odbc_dsn").style.display = "none";
+    
+    // Mostrar campos comuns por padrão
+    document.getElementById("campo_host").style.display = "";
+    document.getElementById("campo_porta").style.display = "";
+    document.getElementById("campo_usuario").style.display = "";
+    document.getElementById("campo_senha").style.display = "";
     
     // Remover required de todos os campos específicos
     document.getElementById("nome_banco").removeAttribute("required");
     document.getElementById("sid").removeAttribute("required");
+    document.getElementById("sqlite_path").removeAttribute("required");
+    document.getElementById("odbc_dsn").removeAttribute("required");
+    document.getElementById("host").setAttribute("required", "required");
+    document.getElementById("porta").setAttribute("required", "required");
+    document.getElementById("usuario").setAttribute("required", "required");
     
     // Mostrar campos específicos conforme o tipo de banco
     if (tipoBanco === "oracle") {
-        // Oracle: mostrar tipo de conexão e SID/Service Name
         document.getElementById("campo_tipo_conexao_oracle").style.display = "block";
         document.getElementById("campo_sid").style.display = "block";
         document.getElementById("sid").setAttribute("required", "required");
     } else if (tipoBanco === "sqlserver") {
-        // SQL Server: nome do banco + instance (opcional)
         document.getElementById("campo_nome_banco").style.display = "block";
         document.getElementById("campo_instance").style.display = "block";
         document.getElementById("nome_banco").setAttribute("required", "required");
+    } else if (tipoBanco === "sqlite") {
+        // SQLite: só precisa do caminho do arquivo
+        document.getElementById("campo_sqlite_path").style.display = "block";
+        document.getElementById("sqlite_path").setAttribute("required", "required");
+        document.getElementById("campo_host").style.display = "none";
+        document.getElementById("campo_porta").style.display = "none";
+        document.getElementById("campo_usuario").style.display = "none";
+        document.getElementById("campo_senha").style.display = "none";
+        document.getElementById("host").removeAttribute("required");
+        document.getElementById("porta").removeAttribute("required");
+        document.getElementById("usuario").removeAttribute("required");
+    } else if (tipoBanco === "odbc") {
+        // ODBC: DSN + usuário/senha opcionais
+        document.getElementById("campo_odbc_dsn").style.display = "block";
+        document.getElementById("odbc_dsn").setAttribute("required", "required");
+        document.getElementById("campo_host").style.display = "none";
+        document.getElementById("campo_porta").style.display = "none";
+        document.getElementById("host").removeAttribute("required");
+        document.getElementById("porta").removeAttribute("required");
+        document.getElementById("usuario").removeAttribute("required");
     } else {
-        // PostgreSQL, MySQL, MariaDB: apenas nome do banco
+        // PostgreSQL, MySQL, MariaDB: nome do banco
         document.getElementById("campo_nome_banco").style.display = "block";
         document.getElementById("nome_banco").setAttribute("required", "required");
     }

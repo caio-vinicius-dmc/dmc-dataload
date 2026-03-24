@@ -559,9 +559,18 @@ if (preg_match('#^/rotinas/run/(\d+)$#', $path, $m) && $method === 'POST') {
         exit;
     }
     $id = intval($m[1]);
+    $iniciarDeBloco = max(1, intval($_POST['iniciar_de_bloco'] ?? 1));
+    $modoExecucao = $_POST['modo_execucao'] ?? 'normal';
+    $blocosSelecionados = [];
+    if (!empty($_POST['blocos_selecionados'])) {
+        $raw = $_POST['blocos_selecionados'];
+        if (is_string($raw)) $raw = json_decode($raw, true) ?: [];
+        $blocosSelecionados = array_map('intval', array_filter((array)$raw, 'is_numeric'));
+    }
+    error_log("[DMC-DATALOAD] Execução rotina {$id} | modo={$modoExecucao} | iniciar_de={$iniciarDeBloco} | blocos_sel=" . json_encode($blocosSelecionados) . " | POST_raw=" . json_encode($_POST));
     $r = new RotinasController();
     header('Content-Type: application/json');
-    echo json_encode($r->executar($id));
+    echo json_encode($r->executar($id, $iniciarDeBloco, $blocosSelecionados));
     exit;
 }
 
@@ -1604,7 +1613,14 @@ if (preg_match('#^/api/historico/(rotina|pipeline|workflow)/(\d+)$#', $path, $m)
                 $metaData = is_string($log['detalhes_json']) ? json_decode($log['detalhes_json'], true) : $log['detalhes_json'];
             }
             if (!empty($metaData) && is_array($metaData)) {
-                foreach ($metaData as $item) {
+                // Suportar novo formato {blocos: [...], opcoes: {...}} e formato legado (array direto)
+                $blocosMeta = $metaData;
+                if (isset($metaData['blocos']) && is_array($metaData['blocos'])) {
+                    $blocosMeta = $metaData['blocos'];
+                    // Incluir opções de execução na resposta
+                    $log['opcoes_execucao'] = $metaData['opcoes'] ?? [];
+                }
+                foreach ($blocosMeta as $item) {
                     $logItem = [
                         'bloco' => $item['bloco'] ?? 'Bloco',
                         'tipo' => $item['tipo'] ?? 'SQL',
@@ -1624,8 +1640,26 @@ if (preg_match('#^/api/historico/(rotina|pipeline|workflow)/(\d+)$#', $path, $m)
                     }
                     if (isset($item['status'])) $logItem['status'] = $item['status'];
                     if (isset($item['resultado'])) $logItem['resultado'] = $item['resultado'];
-                    if (isset($item['erro'])) { $logItem['erro'] = $item['erro']; $logItem['status'] = 'erro'; }
+                    if (isset($item['erro']) && $item['status'] !== 'ignorado' && $item['status'] !== 'pulado') { $logItem['erro'] = $item['erro']; $logItem['status'] = 'erro'; }
+                    elseif (isset($item['erro'])) { $logItem['erro'] = $item['erro']; }
                     if (isset($item['registros'])) $logItem['registros'] = $item['registros'];
+                    // Extrair arquivo_csv de formatos alternativos
+                    if (empty($logItem['arquivo_csv']) && isset($item['arquivo_csv'])) {
+                        $logItem['arquivo_csv'] = $item['arquivo_csv'];
+                    }
+                    if (empty($logItem['arquivo_csv']) && isset($item['arquivo'])) {
+                        $logItem['arquivo_csv'] = $item['arquivo'];
+                    }
+                    // Detectar path de arquivo no resultado
+                    if (empty($logItem['arquivo_csv']) && !empty($logItem['resultado']) && is_string($logItem['resultado'])) {
+                        if (preg_match('#((?:[A-Z]:\\\\|/).*?storage[/\\\\].+?)$#i', $logItem['resultado'], $pathMatch)) {
+                            $logItem['arquivo_csv'] = trim($pathMatch[1]);
+                        }
+                    }
+                    // Verificar se arquivo existe no disco
+                    if (!empty($logItem['arquivo_csv'])) {
+                        $logItem['arquivo_existe'] = file_exists($logItem['arquivo_csv']);
+                    }
                     $log['logs'][] = $logItem;
                 }
             }
@@ -1655,16 +1689,16 @@ if (preg_match('#^/api/historico/(rotina|pipeline|workflow)/(\d+)$#', $path, $m)
             if (!empty($logExec) && is_array($logExec)) {
                 foreach ($logExec as $i => $item) {
                     $log['logs'][] = [
-                        'bloco' => $item['node_label'] ?? $item['node_id'] ?? ('Nó ' . ($i + 1)),
-                        'tipo' => strtoupper($item['node_type'] ?? $item['tipo'] ?? 'NODE'),
+                        'bloco' => $item['label'] ?? $item['node_label'] ?? $item['node_id'] ?? ('Nó ' . ($i + 1)),
+                        'tipo' => strtoupper($item['type'] ?? $item['node_type'] ?? $item['tipo'] ?? 'NODE'),
                         'ordem' => $item['ordem'] ?? ($i + 1),
                         'status' => ($item['status'] ?? 'success') === 'success' ? 'sucesso' : 'erro',
-                        'duracao_ms' => $item['duracao_ms'] ?? null,
-                        'registros' => $item['registros'] ?? $item['rows_affected'] ?? null,
-                        'resultado' => isset($item['output']) ? (is_array($item['output']) ? json_encode($item['output']) : $item['output']) : null,
+                        'duracao_ms' => $item['duration_ms'] ?? $item['duracao_ms'] ?? null,
+                        'registros' => $item['records'] ?? $item['registros'] ?? $item['rows_affected'] ?? null,
+                        'resultado' => isset($item['result_preview']) ? $item['result_preview'] : (isset($item['output']) ? (is_array($item['output']) ? json_encode($item['output']) : $item['output']) : null),
                         'erro' => $item['erro'] ?? $item['error'] ?? null,
                         'sql' => $item['sql'] ?? $item['query'] ?? null,
-                        'arquivo_csv' => null
+                        'arquivo_csv' => $item['file_path'] ?? null
                     ];
                 }
             }
@@ -1814,6 +1848,9 @@ if (preg_match('#^/api/historico/(\d+)$#', $path, $m) && $method === 'GET') {
                 if (isset($item['registros'])) {
                     $logItem['registros'] = $item['registros'];
                 }
+                if (isset($item['arquivo_csv'])) {
+                    $logItem['arquivo_csv'] = $item['arquivo_csv'];
+                }
                 
                 $log['logs'][] = $logItem;
             }
@@ -1955,6 +1992,129 @@ if (preg_match('#^/api/download-csv/(\d+)$#', $path, $m) && $method === 'GET') {
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="' . basename($caminho) . '"');
         readfile($caminho);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo 'Erro: ' . $e->getMessage();
+    }
+    exit;
+}
+
+// API Download CSV de bloco específico de uma execução
+if (preg_match('#^/api/download-csv-bloco/(\d+)/(\d+)$#', $path, $m) && $method === 'GET') {
+    try {
+        $logId = (int)$m[1];
+        $blocoIndex = (int)$m[2];
+        $db = Database::getConexao();
+        
+        $stmt = $db->prepare("SELECT meta FROM tb_logs_execucao WHERE id = ?");
+        $stmt->execute([$logId]);
+        $detalhesRaw = $stmt->fetchColumn();
+        
+        if (!$detalhesRaw) {
+            http_response_code(404);
+            echo 'Execução não encontrada';
+            exit;
+        }
+        
+        $detalhes = json_decode($detalhesRaw, true);
+        // Suportar todas as estruturas de armazenamento de caminho
+        $caminho = null;
+        if (is_array($detalhes) && isset($detalhes[$blocoIndex])) {
+            $bloco = $detalhes[$blocoIndex];
+            $caminho = $bloco['arquivo_csv'] ?? $bloco['arquivo'] ?? $bloco['res']['arquivo'] ?? null;
+            // Detectar path no campo resultado
+            if (!$caminho && !empty($bloco['res']['resultado']) && is_string($bloco['res']['resultado'])) {
+                if (preg_match('#((?:[A-Z]:\\\\|/).*?storage[/\\\\].+?)$#i', $bloco['res']['resultado'], $pm)) {
+                    $caminho = trim($pm[1]);
+                }
+            }
+        }
+        if (!$caminho) {
+            http_response_code(404);
+            echo 'Bloco ou arquivo não encontrado';
+            exit;
+        }
+        
+        // Segurança: garantir que o arquivo está dentro do diretório storage
+        $storagePath = realpath(__DIR__ . '/../storage');
+        $realCaminho = realpath($caminho);
+        if (!$realCaminho || !$storagePath || strpos($realCaminho, $storagePath) !== 0) {
+            http_response_code(403);
+            echo 'Acesso negado ao arquivo';
+            exit;
+        }
+        
+        if (!file_exists($realCaminho)) {
+            http_response_code(404);
+            echo 'Arquivo não encontrado no disco';
+            exit;
+        }
+        
+        // Detectar tipo MIME pelo extensão
+        $ext = strtolower(pathinfo($realCaminho, PATHINFO_EXTENSION));
+        $mimeTypes = ['csv'=>'text/csv','json'=>'application/json','html'=>'text/html','pdf'=>'application/pdf','xml'=>'text/xml','xlsx'=>'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        $mime = $mimeTypes[$ext] ?? 'application/octet-stream';
+        
+        header('Content-Type: ' . $mime . '; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . basename($realCaminho) . '"');
+        header('Content-Length: ' . filesize($realCaminho));
+        readfile($realCaminho);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo 'Erro: ' . $e->getMessage();
+    }
+    exit;
+}
+
+// API Download arquivo de nó de pipeline
+if (preg_match('#^/api/download-pipeline-file/(\d+)/(\d+)$#', $path, $m) && $method === 'GET') {
+    try {
+        $execId = (int)$m[1];
+        $nodeIndex = (int)$m[2];
+        $db = Database::getConexao();
+        
+        $stmt = $db->prepare("SELECT log_execucao FROM tb_pipeline_execucoes WHERE id = ?");
+        $stmt->execute([$execId]);
+        $logRaw = $stmt->fetchColumn();
+        
+        if (!$logRaw) {
+            http_response_code(404);
+            echo 'Execução não encontrada';
+            exit;
+        }
+        
+        $logs = json_decode($logRaw, true);
+        if (!is_array($logs) || !isset($logs[$nodeIndex]['file_path'])) {
+            http_response_code(404);
+            echo 'Nó ou arquivo não encontrado';
+            exit;
+        }
+        
+        $caminho = $logs[$nodeIndex]['file_path'];
+        
+        // Segurança: garantir que o arquivo está dentro do diretório storage
+        $storagePath = realpath(__DIR__ . '/../storage');
+        $realCaminho = realpath($caminho);
+        if (!$realCaminho || !$storagePath || strpos($realCaminho, $storagePath) !== 0) {
+            http_response_code(403);
+            echo 'Acesso negado ao arquivo';
+            exit;
+        }
+        
+        if (!file_exists($realCaminho)) {
+            http_response_code(404);
+            echo 'Arquivo não encontrado no disco';
+            exit;
+        }
+        
+        $ext = strtolower(pathinfo($realCaminho, PATHINFO_EXTENSION));
+        $mimeTypes = ['csv'=>'text/csv','json'=>'application/json','html'=>'text/html','pdf'=>'application/pdf','xml'=>'text/xml','xlsx'=>'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        $mime = $mimeTypes[$ext] ?? 'application/octet-stream';
+        
+        header('Content-Type: ' . $mime . '; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . basename($realCaminho) . '"');
+        header('Content-Length: ' . filesize($realCaminho));
+        readfile($realCaminho);
     } catch (Exception $e) {
         http_response_code(500);
         echo 'Erro: ' . $e->getMessage();
@@ -2104,7 +2264,7 @@ if (preg_match('#^/api/apis-externas/get/(\d+)$#', $path, $m) && $method === 'GE
     $id = (int)$m[1];
     header('Cache-Control: no-cache, no-store, must-revalidate');
     header('Content-Type: application/json');
-    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('api_externa', $id)) {
+    if (!\App\Servicos\ServicoPermissao::podeVerRecurso('api', $id)) {
         http_response_code(403);
         echo json_encode(['erro' => 'Sem permissão para visualizar esta API', 'sucesso' => false]);
         exit;
@@ -2136,7 +2296,7 @@ if ($path === '/api/apis-externas/salvar' && $method === 'POST') {
     unset($data['_csrf_token']);
     header('Content-Type: application/json');
     if (!empty($data['id'])) {
-        if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('api_externa', (int)$data['id'])) {
+        if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('api', (int)$data['id'])) {
             http_response_code(403);
             echo json_encode(['erro' => 'Sem permissão para modificar esta API', 'sucesso' => false]);
             exit;
@@ -2158,7 +2318,7 @@ if (preg_match('#^/api/apis-externas/delete/(\d+)$#', $path, $m) && $method === 
     }
     $id = (int)$m[1];
     header('Content-Type: application/json');
-    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('api_externa', $id)) {
+    if (!\App\Servicos\ServicoPermissao::podeModificarRecurso('api', $id)) {
         http_response_code(403);
         echo json_encode(['erro' => 'Sem permissão para excluir esta API', 'sucesso' => false]);
         exit;
@@ -2330,15 +2490,22 @@ if ($path === '/api/apis-externas/polling' && $method === 'POST') {
 // ROTAS: NOTIFICAÇÕES
 // =====================================================
 
-// Listar Notificações (com filtros e paginação)
+// Listar Notificações (com filtros e paginação) — RBAC: só mostra notificações de recursos associados
 if ($path === '/api/notificacoes/list' && $method === 'GET') {
     $idUsuario = AuthMiddleware::obterUsuarioId();
+    $usuario = AuthMiddleware::obterUsuario();
+    $ehSuperAdmin = ($usuario['nivel_acesso'] ?? '') === 'super_admin';
     $limite = isset($_GET['limite']) ? min((int)$_GET['limite'], 100) : 20;
     $pagina = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
     $offset = ($pagina - 1) * $limite;
     $db = \App\Core\Database::getConexao();
 
-    $where = "WHERE (id_usuario = ? OR id_usuario IS NULL)";
+    // Super admin vê tudo; demais só veem notificações direcionadas a eles
+    if ($ehSuperAdmin) {
+        $where = "WHERE (id_usuario = ? OR id_usuario IS NULL)";
+    } else {
+        $where = "WHERE id_usuario = ?";
+    }
     $params = [$idUsuario];
 
     if (isset($_GET['lida'])) {
@@ -2363,55 +2530,85 @@ if ($path === '/api/notificacoes/list' && $method === 'GET') {
     exit;
 }
 
-// Contar Notificações não lidas (do usuário)
+// Contar Notificações não lidas (do usuário) — RBAC
 if ($path === '/api/notificacoes/count' && $method === 'GET') {
     $idUsuario = AuthMiddleware::obterUsuarioId();
+    $usuario = AuthMiddleware::obterUsuario();
+    $ehSuperAdmin = ($usuario['nivel_acesso'] ?? '') === 'super_admin';
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("SELECT COUNT(*) FROM tb_notificacoes WHERE lida = false AND (id_usuario = ? OR id_usuario IS NULL)");
+    if ($ehSuperAdmin) {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM tb_notificacoes WHERE lida = false AND (id_usuario = ? OR id_usuario IS NULL)");
+    } else {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM tb_notificacoes WHERE lida = false AND id_usuario = ?");
+    }
     $stmt->execute([$idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true, 'count' => (int)$stmt->fetchColumn()]);
     exit;
 }
 
-// Marcar notificação como lida
+// Marcar notificação como lida — RBAC
 if (preg_match('#^/api/notificacoes/lida/(\d+)$#', $path, $m) && $method === 'POST') {
     $idUsuario = AuthMiddleware::obterUsuarioId();
+    $usuario = AuthMiddleware::obterUsuario();
+    $ehSuperAdmin = ($usuario['nivel_acesso'] ?? '') === 'super_admin';
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE id = ? AND (id_usuario = ? OR id_usuario IS NULL)");
+    if ($ehSuperAdmin) {
+        $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE id = ? AND (id_usuario = ? OR id_usuario IS NULL)");
+    } else {
+        $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE id = ? AND id_usuario = ?");
+    }
     $stmt->execute([(int)$m[1], $idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true]);
     exit;
 }
 
-// Marcar todas como lidas (do usuário)
+// Marcar todas como lidas (do usuário) — RBAC
 if ($path === '/api/notificacoes/lida-todas' && $method === 'POST') {
     $idUsuario = AuthMiddleware::obterUsuarioId();
+    $usuario = AuthMiddleware::obterUsuario();
+    $ehSuperAdmin = ($usuario['nivel_acesso'] ?? '') === 'super_admin';
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE lida = false AND (id_usuario = ? OR id_usuario IS NULL)");
+    if ($ehSuperAdmin) {
+        $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE lida = false AND (id_usuario = ? OR id_usuario IS NULL)");
+    } else {
+        $stmt = $db->prepare("UPDATE tb_notificacoes SET lida = true WHERE lida = false AND id_usuario = ?");
+    }
     $stmt->execute([$idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true]);
     exit;
 }
 
-// Excluir notificação
+// Excluir notificação — RBAC
 if (preg_match('#^/api/notificacoes/excluir/(\d+)$#', $path, $m) && $method === 'POST') {
     $idUsuario = AuthMiddleware::obterUsuarioId();
+    $usuario = AuthMiddleware::obterUsuario();
+    $ehSuperAdmin = ($usuario['nivel_acesso'] ?? '') === 'super_admin';
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE id = ? AND (id_usuario = ? OR id_usuario IS NULL)");
+    if ($ehSuperAdmin) {
+        $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE id = ? AND (id_usuario = ? OR id_usuario IS NULL)");
+    } else {
+        $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE id = ? AND id_usuario = ?");
+    }
     $stmt->execute([(int)$m[1], $idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true]);
     exit;
 }
 
-// Excluir todas as notificações lidas (do usuário)
+// Excluir todas as notificações lidas (do usuário) — RBAC
 if ($path === '/api/notificacoes/excluir-lidas' && $method === 'POST') {
     $idUsuario = AuthMiddleware::obterUsuarioId();
+    $usuario = AuthMiddleware::obterUsuario();
+    $ehSuperAdmin = ($usuario['nivel_acesso'] ?? '') === 'super_admin';
     $db = \App\Core\Database::getConexao();
-    $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE lida = true AND (id_usuario = ? OR id_usuario IS NULL)");
+    if ($ehSuperAdmin) {
+        $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE lida = true AND (id_usuario = ? OR id_usuario IS NULL)");
+    } else {
+        $stmt = $db->prepare("DELETE FROM tb_notificacoes WHERE lida = true AND id_usuario = ?");
+    }
     $stmt->execute([$idUsuario]);
     header('Content-Type: application/json');
     echo json_encode(['sucesso' => true]);
@@ -2483,6 +2680,22 @@ if ($path === '/api/configuracoes/limpar-dados' && $method === 'POST') {
     \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
     $c = new \App\Controllers\ConfiguracoesController();
     $c->limparDados();
+    exit;
+}
+
+// API: Upload favicon
+if ($path === '/api/configuracoes/upload-favicon' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->uploadFavicon();
+    exit;
+}
+
+// API: Remover favicon
+if ($path === '/api/configuracoes/remover-favicon' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ConfiguracoesController();
+    $c->removerFavicon();
     exit;
 }
 
@@ -2868,8 +3081,6 @@ if ($path === '/debug/create_user' && $method === 'GET') {
     exit;
 }
 
-echo "<h1>DMC DataLoad</h1><p>Front controller mínimo. Configure o server document root em public/</p>";
-
 // ========== API FILA DE EXECUÇÃO (Background Queue) ==========
 
 // Página de fila
@@ -3084,3 +3295,123 @@ if (preg_match('#^/api/backups/delete/(\d+)$#', $path, $m) && $method === 'POST'
     echo json_encode(\App\Servicos\ServicoBackup::deletar((int)$m[1]));
     exit;
 }
+
+// ========== ARQUIVOS GERADOS ==========
+
+// View: Arquivos Gerados (admin+)
+if ($path === '/arquivos-gerados') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    include __DIR__ . '/../views/arquivos-gerados.php';
+    exit;
+}
+
+// API: Listar arquivos gerados
+if ($path === '/api/arquivos-gerados' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ArquivosGeradosController();
+    $c->listar();
+    exit;
+}
+
+// API: Excluir arquivo(s)
+if ($path === '/api/arquivos-gerados/excluir' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    $inputRaw = file_get_contents('php://input');
+    $inputJson = json_decode($inputRaw, true);
+    $csrfFromBody = $inputJson['_csrf_token'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken) && !AuthMiddleware::validarTokenCSRF($csrfFromBody)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\ArquivosGeradosController();
+    $c->excluir($inputJson);
+    exit;
+}
+
+// API: Listar rotinas para dropdown
+if ($path === '/api/arquivos-gerados/rotinas' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ArquivosGeradosController();
+    $c->listarRotinas();
+    exit;
+}
+
+// API: Listar políticas de retenção
+if ($path === '/api/arquivos-gerados/politicas' && $method === 'GET') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $c = new \App\Controllers\ArquivosGeradosController();
+    $c->listarPoliticas();
+    exit;
+}
+
+// API: Salvar política de retenção
+if ($path === '/api/arquivos-gerados/politicas/salvar' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    $inputRaw = file_get_contents('php://input');
+    $inputJson = json_decode($inputRaw, true);
+    $csrfFromBody = $inputJson['_csrf_token'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken) && !AuthMiddleware::validarTokenCSRF($csrfFromBody)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\ArquivosGeradosController();
+    $c->salvarPolitica($inputJson);
+    exit;
+}
+
+// API: Excluir política de retenção
+if ($path === '/api/arquivos-gerados/politicas/excluir' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    $inputRaw = file_get_contents('php://input');
+    $inputJson = json_decode($inputRaw, true);
+    $csrfFromBody = $inputJson['_csrf_token'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken) && !AuthMiddleware::validarTokenCSRF($csrfFromBody)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $c = new \App\Controllers\ArquivosGeradosController();
+    $c->excluirPolitica($inputJson);
+    exit;
+}
+
+// API: Executar limpeza automática (chamado pelo scheduler)
+if ($path === '/api/arquivos-gerados/limpeza' && $method === 'POST') {
+    \App\Servicos\ServicoPermissao::exigirNivel('super_admin');
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    $inputRaw = file_get_contents('php://input');
+    $inputJson = json_decode($inputRaw, true);
+    $csrfFromBody = $inputJson['_csrf_token'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken) && !AuthMiddleware::validarTokenCSRF($csrfFromBody)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    header('Content-Type: application/json');
+    $c = new \App\Controllers\ArquivosGeradosController();
+    echo json_encode($c->executarLimpeza());
+    exit;
+}
+
+// ========== 404 - Rota não encontrada ==========
+http_response_code(404);
+if (strpos($path, '/api/') === 0) {
+    header('Content-Type: application/json');
+    echo json_encode(['sucesso' => false, 'erro' => 'Endpoint não encontrado: ' . $path]);
+} else {
+    echo '<!DOCTYPE html><html><head><title>404</title></head><body>'
+       . '<h1>Página não encontrada</h1>'
+       . '<p>A rota <code>' . htmlspecialchars($path) . '</code> não existe.</p>'
+       . '<a href="' . BASE_URL . '/dashboard">Voltar ao Dashboard</a>'
+       . '</body></html>';
+}
+exit;

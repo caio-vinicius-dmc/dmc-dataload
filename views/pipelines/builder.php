@@ -205,6 +205,13 @@ ob_start();
                             <div class="palette-node-desc">Exportar dados para arquivo</div>
                         </div>
                     </div>
+                    <div class="palette-node" draggable="true" data-type="data_format">
+                        <div class="palette-node-icon" style="background:#0891b2"><i class="bi bi-file-earmark-richtext"></i></div>
+                        <div class="palette-node-info">
+                            <div class="palette-node-name">Data Format</div>
+                            <div class="palette-node-desc">Converter dados para CSV, PDF, JSON ou tabela HTML</div>
+                        </div>
+                    </div>
                     <div class="palette-node" draggable="true" data-type="rotina">
                         <div class="palette-node-icon" style="background:#3b82f6"><i class="bi bi-gear-wide-connected"></i></div>
                         <div class="palette-node-info">
@@ -1214,6 +1221,7 @@ const NODE_TYPES = {
     csv_parse:    { label: 'CSV Parse',     icon: 'bi-filetype-csv',      color: '#059669', inputs: 1, outputs: 1, category: 'data' },
     counter:      { label: 'Counter',       icon: 'bi-plus-slash-minus',  color: '#0d9488', inputs: 1, outputs: 1, category: 'action' },
     file_export:  { label: 'File Export',   icon: 'bi-file-earmark-arrow-down', color: '#16a34a', inputs: 1, outputs: 1, category: 'io' },
+    data_format:  { label: 'Data Format',   icon: 'bi-file-earmark-richtext',   color: '#0891b2', inputs: 1, outputs: 1, category: 'data' },
     rotina:       { label: 'Rotina',        icon: 'bi-gear-wide-connected',      color: '#3b82f6', inputs: 1, outputs: 1, category: 'action' }
 };
 
@@ -1421,6 +1429,8 @@ function getNodeSubtitle(type, data) {
             var dir = data.export_directory || 'storage/exports';
             if (dir.length > 25) dir = '...' + dir.slice(-22);
             return (data.export_format || 'CSV').toUpperCase() + ' → ' + dir;
+        case 'data_format':
+            return (data.format || 'csv').toUpperCase() + ' → ' + (data.filename || 'dados');
         case 'rotina':
             var selRot = data.rotina_id ? rotinasDisponiveis.find(function(r){return r.id==data.rotina_id}) : null;
             return selRot ? selRot.nome : 'Selecionar rotina';
@@ -1459,6 +1469,11 @@ function getNodeBody(type, data) {
                 return '<code>' + escapeHtml(data.filename) + '.' + escapeHtml(data.export_format || 'csv') + '</code>';
             }
             return '<span class="text-muted fst-italic">Configurar exportação</span>';
+        case 'data_format':
+            if (data.input_variable) {
+                return '<code>${' + escapeHtml(data.input_variable) + '} → ' + (data.format || 'csv').toUpperCase() + '</code>';
+            }
+            return '<span class="text-muted fst-italic">Configurar formato</span>';
         case 'rotina':
             if (data.rotina_id) {
                 var rot = rotinasDisponiveis.find(function(r){return r.id==data.rotina_id});
@@ -1555,7 +1570,7 @@ function showProperties(nodeId) {
     html += getTypeProperties(type, node.data, nodeId);
     
     // Output variable (for data-producing nodes)
-    if (['sql_query', 'http_request', 'transform', 'loop', 'script', 'set_variable', 'format_template', 'regex', 'csv_parse', 'counter', 'file_export', 'rotina'].includes(type)) {
+    if (['sql_query', 'http_request', 'transform', 'loop', 'script', 'set_variable', 'format_template', 'regex', 'csv_parse', 'counter', 'file_export', 'data_format', 'rotina'].includes(type)) {
         html += '<div class="prop-group">';
         html += '<div class="prop-group-title">Saída</div>';
         html += '<div class="mb-3">';
@@ -1739,6 +1754,8 @@ function getTypeProperties(type, data, nodeId) {
             h += propInput(nodeId, 'email_to', 'Destinatário', data.email_to || '', 'user@example.com');
             h += propInput(nodeId, 'email_subject', 'Assunto', data.email_subject || '', 'Pipeline concluído');
             h += propTextarea(nodeId, 'email_body', 'Corpo do E-mail', data.email_body || '', '<h1>Resultado</h1><p>{{resultado}}</p>');
+            h += propInput(nodeId, 'email_attachments', 'Anexos (variável)', data.email_attachments || '', 'arquivo_gerado');
+            h += '<div class="prop-help"><i class="bi bi-paperclip me-1"></i>Variável com caminho do arquivo (de <strong>Data Format</strong> ou <strong>File Export</strong>). Deixe vazio para enviar sem anexo.</div>';
             break;
 
         case 'log_node':
@@ -1896,6 +1913,34 @@ function getTypeProperties(type, data, nodeId) {
                 h += propInput(nodeId, 'counter_value', 'Valor', data.counter_value || '0', '10');
             }
             h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Mantém um contador na variável especificada.</div>';
+            break;
+
+        case 'data_format':
+            h += propInput(nodeId, 'input_variable', 'Variável de Dados', data.input_variable || '', 'resultado_sql');
+            h += propSelect(nodeId, 'format', 'Formato de Saída', data.format || 'csv', [
+                {v:'csv',l:'CSV (.csv) — Planilha'},
+                {v:'json',l:'JSON (.json) — Estruturado'},
+                {v:'html_table',l:'Tabela HTML (.html) — Visual'},
+                {v:'pdf',l:'PDF (.pdf) — Relatório'}
+            ]);
+            h += propInput(nodeId, 'title', 'Título do Relatório', data.title || '', 'Relatório de Dados');
+            h += propInput(nodeId, 'filename', 'Nome do Arquivo', data.filename || '', 'relatorio_{date}');
+            h += '<div class="prop-help mb-2"><i class="bi bi-braces me-1"></i><code>{date}</code> <code>{time}</code> <code>{datetime}</code> <code>{seq}</code> <code>{{variavel}}</code></div>';
+            if (data.format === 'csv' || !data.format) {
+                h += propInput(nodeId, 'csv_delimiter', 'Delimitador CSV', data.csv_delimiter || ';', ';');
+            }
+            if (data.format === 'json') {
+                h += propSelect(nodeId, 'json_pretty', 'Formatado (Pretty)', data.json_pretty || 'true', [
+                    {v:'true',l:'Sim'}, {v:'false',l:'Não (compacto)'}
+                ]);
+            }
+            if (data.format === 'html_table' || data.format === 'pdf') {
+                h += propInput(nodeId, 'accent_color', 'Cor de Destaque', data.accent_color || '#3b82f6', '#3b82f6');
+                h += propSelect(nodeId, 'show_row_numbers', 'Numerar Linhas', data.show_row_numbers || 'false', [
+                    {v:'false',l:'Não'}, {v:'true',l:'Sim'}
+                ]);
+            }
+            h += '<div class="prop-help"><i class="bi bi-info-circle me-1"></i>Gera arquivo a partir de dados. Use a variável de saída no campo <strong>Anexos</strong> do nó Email para enviar por e-mail.</div>';
             break;
 
         case 'file_export':

@@ -7,17 +7,19 @@ use PDO;
 
 class RotinasController
 {
-    public function executar(int $id): array
+    public function executar(int $id, int $iniciarDeBloco = 1, array $blocosSelecionados = []): array
     {
         $svc = new ServicoExecucao();
-        return $svc->executarRotina($id);
+        return $svc->executarRotina($id, $iniciarDeBloco, $blocosSelecionados);
     }
 
     public function listar(): array
     {
         $db = Database::getConexao();
         $filtro = \App\Servicos\ServicoPermissao::filtroVisibilidade('rotina', 'r', 'id_usuario_criador');
-        $sql = "SELECT r.id, r.nome, r.descricao, r.esta_executando, p.nome_conexao 
+        $sql = "SELECT r.id, r.nome, r.descricao, r.esta_executando, r.ativa, r.agendamento_cron,
+                       r.proxima_execucao, r.ultima_execucao, r.tentativas_falha,
+                       p.nome_conexao 
                 FROM tb_rotinas r JOIN tb_perfis_conexao p ON r.id_conexao = p.id 
                 WHERE ({$filtro['where']}) ORDER BY r.id DESC";
         $s = $db->prepare($sql);
@@ -49,8 +51,10 @@ class RotinasController
     {
         $db = Database::getConexao();
         if (!empty($data['id'])) {
-            $u = $db->prepare('UPDATE tb_rotinas SET nome=?, descricao=?, id_conexao=?, webhook_sucesso=?, webhook_falha=? WHERE id=?');
-            $u->execute([$data['nome'], $data['descricao'], $data['id_conexao'], $data['webhook_sucesso'] ?? null, $data['webhook_falha'] ?? null, $data['id']]);
+            $pararEmErro = !empty($data['parar_em_erro']);
+            $rollbackEmErro = !empty($data['rollback_em_erro']);
+            $u = $db->prepare('UPDATE tb_rotinas SET nome=?, descricao=?, id_conexao=?, webhook_sucesso=?, webhook_falha=?, parar_em_erro=?::boolean, rollback_em_erro=?::boolean WHERE id=?');
+            $u->execute([$data['nome'], $data['descricao'], $data['id_conexao'], $data['webhook_sucesso'] ?? null, $data['webhook_falha'] ?? null, $pararEmErro ? 't' : 'f', $rollbackEmErro ? 't' : 'f', $data['id']]);
             
             // Remover blocos antigos
             $del = $db->prepare('DELETE FROM tb_blocos_rotina WHERE id_rotina = ?');
@@ -70,8 +74,10 @@ class RotinasController
             return ['sucesso' => true, 'mensagem' => 'Atualizado', 'id' => $data['id']];
         }
 
-        $ins = $db->prepare('INSERT INTO tb_rotinas (nome, descricao, id_conexao, id_usuario_criador, webhook_sucesso, webhook_falha) VALUES (?, ?, ?, ?, ?, ?) RETURNING id');
-        $ins->execute([$data['nome'], $data['descricao'], $data['id_conexao'], $data['id_usuario_criador'] ?? null, $data['webhook_sucesso'] ?? null, $data['webhook_falha'] ?? null]);
+        $pararEmErro = !empty($data['parar_em_erro']);
+        $rollbackEmErro = !empty($data['rollback_em_erro']);
+        $ins = $db->prepare('INSERT INTO tb_rotinas (nome, descricao, id_conexao, id_usuario_criador, webhook_sucesso, webhook_falha, parar_em_erro, rollback_em_erro) VALUES (?, ?, ?, ?, ?, ?, ?::boolean, ?::boolean) RETURNING id');
+        $ins->execute([$data['nome'], $data['descricao'], $data['id_conexao'], $data['id_usuario_criador'] ?? null, $data['webhook_sucesso'] ?? null, $data['webhook_falha'] ?? null, $pararEmErro ? 't' : 'f', $rollbackEmErro ? 't' : 'f']);
         $id = $ins->fetchColumn();
         // salvar blocos se enviado
         if (!empty($data['bloco_codigo']) && is_array($data['bloco_codigo'])) {

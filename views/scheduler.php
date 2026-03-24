@@ -79,17 +79,43 @@ ob_start();
 <!-- Rotinas Agendadas -->
 <div class="card-modern">
     <div class="card-modern-header d-flex justify-content-between align-items-center">
-        <div><i class="bi bi-calendar-check me-2"></i>Rotinas com Agendamento</div>
+        <div><i class="bi bi-calendar-check me-2"></i>Rotinas/Pipelines com agendamento</div>
         <button class="btn btn-sm btn-outline-primary" onclick="recarregarAgendamentos()">
             <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
         </button>
+    </div>
+    <!-- Filtros -->
+    <div class="card-modern-body border-bottom pb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label-modern mb-1"><i class="bi bi-search me-1"></i>Nome</label>
+                <input type="text" class="form-control form-control-sm" id="filtro_nome" placeholder="Buscar por nome..." style="border-radius: 8px;">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label-modern mb-1"><i class="bi bi-funnel me-1"></i>Categoria</label>
+                <select class="form-select form-select-sm" id="filtro_categoria" style="border-radius: 8px;">
+                    <option value="todos" selected>Todos</option>
+                    <option value="rotina">Rotina</option>
+                    <option value="pipeline">Pipeline</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label-modern mb-1"><i class="bi bi-card-text me-1"></i>Descrição / CRON</label>
+                <input type="text" class="form-control form-control-sm" id="filtro_descricao" placeholder="Buscar na descrição..." style="border-radius: 8px;">
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="limparFiltros()" title="Limpar filtros">
+                    <i class="bi bi-x-circle me-1"></i>Limpar
+                </button>
+            </div>
+        </div>
     </div>
     <div class="card-modern-body p-0">
         <div class="table-responsive">
             <table class="table-modern" id="tblAgendamentos">
                 <thead>
                     <tr>
-                        <th><i class="bi bi-gear me-2"></i>Rotina</th>
+                        <th><i class="bi bi-gear me-2"></i>Rotina/Pipeline</th>
                         <th><i class="bi bi-clock me-2"></i>Expressão CRON</th>
                         <th><i class="bi bi-card-text me-2"></i>Descrição</th>
                         <th><i class="bi bi-calendar me-2"></i>Próxima Execução</th>
@@ -354,10 +380,10 @@ ob_start();
                                                     <small class="text-muted">Quando começar?</small>
                                                 </div>
                                             </div>
-                                            <input type="datetime-local" class="form-control" id="data_inicio" style="border-radius: 10px;">
+                                            <input type="datetime-local" class="form-control" id="data_inicio" required style="border-radius: 10px;">
                                             <small class="text-muted mt-2 d-block">
                                                 <i class="bi bi-info-circle me-1"></i>
-                                                Vazio = inicia imediatamente
+                                                Não é possível agendar para antes da data/hora atual
                                             </small>
                                         </div>
                                     </div>
@@ -726,71 +752,104 @@ function descricaoCron(expr) {
     return cronPresets[expr] || expr;
 }
 
+// Cache dos dados para filtragem local
+let dadosAgendamentos = [];
+
+function aplicarFiltros() {
+    const filtroNome = ($("#filtro_nome").val() || "").toLowerCase();
+    const filtroCat = $("#filtro_categoria").val();
+    const filtroDesc = ($("#filtro_descricao").val() || "").toLowerCase();
+    
+    const filtrados = dadosAgendamentos.filter(r => {
+        if (filtroNome && !r.nome.toLowerCase().includes(filtroNome)) return false;
+        if (filtroCat !== "todos" && (r.tipo || "rotina") !== filtroCat) return false;
+        if (filtroDesc) {
+            const desc = descricaoCron(r.agendamento_cron).toLowerCase();
+            const cron = (r.agendamento_cron || "").toLowerCase();
+            if (!desc.includes(filtroDesc) && !cron.includes(filtroDesc)) return false;
+        }
+        return true;
+    });
+    
+    renderizarAgendamentos(filtrados);
+}
+
+function limparFiltros() {
+    $("#filtro_nome").val("");
+    $("#filtro_categoria").val("todos");
+    $("#filtro_descricao").val("");
+    renderizarAgendamentos(dadosAgendamentos);
+}
+
+function renderizarAgendamentos(dados) {
+    const tbody = $("#tblAgendamentos tbody");
+    tbody.empty();
+    
+    if (!dados || dados.length === 0) {
+        const colSpan = isOperador ? 5 : 6;
+        const temFiltro = $("#filtro_nome").val() || $("#filtro_categoria").val() !== "todos" || $("#filtro_descricao").val();
+        tbody.html(`<tr><td colspan="${colSpan}" class="text-center py-5">
+            <div class="d-flex flex-column align-items-center gap-3">
+                <i class="bi bi-${temFiltro ? 'search' : 'calendar-x'} text-muted" style="font-size: 3rem;"></i>
+                <div>
+                    <h5 class="text-muted mb-2">${temFiltro ? 'Nenhum resultado encontrado' : 'Nenhuma rotina com agendamento'}</h5>
+                    ${temFiltro ? '<p class="text-muted mb-3">Ajuste os filtros e tente novamente</p>' : (isOperador ? '' : `<p class="text-muted mb-3">Configure o agendamento CRON nas rotinas para executá-las automaticamente</p>
+                    <a href="${baseUrl}/rotinas" class="btn btn-primary">
+                        <i class="bi bi-gear me-2"></i>Configurar Rotinas
+                    </a>`)}
+                </div>
+            </div>
+        </td></tr>`);
+        return;
+    }
+    
+    dados.forEach(r => {
+        const proxExec = r.proxima_execucao ? new Date(r.proxima_execucao).toLocaleString("pt-BR") : "-";
+        const statusBadge = r.ativa 
+            ? `<span class="badge-status badge-success"><i class="bi bi-check-circle me-1"></i>Ativa</span>`
+            : `<span class="badge-status badge-secondary"><i class="bi bi-pause-circle me-1"></i>Inativa</span>`;
+        const isPipeline = r.tipo === 'pipeline';
+        const tipoBadge = isPipeline 
+            ? `<span class="badge bg-info text-white ms-1" style="font-size:0.7rem;">Pipeline</span>` 
+            : `<span class="badge bg-secondary text-white ms-1" style="font-size:0.7rem;">Rotina</span>`;
+        
+        const acoesPipeline = isPipeline 
+            ? `<a class="btn btn-outline-primary btn-sm" href="${baseUrl}/pipelines/builder/${r.id}" title="Editar Pipeline">
+                   <i class="bi bi-diagram-3-fill"></i>
+               </a>`
+            : `<div class="btn-group btn-group-sm">
+                   <button class="btn btn-outline-${r.ativa ? "warning" : "success"}" onclick="toggleAtiva(${r.id}, ${!r.ativa})" title="${r.ativa ? "Desativar" : "Ativar"}">
+                       <i class="bi bi-${r.ativa ? "pause" : "play"}-fill"></i>
+                   </button>
+                   <button class="btn btn-outline-primary" onclick="editarAgendamento(${r.id})" title="Editar Agendamento">
+                       <i class="bi bi-pencil-fill"></i>
+                   </button>
+                   <button class="btn btn-outline-danger" onclick="excluirAgendamento(${r.id}, '${r.nome}')" title="Excluir Agendamento">
+                       <i class="bi bi-trash-fill"></i>
+                   </button>
+               </div>`;
+        
+        const acoesCol = isOperador ? '' : `<td>${acoesPipeline}</td>`;
+        
+        tbody.append(`<tr>
+            <td><strong>${r.nome}</strong>${tipoBadge}</td>
+            <td><code>${r.agendamento_cron}</code></td>
+            <td><small class="text-muted">${descricaoCron(r.agendamento_cron)}</small></td>
+            <td>${proxExec}</td>
+            <td>${statusBadge}</td>
+            ${acoesCol}
+        </tr>`);
+    });
+    
+    $("#workerScheduled").text(dados.filter(r => r.ativa).length);
+}
+
 function carregarAgendamentos() {
     $.getJSON(baseUrl + "/api/scheduler/rotinas", function(res) {
-        const tbody = $("#tblAgendamentos tbody");
-        tbody.empty();
-        
-        if (!res.dados || res.dados.length === 0) {
-            const colSpan = isOperador ? 5 : 6;
-            tbody.html(`<tr><td colspan="${colSpan}" class="text-center py-5">
-                <div class="d-flex flex-column align-items-center gap-3">
-                    <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
-                    <div>
-                        <h5 class="text-muted mb-2">Nenhuma rotina com agendamento</h5>
-                        ${isOperador ? '' : `<p class="text-muted mb-3">Configure o agendamento CRON nas rotinas para executá-las automaticamente</p>
-                        <a href="${baseUrl}/rotinas" class="btn btn-primary">
-                            <i class="bi bi-gear me-2"></i>Configurar Rotinas
-                        </a>`}
-                    </div>
-                </div>
-            </td></tr>`);
-            return;
-        }
-        
-        res.dados.forEach(r => {
-            const proxExec = r.proxima_execucao ? new Date(r.proxima_execucao).toLocaleString("pt-BR") : "-";
-            const statusBadge = r.ativa 
-                ? `<span class="badge-status badge-success"><i class="bi bi-check-circle me-1"></i>Ativa</span>`
-                : `<span class="badge-status badge-secondary"><i class="bi bi-pause-circle me-1"></i>Inativa</span>`;
-            const isPipeline = r.tipo === 'pipeline';
-            const tipoBadge = isPipeline 
-                ? `<span class="badge bg-info text-white ms-1" style="font-size:0.7rem;">Pipeline</span>` 
-                : '';
-            
-            const acoesPipeline = isPipeline 
-                ? `<a class="btn btn-outline-primary btn-sm" href="${baseUrl}/pipelines/builder/${r.id}" title="Editar Pipeline">
-                       <i class="bi bi-diagram-3-fill"></i>
-                   </a>`
-                : `<div class="btn-group btn-group-sm">
-                       <button class="btn btn-outline-${r.ativa ? "warning" : "success"}" onclick="toggleAtiva(${r.id}, ${!r.ativa})" title="${r.ativa ? "Desativar" : "Ativar"}">
-                           <i class="bi bi-${r.ativa ? "pause" : "play"}-fill"></i>
-                       </button>
-                       <button class="btn btn-outline-primary" onclick="editarAgendamento(${r.id})" title="Editar Agendamento">
-                           <i class="bi bi-pencil-fill"></i>
-                       </button>
-                       <button class="btn btn-outline-danger" onclick="excluirAgendamento(${r.id}, '${r.nome}')" title="Excluir Agendamento">
-                           <i class="bi bi-trash-fill"></i>
-                       </button>
-                   </div>`;
-            
-            const acoesCol = isOperador ? '' : `<td>${acoesPipeline}</td>`;
-            
-            tbody.append(`<tr>
-                <td><strong>${r.nome}</strong>${tipoBadge}</td>
-                <td><code>${r.agendamento_cron}</code></td>
-                <td><small class="text-muted">${descricaoCron(r.agendamento_cron)}</small></td>
-                <td>${proxExec}</td>
-                <td>${statusBadge}</td>
-                ${acoesCol}
-            </tr>`);
-        });
-        
-        $("#workerScheduled").text(res.dados.filter(r => r.ativa).length);
+        dadosAgendamentos = res.dados || [];
+        aplicarFiltros();
     }).fail(function(xhr, status, error) {
         console.error("Erro ao carregar agendamentos:", error);
-        console.error("Status:", status);
-        console.error("Response:", xhr.responseText);
         const tbody = $("#tblAgendamentos tbody");
         tbody.html(`<tr><td colspan="6" class="text-center py-4">
             <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
@@ -956,6 +1015,10 @@ $(document).ready(function() {
     setInterval(verificarWorker, 10000);
     setInterval(carregarAgendamentos, 30000);
     
+    // Event listeners para filtros
+    $("#filtro_nome, #filtro_descricao").on("input", function() { aplicarFiltros(); });
+    $("#filtro_categoria").on("change", function() { aplicarFiltros(); });
+    
     // Carregar rotinas no select
     carregarRotinasSelect();
     
@@ -1010,6 +1073,13 @@ function carregarRotinasSelect() {
     });
 }
 
+// Helper para obter data/hora atual formatada para datetime-local
+function getDataHoraAtual() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+}
+
 // Abrir modal de novo agendamento
 function novoAgendamento() {
     // Resetar modo de edição
@@ -1021,6 +1091,11 @@ function novoAgendamento() {
     $("#agendamento_id_rotina").val("");
     $("#modo_visual").prop("checked", true).trigger("change");
     $("#freq_tipo").val("minutos").trigger("change");
+    
+    // Preencher data de início com data/hora atual e definir mínimo
+    const agora = getDataHoraAtual();
+    $("#data_inicio").val(agora).attr("min", agora);
+    
     $("#modalAgendamentoTitle").html('<i class="bi bi-plus-circle me-2"></i>Novo Agendamento');
     atualizarPreview();
     new bootstrap.Modal("#modalAgendamento").show();
@@ -1054,9 +1129,15 @@ function editarAgendamento(id) {
         
         // Carregar dados extras da rotina
         $.getJSON(baseUrl + "/api/scheduler/detalhes/" + id, function(detalhes) {
+            // Definir mínimo para data de início
+            const agora = getDataHoraAtual();
+            $("#data_inicio").attr("min", agora);
+            
             // Preencher campos de período
             if (detalhes.data_inicio) {
                 $("#data_inicio").val(detalhes.data_inicio);
+            } else {
+                $("#data_inicio").val(agora);
             }
             if (detalhes.data_fim) {
                 $("#data_fim").val(detalhes.data_fim);
@@ -1256,6 +1337,23 @@ function salvarAgendamento() {
     const rotinaId = $("#agendamento_rotina").val();
     if (!rotinaId) {
         Swal.fire("Atenção!", "Selecione uma rotina.", "warning");
+        return;
+    }
+    
+    // Validar data de início obrigatória
+    const dataInicio = $("#data_inicio").val();
+    if (!dataInicio) {
+        Swal.fire("Atenção!", "Informe a Data/Hora de Início.", "warning");
+        $("#tab-periodo").tab("show");
+        return;
+    }
+    
+    // Validar que data de início não é anterior a agora
+    const agora = new Date();
+    const inicio = new Date(dataInicio);
+    if (inicio < agora && !isEditingMode) {
+        Swal.fire("Atenção!", "A Data/Hora de Início não pode ser anterior à data/hora atual.", "warning");
+        $("#tab-periodo").tab("show");
         return;
     }
     

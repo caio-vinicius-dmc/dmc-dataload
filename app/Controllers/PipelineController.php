@@ -392,7 +392,7 @@ class PipelineController
                     }
 
                     $nodesSuccess++;
-                    $logs[] = [
+                    $logEntry = [
                         'node_id' => $nodeId,
                         'label' => $nodeLabel,
                         'type' => $nodeType,
@@ -401,6 +401,14 @@ class PipelineController
                         'result_preview' => $this->previewResult($result['data'] ?? null),
                         'timestamp' => date('c')
                     ];
+                    // Incluir file_path quando o nó gera arquivo
+                    $rd = $result['data'] ?? null;
+                    if (is_array($rd) && isset($rd['file_path'])) {
+                        $logEntry['file_path'] = $rd['file_path'];
+                        if (isset($rd['records'])) $logEntry['records'] = $rd['records'];
+                        if (isset($rd['filename'])) $logEntry['filename'] = $rd['filename'];
+                    }
+                    $logs[] = $logEntry;
                 } catch (\Throwable $e) {
                     $nodeTime = round((microtime(true) - $nodeStart) * 1000);
                     $nodesFail++;
@@ -586,6 +594,9 @@ class PipelineController
             case 'file_export':
                 return $this->execFileExport($config, $context);
 
+            case 'data_format':
+                return $this->execDataFormat($config, $context);
+
             case 'rotina':
                 return $this->execRotina($config, $context);
 
@@ -683,6 +694,19 @@ class PipelineController
                 $port = $porta ?: 1521;
                 $sid = $extras['sid'] ?? $dbName;
                 $dsn = "oci:dbname=//{$host}:{$port}/{$sid}";
+                break;
+            case 'sqlite':
+                $sqlitePath = $extras['sqlite_path'] ?? $dbName ?? '';
+                if (empty($sqlitePath) || !file_exists($sqlitePath)) {
+                    throw new \RuntimeException("Arquivo SQLite não encontrado: {$sqlitePath}");
+                }
+                $dsn = "sqlite:{$sqlitePath}";
+                $user = null;
+                $pass = null;
+                break;
+            case 'odbc':
+                $odbcDsn = $extras['odbc_dsn'] ?? $dbName ?? '';
+                $dsn = "odbc:{$odbcDsn}";
                 break;
             default:
                 throw new \RuntimeException("Tipo de banco '{$tipo}' não suportado");
@@ -1157,7 +1181,7 @@ class PipelineController
     }
 
     /**
-     * Executa nó Email
+     * Executa nó Email (com suporte a anexos)
      */
     private function execEmail(array $config, array &$context): array
     {
@@ -1173,11 +1197,39 @@ class PipelineController
         $subject = $this->replaceVariables($subject, $context['variables']);
         $body = $this->replaceVariables($body, $context['variables']);
 
-        $headers = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n";
+        // Coletar anexos — variável com caminhos de arquivos
+        $anexos = [];
+        $attachVar = trim($config['email_attachments'] ?? '');
+        if ($attachVar) {
+            $attachData = $context['variables'][$attachVar] ?? null;
+            if ($attachData) {
+                if (is_string($attachData) && file_exists($attachData)) {
+                    $anexos[] = $attachData;
+                } elseif (is_array($attachData)) {
+                    if (isset($attachData['file_path'])) {
+                        $anexos[] = $attachData['file_path'];
+                    } elseif (isset($attachData['files'])) {
+                        foreach ($attachData['files'] as $f) {
+                            if (is_string($f) && file_exists($f)) $anexos[] = $f;
+                            elseif (is_array($f) && !empty($f['file_path'])) $anexos[] = $f['file_path'];
+                        }
+                    } else {
+                        foreach ($attachData as $f) {
+                            if (is_string($f) && file_exists($f)) $anexos[] = $f;
+                            elseif (is_array($f) && !empty($f['file_path'])) $anexos[] = $f['file_path'];
+                        }
+                    }
+                }
+            }
+        }
 
-        $sent = @mail($to, $subject, $body, $headers);
+        $resultado = \App\Servicos\ServicoEmail::enviar($to, $subject, $body, true, $anexos);
 
-        return ['data' => ['sent' => $sent, 'to' => $to]];
+        if (!($resultado['sucesso'] ?? false)) {
+            throw new \RuntimeException('Falha ao enviar e-mail: ' . ($resultado['erro'] ?? 'Erro desconhecido'));
+        }
+
+        return ['data' => ['sent' => true, 'to' => $to, 'subject' => $subject, 'attachments' => count($anexos)]];
     }
 
     /**
@@ -1679,6 +1731,10 @@ class PipelineController
                     $stmt = $pdo->query("SELECT owner as table_schema, table_name, 'TABLE' as table_type FROM all_tables WHERE owner = USER ORDER BY table_name");
                     $tables = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     break;
+                case 'sqlite':
+                    $stmt = $pdo->query("SELECT 'main' as table_schema, name as table_name, type as table_type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name");
+                    $tables = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    break;
             }
 
             return ['sucesso' => true, 'data' => $tables, 'tipo_banco' => $conn['tipo_banco']];
@@ -1755,6 +1811,17 @@ class PipelineController
                     $stmt->execute([$tabela]);
                     $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     break;
+                case 'sqlite':
+                    $cols = $pdo->query("PRAGMA table_info(" . $pdo->quote($tabela) . ")")->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($cols as $col) {
+                        $columns[] = [
+                            'column_name' => $col['name'],
+                            'data_type' => $col['type'] ?: 'TEXT',
+                            'is_nullable' => $col['notnull'] ? 'NO' : 'YES',
+                            'column_default' => $col['dflt_value']
+                        ];
+                    }
+                    break;
             }
 
             return ['sucesso' => true, 'data' => $columns];
@@ -1796,7 +1863,7 @@ class PipelineController
     private function execFormatTemplate(array $config, array &$context): array
     {
         $template = $config['template'] ?? '';
-        $result = $this->replaceVariables($template, $context);
+        $result = $this->replaceVariables($template, $context['variables']);
         return ['data' => $result];
     }
 
@@ -1807,7 +1874,7 @@ class PipelineController
     {
         $mode = $config['regex_mode'] ?? 'match';
         $inputVar = $config['input_variable'] ?? '';
-        $input = $this->resolveValue($inputVar, $context['variables']);
+        $input = $context['variables'][$inputVar] ?? $this->resolveValue($inputVar, $context['variables']);
         if (!is_string($input)) {
             $input = json_encode($input);
         }
@@ -1842,12 +1909,24 @@ class PipelineController
     }
 
     /**
-     * CSV Parse — converte texto CSV em array de objetos
+     * CSV Parse — converte texto CSV em array de objetos.
+     * Se a entrada já for um array (ex: resultado de SQL Query), converte para CSV e re-parseia,
+     * ou simplesmente repassa os dados.
      */
     private function execCsvParse(array $config, array &$context): array
     {
         $inputVar = $config['input_variable'] ?? '';
-        $input = $this->resolveValue($inputVar, $context['variables']);
+        $input = $context['variables'][$inputVar] ?? $this->resolveValue($inputVar, $context['variables']);
+
+        // Se já é um array de objetos (ex: resultado de SQL), tratar diretamente
+        if (is_array($input)) {
+            $outputVar = $config['output_variable'] ?? '';
+            if ($outputVar) {
+                $context['variables'][$outputVar] = $input;
+            }
+            return ['data' => $input, 'variables' => $outputVar ? [$outputVar => $input] : []];
+        }
+
         if (!is_string($input)) {
             throw new \RuntimeException("Variável '{$inputVar}' não contém texto CSV");
         }
@@ -1868,6 +1947,7 @@ class PipelineController
             return ['data' => []];
         }
 
+        $outputVar = $config['output_variable'] ?? '';
         if ($hasHeader) {
             $headers = array_shift($lines);
             $result = [];
@@ -1878,10 +1958,16 @@ class PipelineController
                 }
                 $result[] = $row;
             }
-            return ['data' => $result];
+            if ($outputVar) {
+                $context['variables'][$outputVar] = $result;
+            }
+            return ['data' => $result, 'variables' => $outputVar ? [$outputVar => $result] : []];
         }
 
-        return ['data' => $lines];
+        if ($outputVar) {
+            $context['variables'][$outputVar] = $lines;
+        }
+        return ['data' => $lines, 'variables' => $outputVar ? [$outputVar => $lines] : []];
     }
 
     /**
@@ -1940,6 +2026,212 @@ class PipelineController
     }
 
     /**
+     * Data Format — converte dados (array) em arquivo formatado para uso em email ou download
+     * Formatos: csv, json, html_table, pdf
+     */
+    private function execDataFormat(array $config, array &$context): array
+    {
+        $inputVar = $config['input_variable'] ?? '';
+        $data = $context['variables'][$inputVar] ?? $this->resolveValue($inputVar, $context['variables']);
+
+        // Se não encontrou na variável, tenta no resultado do nó anterior
+        if ($data === $inputVar && isset($context['results'])) {
+            foreach (array_reverse($context['results'], true) as $nodeResult) {
+                if (isset($nodeResult['data'])) {
+                    if (is_array($nodeResult['data']) && isset($nodeResult['data']['rows'])) {
+                        $data = $nodeResult['data']['rows'];
+                    } elseif (is_array($nodeResult['data'])) {
+                        $data = $nodeResult['data'];
+                    }
+                    break;
+                }
+            }
+        }
+
+        if ($data === null || $data === $inputVar) {
+            throw new \RuntimeException("Variável '{$inputVar}' não encontrada");
+        }
+
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $data = $decoded;
+            } else {
+                $data = [['value' => $data]];
+            }
+        }
+
+        if (!is_array($data)) {
+            $data = [['value' => $data]];
+        }
+
+        $format = strtolower($config['format'] ?? 'csv');
+        $allowedFormats = ['csv', 'json', 'html_table', 'pdf'];
+        if (!in_array($format, $allowedFormats)) {
+            throw new \RuntimeException("Formato '{$format}' não suportado. Use: " . implode(', ', $allowedFormats));
+        }
+
+        // Nome e diretório do arquivo
+        $filename = $config['filename'] ?? 'dados';
+        $filename = $this->processExportFilename($filename, $config, $context);
+        $basePath = defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2);
+        $exportDir = $basePath . '/storage/exports';
+        if (!is_dir($exportDir)) {
+            mkdir($exportDir, 0755, true);
+        }
+
+        $title = $config['title'] ?? 'Relatório de Dados';
+        $title = $this->replaceVariables($title, $context['variables']);
+
+        $ext = ($format === 'html_table') ? 'html' : $format;
+        $fullPath = $exportDir . DIRECTORY_SEPARATOR . $filename . '.' . $ext;
+
+        switch ($format) {
+            case 'csv':
+                $delimiter = $config['csv_delimiter'] ?? ';';
+                $this->exportToCsv($data, $fullPath, ['csv_delimiter' => $delimiter, 'csv_enclosure' => '"']);
+                break;
+
+            case 'json':
+                $pretty = ($config['json_pretty'] ?? 'true') === 'true';
+                $this->exportToJson($data, $fullPath, ['json_pretty' => $pretty ? 'true' : 'false']);
+                break;
+
+            case 'html_table':
+                $this->formatToHtmlTable($data, $fullPath, $title, $config);
+                break;
+
+            case 'pdf':
+                $this->formatToPdf($data, $fullPath, $title, $config);
+                break;
+        }
+
+        $fileSize = file_exists($fullPath) ? filesize($fullPath) : 0;
+        $recordCount = is_array($data) ? count($data) : 1;
+
+        $result = [
+            'file_path' => $fullPath,
+            'filename' => basename($fullPath),
+            'format' => $format,
+            'records' => $recordCount,
+            'file_size' => $fileSize,
+            'file_size_formatted' => $this->formatBytes($fileSize),
+        ];
+
+        if (!empty($config['output_variable'])) {
+            $context['variables'][$config['output_variable']] = $result;
+        }
+
+        return ['data' => $result];
+    }
+
+    /**
+     * Gera tabela HTML estilizada com cabeçalho, cores e rodapé
+     */
+    private function formatToHtmlTable(array $data, string $path, string $title, array $config): void
+    {
+        $accentColor = $config['accent_color'] ?? '#3b82f6';
+        $showRowNumbers = ($config['show_row_numbers'] ?? 'false') === 'true';
+
+        $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>' . htmlspecialchars($title) . '</title>';
+        $html .= '<style>';
+        $html .= 'body{font-family:"Segoe UI",Roboto,sans-serif;margin:30px;background:#f8fafc;color:#1e293b}';
+        $html .= '.report-header{background:' . htmlspecialchars($accentColor) . ';color:#fff;padding:20px 28px;border-radius:10px 10px 0 0;margin-bottom:0}';
+        $html .= '.report-header h1{margin:0;font-size:1.4rem;font-weight:600}';
+        $html .= '.report-header .meta{font-size:.82rem;opacity:.85;margin-top:4px}';
+        $html .= '.report-body{background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;overflow:hidden}';
+        $html .= 'table{border-collapse:collapse;width:100%}';
+        $html .= 'th{background:#f1f5f9;padding:10px 14px;text-align:left;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:2px solid #e2e8f0}';
+        $html .= 'td{padding:9px 14px;font-size:.85rem;border-bottom:1px solid #f1f5f9}';
+        $html .= 'tr:nth-child(even){background:#fafbfc}';
+        $html .= 'tr:hover{background:#f0f4ff}';
+        $html .= '.report-footer{text-align:center;padding:14px;font-size:.75rem;color:#94a3b8}';
+        $html .= '</style></head><body>';
+        $html .= '<div class="report-header"><h1>' . htmlspecialchars($title) . '</h1>';
+        $html .= '<div class="meta">Gerado em: ' . date('d/m/Y H:i:s') . ' | Registros: ' . count($data) . '</div></div>';
+        $html .= '<div class="report-body"><table>';
+
+        if (!empty($data) && is_array($data[0] ?? null)) {
+            $html .= '<thead><tr>';
+            if ($showRowNumbers) $html .= '<th>#</th>';
+            foreach (array_keys($data[0]) as $col) {
+                $html .= '<th>' . htmlspecialchars($col) . '</th>';
+            }
+            $html .= '</tr></thead><tbody>';
+            $i = 1;
+            foreach ($data as $row) {
+                $html .= '<tr>';
+                if ($showRowNumbers) $html .= '<td style="color:#94a3b8;font-size:.78rem">' . $i++ . '</td>';
+                foreach ($row as $val) {
+                    $html .= '<td>' . htmlspecialchars(is_array($val) ? json_encode($val, JSON_UNESCAPED_UNICODE) : (string)$val) . '</td>';
+                }
+                $html .= '</tr>';
+            }
+            $html .= '</tbody>';
+        }
+
+        $html .= '</table></div>';
+        $html .= '<div class="report-footer">DMC DataLoad — Pipeline Builder</div>';
+        $html .= '</body></html>';
+
+        file_put_contents($path, $html);
+    }
+
+    /**
+     * Gera PDF a partir de dados tabulares (usando HTML → PDF sem dependências externas)
+     * Usa a mesma tabela HTML renderizada, salva como PDF-simulado via wkhtmltopdf ou fallback HTML
+     */
+    private function formatToPdf(array $data, string $path, string $title, array $config): void
+    {
+        // Gerar HTML da tabela primeiro
+        $htmlPath = str_replace('.pdf', '_temp.html', $path);
+        $this->formatToHtmlTable($data, $htmlPath, $title, $config);
+
+        // Tentar usar wkhtmltopdf se disponível
+        $wkhtmltopdf = $this->findWkhtmltopdf();
+        if ($wkhtmltopdf) {
+            $cmd = escapeshellarg($wkhtmltopdf) . ' --quiet --encoding UTF-8 --page-size A4 --margin-top 10 --margin-bottom 10 --margin-left 10 --margin-right 10 ' 
+                 . escapeshellarg($htmlPath) . ' ' . escapeshellarg($path);
+            exec($cmd, $output, $exitCode);
+            @unlink($htmlPath);
+            if ($exitCode === 0 && file_exists($path)) {
+                return;
+            }
+        }
+
+        // Fallback: salvar como HTML com extensão .pdf (abre no navegador)
+        // Adicionar script de auto-impressão
+        $htmlContent = file_get_contents($htmlPath);
+        $htmlContent = str_replace('</body>', '<script>window.onload=function(){window.print()}</script></body>', $htmlContent);
+        file_put_contents($path, $htmlContent);
+        @unlink($htmlPath);
+    }
+
+    /**
+     * Tenta localizar wkhtmltopdf no sistema
+     */
+    private function findWkhtmltopdf(): ?string
+    {
+        $paths = [
+            'wkhtmltopdf',
+            'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
+            'C:\\Program Files (x86)\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
+            '/usr/local/bin/wkhtmltopdf',
+            '/usr/bin/wkhtmltopdf',
+        ];
+        foreach ($paths as $p) {
+            if (str_contains($p, DIRECTORY_SEPARATOR) || str_contains($p, '/')) {
+                if (file_exists($p)) return $p;
+            } else {
+                $which = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'where' : 'which';
+                exec("$which $p 2>&1", $out, $code);
+                if ($code === 0 && !empty($out[0])) return trim($out[0]);
+            }
+        }
+        return null;
+    }
+
+    /**
      * File Export — exporta dados para arquivo em formatos variados
      * Suporta variáveis de sequência no nome do arquivo:
      *   {seq} - sequencial auto-incremento
@@ -1953,7 +2245,7 @@ class PipelineController
     private function execFileExport(array $config, array &$context): array
     {
         $inputVar = $config['input_variable'] ?? '';
-        $data = $this->resolveValue($inputVar, $context['variables']);
+        $data = $context['variables'][$inputVar] ?? $this->resolveValue($inputVar, $context['variables']);
 
         // Se não encontrou na variável, tenta no resultado do nó anterior
         if ($data === $inputVar && isset($context['results'])) {
