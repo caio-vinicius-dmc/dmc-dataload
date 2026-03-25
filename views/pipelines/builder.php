@@ -3,6 +3,7 @@ $pageTitle = 'Pipeline Builder';
 $currentPage = 'pipelines';
 $csrfToken = App\Core\AuthMiddleware::gerarTokenCSRF();
 $pipelineId = $pipelineId ?? null;
+$base = defined('BASE_URL') ? BASE_URL : '';
 ob_start();
 ?>
 
@@ -12,7 +13,7 @@ ob_start();
     <div class="builder-toolbar">
         <div class="toolbar-row toolbar-row-main">
             <div class="toolbar-left">
-                <a href="<?= $baseUrl ?>/pipelines" class="btn btn-sm btn-outline-secondary" title="Voltar">
+                <a href="<?= $base ?>/pipelines" class="btn btn-sm btn-outline-secondary" title="Voltar">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <div class="pipeline-name-wrapper">

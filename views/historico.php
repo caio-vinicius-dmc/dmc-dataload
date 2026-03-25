@@ -17,7 +17,7 @@ ob_start();
     </div>
     <div>
         <h1 class="page-title-modern">Histórico de Execuções</h1>
-        <p class="page-subtitle-modern">Monitore e analise todas as execuções: rotinas, pipelines e workflows</p>
+        <p class="page-subtitle-modern">Monitore e analise todas as execuções: rotinas e pipelines</p>
     </div>
     <div class="d-flex gap-2 ms-auto">
         <button class="btn-modern-outline" onclick="recarregar()">
@@ -43,7 +43,6 @@ ob_start();
                     <option value="">Todos os tipos</option>
                     <option value="rotina">🔄 Rotinas</option>
                     <option value="pipeline">⚡ Pipelines</option>
-                    <option value="workflow">🔀 Workflows</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -85,7 +84,7 @@ ob_start();
 
 <!-- Stats -->
 <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg">
         <div class="stat-card-modern success-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-check-circle-fill"></i>
@@ -99,7 +98,7 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg">
         <div class="stat-card-modern danger-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-x-circle-fill"></i>
@@ -113,7 +112,21 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg">
+        <div class="stat-card-modern warning-card">
+            <div class="stat-icon-modern">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="statParciais">0</div>
+                <div class="stat-label-modern">Parciais</div>
+            </div>
+            <div class="stat-trend warning-trend">
+                <i class="bi bi-slash-circle"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg">
         <div class="stat-card-modern info-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-play-circle-fill"></i>
@@ -127,7 +140,7 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg">
         <div class="stat-card-modern primary-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-stopwatch-fill"></i>
@@ -457,6 +470,7 @@ $extraStyles = <<<'STYLES'
 
 .success-card::before { background: var(--gradient-success); }
 .danger-card::before { background: var(--gradient-danger); }
+.warning-card::before { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
 .info-card::before { background: var(--gradient-info); }
 .primary-card::before { background: var(--gradient-primary); }
 
@@ -489,6 +503,11 @@ $extraStyles = <<<'STYLES'
 .primary-card .stat-icon-modern {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.15) 100%);
     color: #667eea;
+}
+
+.warning-card .stat-icon-modern {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.15) 100%);
+    color: #f59e0b;
 }
 
 .stat-content {
@@ -538,6 +557,11 @@ $extraStyles = <<<'STYLES'
 .primary-trend {
     background: rgba(102, 126, 234, 0.1);
     color: #667eea;
+}
+
+.warning-trend {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
 }
 
 /* ==== BADGES ==== */
@@ -1340,8 +1364,8 @@ function renderizarDetalhes(dados) {
     console.log("🎯 renderizarDetalhes chamado com:", dados);
     
     const tipoExec = dados.tipo_execucao || 'rotina';
-    const tipoLabels = { rotina: 'Rotina', pipeline: 'Pipeline', workflow: 'Workflow' };
-    const tipoIcons = { rotina: '🔄', pipeline: '⚡', workflow: '🔀' };
+    const tipoLabels = { rotina: 'Rotina', pipeline: 'Pipeline' };
+    const tipoIcons = { rotina: '🔄', pipeline: '⚡' };
     
     // Atualizar subtítulo do modal
     const nomeOrigem = dados.nome_rotina || dados.nome_origem || '-';
@@ -1421,7 +1445,6 @@ function renderizarDetalhes(dados) {
                         <span class="info-value">${dados.registros_processados?.toLocaleString("pt-BR") || "-"}</span>
                     </div>
                     ${tipoExec === 'rotina' ? renderCsvRow(dados) : ''}
-                    ${tipoExec === 'workflow' && dados.triggered_by ? '<div class="info-row"><span class="info-label">Disparado por</span><span class="info-value">' + escapeHtml(dados.triggered_by) + '</span></div>' : ''}
                 </div>
             </div>
         </div>
@@ -1934,16 +1957,17 @@ $(document).ready(function() {
             url: baseUrl + "/api/historico",
             dataSrc: function(json) {
                 var dados = json.dados || [];
-                var sucesso = 0, falhas = 0, executando = 0, tempoTotal = 0, tempoCount = 0;
+                var sucesso = 0, falhas = 0, parciais = 0, executando = 0, tempoTotal = 0, tempoCount = 0;
                 dados.forEach(function(d) {
                     if (d.status === 'sucesso') sucesso++;
-                    else if (d.status === 'parcial') falhas++; // parcial conta como falha parcial
+                    else if (d.status === 'parcial') parciais++;
                     else if (d.status === 'falha' || d.status === 'erro') falhas++;
                     else if (d.status === 'executando') executando++;
                     if (d.duracao_ms) { tempoTotal += parseFloat(d.duracao_ms); tempoCount++; }
                 });
                 $("#statSucesso").text(sucesso);
                 $("#statFalhas").text(falhas);
+                $("#statParciais").text(parciais);
                 $("#statExecutando").text(executando);
                 $("#statTempo").text(formatDuracao(tempoCount > 0 ? Math.round(tempoTotal / tempoCount) : 0));
                 return dados;
@@ -1956,8 +1980,7 @@ $(document).ready(function() {
                 render: function(data) {
                     const badges = {
                         rotina: '<span class="badge bg-primary"><i class="bi bi-arrow-repeat me-1"></i>Rotina</span>',
-                        pipeline: '<span class="badge bg-info text-dark"><i class="bi bi-lightning-fill me-1"></i>Pipeline</span>',
-                        workflow: '<span class="badge bg-purple text-white"><i class="bi bi-shuffle me-1"></i>Workflow</span>'
+                        pipeline: '<span class="badge bg-info text-dark"><i class="bi bi-lightning-fill me-1"></i>Pipeline</span>'
                     };
                     return badges[data] || `<span class="badge bg-secondary">${data}</span>`;
                 }

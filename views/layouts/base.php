@@ -144,6 +144,7 @@ $appFavicon = $_brandCfg['app_favicon'];
             flex: 1;
             padding: 1rem 0;
             overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .sidebar-menu::-webkit-scrollbar {
@@ -174,7 +175,7 @@ $appFavicon = $_brandCfg['app_favicon'];
             align-items: center;
             gap: 12px;
             padding: 0.7rem 1rem;
-            margin: 0 0.75rem;
+            margin: 0 1rem;
             border-radius: 10px;
             cursor: pointer;
             color: var(--text-muted);
@@ -186,7 +187,7 @@ $appFavicon = $_brandCfg['app_favicon'];
             user-select: none;
             border: none;
             background: none;
-            width: calc(100% - 1.5rem);
+            width: calc(100% - 2rem);
             text-align: left;
         }
 
@@ -196,7 +197,7 @@ $appFavicon = $_brandCfg['app_favicon'];
         }
 
         .menu-group-toggle .group-icon {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             width: 24px;
             text-align: center;
             flex-shrink: 0;
@@ -256,7 +257,6 @@ $appFavicon = $_brandCfg['app_favicon'];
             font-size: 0.875rem;
             transition: var(--transition);
             position: relative;
-            overflow: hidden;
         }
 
         .menu-link::before {
@@ -1040,29 +1040,25 @@ $appFavicon = $_brandCfg['app_favicon'];
         @media (min-width: 1200px) {
             body.sidebar-collapsed .sidebar {
                 width: var(--sidebar-collapsed-width);
+                overflow: visible;
             }
 
             body.sidebar-collapsed .sidebar-brand-text,
             body.sidebar-collapsed .menu-label,
             body.sidebar-collapsed .menu-link span,
             body.sidebar-collapsed .menu-badge,
-            body.sidebar-collapsed .user-info,
-            body.sidebar-collapsed .user-actions,
             body.sidebar-collapsed .menu-group-toggle .group-label,
             body.sidebar-collapsed .menu-group-toggle .group-chevron {
-                opacity: 0;
-                width: 0;
-                overflow: hidden;
-                white-space: nowrap;
-                pointer-events: none;
-                transition: opacity 0.2s ease, width 0.2s ease;
+                display: none;
             }
 
             body.sidebar-collapsed .menu-group-toggle {
                 justify-content: center;
-                padding: 0.6rem 0.5rem;
+                padding: 0.85rem 0;
                 margin: 0 0.5rem;
                 width: calc(100% - 1rem);
+                gap: 0;
+                overflow: hidden;
             }
 
             body.sidebar-collapsed .menu-group-toggle .group-icon {
@@ -1100,7 +1096,18 @@ $appFavicon = $_brandCfg['app_favicon'];
                 padding: 0 8px;
             }
 
+            body.sidebar-collapsed .menu-group:hover > .menu-group-items .menu-link {
+                justify-content: flex-start;
+                gap: 12px;
+                padding: 0.55rem 0.75rem;
+            }
+
+            body.sidebar-collapsed .menu-group:hover > .menu-group-items .menu-link i {
+                font-size: 1.1rem;
+            }
+
             body.sidebar-collapsed .menu-group:hover > .menu-group-items .menu-link span {
+                display: inline;
                 opacity: 1;
                 width: auto;
                 pointer-events: auto;
@@ -1111,6 +1118,7 @@ $appFavicon = $_brandCfg['app_favicon'];
                 justify-content: center;
                 flex-direction: column;
                 gap: 8px;
+                overflow: hidden;
             }
 
             body.sidebar-collapsed .sidebar-brand {
@@ -1130,7 +1138,9 @@ $appFavicon = $_brandCfg['app_favicon'];
 
             body.sidebar-collapsed .menu-link {
                 justify-content: center;
-                padding: 0.85rem 0.5rem;
+                padding: 0.85rem 0;
+                gap: 0;
+                overflow: visible;
             }
 
             body.sidebar-collapsed .menu-link i {
@@ -1139,14 +1149,34 @@ $appFavicon = $_brandCfg['app_favicon'];
             }
 
             body.sidebar-collapsed .sidebar-footer {
-                padding: 0.75rem 0.5rem;
+                padding: 0.5rem;
+                position: relative;
+                overflow: hidden;
             }
 
             body.sidebar-collapsed .user-card {
                 justify-content: center;
+                align-items: center;
                 padding: 0;
-                background: transparent;
+                background: transparent !important;
                 gap: 0;
+                position: relative;
+                border-radius: 0;
+                width: auto;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            body.sidebar-collapsed .user-card:hover {
+                background: transparent !important;
+            }
+
+            body.sidebar-collapsed .user-info,
+            body.sidebar-collapsed .user-actions {
+                display: none !important;
+                width: 0 !important;
+                height: 0 !important;
+                overflow: hidden !important;
             }
 
             body.sidebar-collapsed .user-avatar {
@@ -1154,8 +1184,13 @@ $appFavicon = $_brandCfg['app_favicon'];
                 height: 40px;
                 min-width: 40px;
                 min-height: 40px;
+                max-width: 40px;
+                max-height: 40px;
                 font-size: 0.95rem;
                 flex-shrink: 0;
+                line-height: 1;
+                border-radius: 10px;
+                margin: 0 auto;
             }
 
             body.sidebar-collapsed .topbar {
@@ -1240,6 +1275,88 @@ $appFavicon = $_brandCfg['app_favicon'];
             body.sidebar-collapsed .menu-group-toggle:hover::after {
                 opacity: 1;
             }
+        }
+
+        /* ========== USER DROPDOWN (COLLAPSED SIDEBAR) ========== */
+        .user-dropdown {
+            display: none;
+            position: absolute;
+            left: 100%;
+            bottom: 8px;
+            margin-left: 8px;
+            min-width: 200px;
+            background: var(--dark);
+            border-radius: 10px;
+            box-shadow: 4px 4px 20px rgba(0,0,0,0.3);
+            padding: 6px 0;
+            z-index: 9999;
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+
+        .user-dropdown-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .user-dropdown-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .user-dropdown-role {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.6rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+        }
+
+        .user-dropdown-item:hover {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-light);
+        }
+
+        .user-dropdown-item i {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .user-dropdown-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.08);
+            margin: 4px 0;
+        }
+
+        .user-dropdown-item.logout-item {
+            color: #f87171;
+        }
+
+        .user-dropdown-item.logout-item:hover {
+            background: rgba(248, 113, 113, 0.1);
+            color: #fca5a5;
+        }
+
+        body.dark-mode .user-dropdown {
+            background: #0d0f18;
         }
 
         /* Hide collapse button on mobile (mobile uses its own toggle) */
@@ -1888,6 +2005,7 @@ $appFavicon = $_brandCfg['app_favicon'];
         </div>
 
         <nav class="sidebar-menu">
+            <!-- DASHBOARD (todos) -->
             <div class="menu-item" style="margin-top: 4px;">
                 <a href="<?= $base ?>/dashboard" class="menu-link <?= $currentPage === 'dashboard' ? 'active' : '' ?>" data-tooltip="Dashboard">
                     <i class="bi bi-grid-1x2-fill"></i>
@@ -1903,6 +2021,17 @@ $appFavicon = $_brandCfg['app_favicon'];
             $ehOperador = ($nivelAcesso === 'operador');
             ?>
 
+            <!-- CONEXÕES (dev+) -->
+            <?php if ($ehDevOuSuperior): ?>
+            <div class="menu-item">
+                <a href="<?= $base ?>/conexoes" class="menu-link <?= $currentPage === 'conexoes' ? 'active' : '' ?>" data-tooltip="Conexões">
+                    <i class="bi bi-hdd-network-fill"></i>
+                    <span>Conexões</span>
+                </a>
+            </div>
+            <?php endif; ?>
+
+            <!-- ETL (dev+) -->
             <?php if ($ehDevOuSuperior): ?>
             <div class="menu-group" data-group="etl">
                 <button class="menu-group-toggle" data-tooltip="ETL">
@@ -1912,23 +2041,30 @@ $appFavicon = $_brandCfg['app_favicon'];
                 </button>
                 <div class="menu-group-items">
                     <div class="menu-item">
-                        <a href="<?= $base ?>/conexoes" class="menu-link <?= $currentPage === 'conexoes' ? 'active' : '' ?>" data-tooltip="Conexões">
-                            <i class="bi bi-hdd-network-fill"></i>
-                            <span>Conexões</span>
-                        </a>
-                    </div>
-                    <div class="menu-item">
                         <a href="<?= $base ?>/rotinas" class="menu-link <?= $currentPage === 'rotinas' ? 'active' : '' ?>" data-tooltip="Rotinas">
                             <i class="bi bi-play-circle-fill"></i>
                             <span>Rotinas</span>
                         </a>
                     </div>
                     <div class="menu-item">
-                        <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>" data-tooltip="Histórico">
-                            <i class="bi bi-clock-history"></i>
-                            <span>Histórico</span>
+                        <a href="<?= $base ?>/pipelines" class="menu-link <?= $currentPage === 'pipelines' ? 'active' : '' ?>" data-tooltip="Pipelines">
+                            <i class="bi bi-bezier2"></i>
+                            <span>Pipelines</span>
                         </a>
                     </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- SQL (dev+ vê tudo, operador vê só Diagrama ER) -->
+            <?php if ($ehDevOuSuperior): ?>
+            <div class="menu-group" data-group="sql">
+                <button class="menu-group-toggle" data-tooltip="SQL">
+                    <i class="bi bi-terminal group-icon"></i>
+                    <span class="group-label">SQL</span>
+                    <i class="bi bi-chevron-right group-chevron"></i>
+                </button>
+                <div class="menu-group-items">
                     <div class="menu-item">
                         <a href="<?= $base ?>/sql-editor" class="menu-link <?= $currentPage === 'sql-editor' ? 'active' : '' ?>" data-tooltip="SQL Editor">
                             <i class="bi bi-terminal"></i>
@@ -1943,20 +2079,14 @@ $appFavicon = $_brandCfg['app_favicon'];
                     </div>
                 </div>
             </div>
-            <?php else: ?>
-            <div class="menu-group" data-group="etl-op">
-                <button class="menu-group-toggle" data-tooltip="Dados">
-                    <i class="bi bi-database-gear group-icon"></i>
-                    <span class="group-label">Dados</span>
+            <?php elseif ($ehOperador): ?>
+            <div class="menu-group" data-group="sql">
+                <button class="menu-group-toggle" data-tooltip="SQL">
+                    <i class="bi bi-terminal group-icon"></i>
+                    <span class="group-label">SQL</span>
                     <i class="bi bi-chevron-right group-chevron"></i>
                 </button>
                 <div class="menu-group-items">
-                    <div class="menu-item">
-                        <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>" data-tooltip="Histórico">
-                            <i class="bi bi-clock-history"></i>
-                            <span>Histórico</span>
-                        </a>
-                    </div>
                     <div class="menu-item">
                         <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>" data-tooltip="Diagrama ER">
                             <i class="bi bi-diagram-3"></i>
@@ -1967,40 +2097,11 @@ $appFavicon = $_brandCfg['app_favicon'];
             </div>
             <?php endif; ?>
 
-            <?php if ($ehDevOuSuperior): ?>
-            <div class="menu-group" data-group="automacao">
-                <button class="menu-group-toggle" data-tooltip="Automação">
-                    <i class="bi bi-lightning-charge group-icon"></i>
-                    <span class="group-label">Automação</span>
-                    <i class="bi bi-chevron-right group-chevron"></i>
-                </button>
-                <div class="menu-group-items">
-                    <div class="menu-item">
-                        <a href="<?= $base ?>/apis-externas" class="menu-link <?= $currentPage === 'apis-externas' ? 'active' : '' ?>" data-tooltip="APIs Externas">
-                            <i class="bi bi-cloud-arrow-up-fill"></i>
-                            <span>APIs Externas</span>
-                        </a>
-                    </div>
-                    <div class="menu-item">
-                        <a href="<?= $base ?>/eventos-api" class="menu-link <?= $currentPage === 'eventos-api' ? 'active' : '' ?>" data-tooltip="Eventos de API">
-                            <i class="bi bi-broadcast-pin"></i>
-                            <span>Eventos de API</span>
-                        </a>
-                    </div>
-                    <div class="menu-item">
-                        <a href="<?= $base ?>/pipelines" class="menu-link <?= $currentPage === 'pipelines' ? 'active' : '' ?>" data-tooltip="Pipelines">
-                            <i class="bi bi-bezier2"></i>
-                            <span>Pipelines</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <div class="menu-group" data-group="sistema">
-                <button class="menu-group-toggle" data-tooltip="Sistema">
-                    <i class="bi bi-sliders group-icon"></i>
-                    <span class="group-label">Sistema</span>
+            <!-- AGENDA (todos) -->
+            <div class="menu-group" data-group="agenda">
+                <button class="menu-group-toggle" data-tooltip="Agenda">
+                    <i class="bi bi-calendar-check group-icon"></i>
+                    <span class="group-label">Agenda</span>
                     <i class="bi bi-chevron-right group-chevron"></i>
                 </button>
                 <div class="menu-group-items">
@@ -2017,10 +2118,21 @@ $appFavicon = $_brandCfg['app_favicon'];
                             <span>Calendário</span>
                         </a>
                     </div>
+                </div>
+            </div>
+
+            <!-- REGISTROS (misto: Histórico e Notificações = todos; Logs = dev+; Fila/Auditoria/Arquivos = admin+) -->
+            <div class="menu-group" data-group="registros">
+                <button class="menu-group-toggle" data-tooltip="Registros">
+                    <i class="bi bi-clock-history group-icon"></i>
+                    <span class="group-label">Registros</span>
+                    <i class="bi bi-chevron-right group-chevron"></i>
+                </button>
+                <div class="menu-group-items">
                     <div class="menu-item">
-                        <a href="<?= $base ?>/notificacoes" class="menu-link <?= $currentPage === 'notificacoes' ? 'active' : '' ?>" data-tooltip="Notificações">
-                            <i class="bi bi-bell-fill"></i>
-                            <span>Notificações</span>
+                        <a href="<?= $base ?>/historico" class="menu-link <?= $currentPage === 'historico' ? 'active' : '' ?>" data-tooltip="Histórico">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Histórico</span>
                         </a>
                     </div>
                     <?php if ($ehDevOuSuperior): ?>
@@ -2031,14 +2143,45 @@ $appFavicon = $_brandCfg['app_favicon'];
                         </a>
                     </div>
                     <?php endif; ?>
+                    <?php if ($ehAdminSidebar): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>" data-tooltip="Fila Execução">
+                            <i class="bi bi-collection"></i>
+                            <span>Fila Execução</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($ehSuperAdminSidebar): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/admin/auditoria" class="menu-link <?= $currentPage === 'auditoria' ? 'active' : '' ?>" data-tooltip="Auditoria">
+                            <i class="bi bi-shield-check"></i>
+                            <span>Auditoria</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($ehAdminSidebar): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/arquivos-gerados" class="menu-link <?= $currentPage === 'arquivos-gerados' ? 'active' : '' ?>" data-tooltip="Arquivos Gerados">
+                            <i class="bi bi-folder2-open"></i>
+                            <span>Arquivos Gerados</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/notificacoes" class="menu-link <?= $currentPage === 'notificacoes' ? 'active' : '' ?>" data-tooltip="Notificações">
+                            <i class="bi bi-bell-fill"></i>
+                            <span>Notificações</span>
+                        </a>
+                    </div>
                 </div>
             </div>
 
+            <!-- APLICAÇÃO (admin+, com itens super_admin only) -->
             <?php if ($ehAdminSidebar): ?>
-            <div class="menu-group" data-group="admin">
-                <button class="menu-group-toggle" data-tooltip="Administração">
+            <div class="menu-group" data-group="aplicacao">
+                <button class="menu-group-toggle" data-tooltip="Aplicação">
                     <i class="bi bi-shield-lock group-icon"></i>
-                    <span class="group-label">Administração</span>
+                    <span class="group-label">Aplicação</span>
                     <i class="bi bi-chevron-right group-chevron"></i>
                 </button>
                 <div class="menu-group-items">
@@ -2069,12 +2212,8 @@ $appFavicon = $_brandCfg['app_favicon'];
                             <span>Configurações</span>
                         </a>
                     </div>
-                    <div class="menu-item">
-                        <a href="<?= $base ?>/admin/auditoria" class="menu-link <?= $currentPage === 'auditoria' ? 'active' : '' ?>" data-tooltip="Auditoria">
-                            <i class="bi bi-shield-check"></i>
-                            <span>Auditoria</span>
-                        </a>
-                    </div>
+                    <?php endif; ?>
+                    <?php if ($ehSuperAdminSidebar): ?>
                     <div class="menu-item">
                         <a href="<?= $base ?>/admin/webhooks" class="menu-link <?= $currentPage === 'webhooks' ? 'active' : '' ?>" data-tooltip="Webhooks">
                             <i class="bi bi-broadcast"></i>
@@ -2088,23 +2227,25 @@ $appFavicon = $_brandCfg['app_favicon'];
                             <span>Slack/Teams</span>
                         </a>
                     </div>
-                    <div class="menu-item">
-                        <a href="<?= $base ?>/admin/fila" class="menu-link <?= $currentPage === 'fila' ? 'active' : '' ?>" data-tooltip="Fila Execução">
-                            <i class="bi bi-collection"></i>
-                            <span>Fila Execução</span>
-                        </a>
-                    </div>
-                    <div class="menu-item">
-                        <a href="<?= $base ?>/arquivos-gerados" class="menu-link <?= $currentPage === 'arquivos-gerados' ? 'active' : '' ?>" data-tooltip="Arquivos Gerados">
-                            <i class="bi bi-folder2-open"></i>
-                            <span>Arquivos Gerados</span>
-                        </a>
-                    </div>
                     <?php if ($ehSuperAdminSidebar): ?>
                     <div class="menu-item">
                         <a href="<?= $base ?>/admin/backups" class="menu-link <?= $currentPage === 'backups' ? 'active' : '' ?>" data-tooltip="Backups">
                             <i class="bi bi-cloud-download"></i>
                             <span>Backups</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($ehDevOuSuperior): ?>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/apis-externas" class="menu-link <?= $currentPage === 'apis-externas' ? 'active' : '' ?>" data-tooltip="APIs Externas">
+                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                            <span>APIs Externas</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/eventos-api" class="menu-link <?= $currentPage === 'eventos-api' ? 'active' : '' ?>" data-tooltip="Eventos de API">
+                            <i class="bi bi-broadcast-pin"></i>
+                            <span>Eventos de API</span>
                         </a>
                     </div>
                     <?php endif; ?>
@@ -2131,6 +2272,22 @@ $appFavicon = $_brandCfg['app_favicon'];
                     </button>
                 </div>
             </div>
+        </div>
+
+        <div class="user-dropdown" id="userDropdown">
+            <div class="user-dropdown-header">
+                <div class="user-dropdown-name"><?= htmlspecialchars($usuario['nome_usuario'] ?? 'Usuário') ?></div>
+                <div class="user-dropdown-role"><?= $labelsPapeis[$usuario['nivel_acesso'] ?? 'operador'] ?? ucfirst($usuario['nivel_acesso'] ?? 'user') ?></div>
+            </div>
+            <a href="<?= $base ?>/meu-perfil" class="user-dropdown-item">
+                <i class="bi bi-person"></i>
+                <span>Meu Perfil</span>
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <button class="user-dropdown-item logout-item" id="btnDropdownLogout">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Sair</span>
+            </button>
         </div>
     </aside>
 
@@ -2315,21 +2472,52 @@ $appFavicon = $_brandCfg['app_favicon'];
             setTimeout(() => document.body.classList.remove('dark-mode-transition'), 400);
         });
 
-        // Logout
-        document.getElementById('btnLogout')?.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
+        // Logout handler (shared)
+        function doLogout() {
             if (confirm('Deseja realmente sair?')) {
                 $.post(baseUrl + '/logout', function() {
                     window.location.href = baseUrl + '/login';
                 });
             }
+        }
+
+        document.getElementById('btnLogout')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            doLogout();
         });
 
-        // User card → Meu Perfil
+        document.getElementById('btnDropdownLogout')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            doLogout();
+        });
+
+        // User dropdown (collapsed sidebar)
+        const userDropdown = document.getElementById('userDropdown');
+
         document.getElementById('userCard')?.addEventListener('click', function(e) {
             if (e.target.closest('#btnLogout')) return;
+            // If sidebar is collapsed on desktop, show dropdown
+            if (document.body.classList.contains('sidebar-collapsed') && window.innerWidth >= 1200) {
+                e.preventDefault();
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+                return;
+            }
             window.location.href = baseUrl + '/meu-perfil';
+        });
+
+        // Close dropdown on click outside
+        document.addEventListener('click', function(e) {
+            if (userDropdown && !e.target.closest('.sidebar-footer') && !e.target.closest('.user-dropdown')) {
+                userDropdown.classList.remove('show');
+            }
+        });
+
+        // Close dropdown when sidebar expands
+        collapseBtn?.addEventListener('click', function() {
+            if (userDropdown) userDropdown.classList.remove('show');
         });
 
         // Load active schedules count

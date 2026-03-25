@@ -215,6 +215,53 @@ class RotinasController2
         $d->execute([$id]);
         return ['sucesso' => true];
     }
+
+    public function duplicar(int $id): array
+    {
+        $original = $this->buscar($id);
+        if (empty($original)) {
+            return ['sucesso' => false, 'erro' => 'Rotina não encontrada'];
+        }
+
+        $r = $original['rotina'];
+        $blocos = $original['blocos'];
+
+        try {
+            $db = Database::getConexao();
+            $db->beginTransaction();
+
+            $ins = $db->prepare('INSERT INTO tb_rotinas (nome, descricao, id_conexao, id_usuario_criador, webhook_sucesso, webhook_falha, parar_em_erro, rollback_em_erro) VALUES (?, ?, ?, ?, ?, ?, ?::boolean, ?::boolean) RETURNING id');
+            $ins->execute([
+                $r['nome'] . ' (cópia)',
+                $r['descricao'],
+                $r['id_conexao'],
+                $r['id_usuario_criador'],
+                $r['webhook_sucesso'] ?? null,
+                $r['webhook_falha'] ?? null,
+                !empty($r['parar_em_erro']) ? 't' : 'f',
+                !empty($r['rollback_em_erro']) ? 't' : 'f',
+            ]);
+            $novoId = $ins->fetchColumn();
+
+            foreach ($blocos as $bloco) {
+                $b = $db->prepare('INSERT INTO tb_blocos_rotina (id_rotina, codigo_bloco, ordem, script_sql, tipo_bloco) VALUES (?, ?, ?, ?, ?)');
+                $b->execute([$novoId, $bloco['codigo_bloco'], $bloco['ordem'], $bloco['script_sql'], $bloco['tipo_bloco']]);
+            }
+
+            // Copiar associações RBAC (empresas e projetos)
+            $stmtEmp = $db->prepare('INSERT INTO tb_recurso_empresas (tipo_recurso, id_recurso, id_empresa) SELECT tipo_recurso, ?, id_empresa FROM tb_recurso_empresas WHERE tipo_recurso = ? AND id_recurso = ?');
+            $stmtEmp->execute([$novoId, 'rotina', $id]);
+
+            $stmtProj = $db->prepare('INSERT INTO tb_recurso_projetos (tipo_recurso, id_recurso, id_projeto) SELECT tipo_recurso, ?, id_projeto FROM tb_recurso_projetos WHERE tipo_recurso = ? AND id_recurso = ?');
+            $stmtProj->execute([$novoId, 'rotina', $id]);
+
+            $db->commit();
+            return ['sucesso' => true, 'id' => $novoId, 'mensagem' => 'Rotina duplicada com sucesso'];
+        } catch (\Exception $e) {
+            $db->rollBack();
+            return ['sucesso' => false, 'erro' => 'Erro ao duplicar: ' . $e->getMessage()];
+        }
+    }
     
     /**
      * Alterna o status de ativação de uma rotina
@@ -269,6 +316,7 @@ class RotinasController2
         $stats = $db->prepare("SELECT 
             COUNT(*) as total_execucoes,
             COUNT(*) FILTER (WHERE status = 'sucesso') as sucesso,
+            COUNT(*) FILTER (WHERE status = 'parcial') as parcial,
             COUNT(*) FILTER (WHERE status = 'falha') as falha,
             AVG(duracao_ms) as tempo_medio,
             MAX(data_inicio) as ultima_execucao

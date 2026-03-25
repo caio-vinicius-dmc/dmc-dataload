@@ -379,6 +379,34 @@ textarea.form-control-modern {
     background: #f3f4f6;
     color: #374151;
 }
+.btn-insert-bloco {
+    padding: 4px 8px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+.btn-insert-bloco:hover {
+    background: #eef2ff;
+    border-color: #6366f1;
+    color: #6366f1;
+}
+.btn-insert-bloco .dropdown-menu {
+    min-width: 180px;
+    font-size: 0.875rem;
+}
+.btn-insert-bloco .dropdown-menu .dropdown-header {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #9ca3af;
+    font-weight: 600;
+}
 .CodeMirror {
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -553,6 +581,26 @@ function addBloco(codigo = "", tipo = "SELECT", sql = "") {
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-chevron-down toggle-icon"></i>
+                    <div class="dropdown" onclick="event.stopPropagation()">
+                        <button type="button" class="btn-insert-bloco dropdown-toggle" data-bs-toggle="dropdown" title="Inserir bloco">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><span class="dropdown-header"><i class="bi bi-arrow-up me-1"></i>Inserir Acima</span></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'before', 'SELECT'); return false;">SELECT</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'before', 'INSERT'); return false;">INSERT</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'before', 'UPDATE'); return false;">UPDATE</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'before', 'DELETE'); return false;">DELETE</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'before', 'OUTROS'); return false;">OUTROS</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><span class="dropdown-header"><i class="bi bi-arrow-down me-1"></i>Inserir Abaixo</span></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'after', 'SELECT'); return false;">SELECT</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'after', 'INSERT'); return false;">INSERT</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'after', 'UPDATE'); return false;">UPDATE</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'after', 'DELETE'); return false;">DELETE</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="insertBloco('${blocoId}', 'after', 'OUTROS'); return false;">OUTROS</a></li>
+                        </ul>
+                    </div>
                     <button type="button" class="btn btn-sm btn-outline-danger btn-remove" onclick="event.stopPropagation()">
                         <i class="bi bi-trash me-1"></i>Remover
                     </button>
@@ -600,7 +648,23 @@ function addBloco(codigo = "", tipo = "SELECT", sql = "") {
         </div>
     `;
     
-    $("#lista-blocos").append(blocoHtml);
+    // Inserir na posição correta ou no final
+    if (typeof addBloco._insertRef === 'string' && typeof addBloco._insertPos === 'string') {
+        const refEl = $(`[data-bloco-id="${addBloco._insertRef}"]`);
+        if (refEl.length) {
+            if (addBloco._insertPos === 'before') {
+                refEl.before(blocoHtml);
+            } else {
+                refEl.after(blocoHtml);
+            }
+        } else {
+            $("#lista-blocos").append(blocoHtml);
+        }
+        addBloco._insertRef = null;
+        addBloco._insertPos = null;
+    } else {
+        $("#lista-blocos").append(blocoHtml);
+    }
     $("#bottomActions").show();
     
     const blocoElement = $(`[data-bloco-id="${blocoId}"]`);
@@ -661,6 +725,19 @@ function addBloco(codigo = "", tipo = "SELECT", sql = "") {
     });
     
     return blocoElement;
+}
+
+// Inserir bloco acima ou abaixo de outro
+function insertBloco(refBlocoId, position, tipo) {
+    addBloco._insertRef = refBlocoId;
+    addBloco._insertPos = position;
+    const el = addBloco('', tipo);
+    // Scroll até o novo bloco
+    if (el && el.length) {
+        el[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.css('border-color', '#6366f1');
+        setTimeout(() => el.css('border-color', ''), 1500);
+    }
 }
 
 // Toggle bloco

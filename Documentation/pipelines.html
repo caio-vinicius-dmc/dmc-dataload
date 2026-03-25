@@ -513,6 +513,17 @@
                 <li><a href="#ex8">Loop com Chamadas HTTP Individuais</a></li>
             </ol>
         </li>
+        <li><a href="#combinacoes">Exemplos Avançados de Combinações (52 exemplos)</a>
+            <ol>
+                <li><a href="#ex9">ETL &amp; Integração de Dados (ex. 9–20)</a></li>
+                <li><a href="#ex21">Monitoramento &amp; Alertas (ex. 21–25)</a></li>
+                <li><a href="#ex26">Relatórios &amp; Exportação (ex. 26–30)</a></li>
+                <li><a href="#ex31">Automação de Processos (ex. 31–40)</a></li>
+                <li><a href="#ex41">Integração com APIs Externas (ex. 41–45)</a></li>
+                <li><a href="#ex46">Segurança &amp; Compliance (ex. 46–49)</a></li>
+                <li><a href="#ex50">Pipelines Complexos Multi-Etapa (ex. 50–60)</a></li>
+            </ol>
+        </li>
     </ol>
 </div>
 
@@ -714,7 +725,7 @@
 
         <div class="example-box">
             <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
-            <p>API Call para verificar se um serviço está online: JSONPath = <code>$.status</code>, Condição = <code>equals</code>, Valor = <code>healthy</code>. Se verdadeiro, segue o fluxo normal; se falso, envia alerta por email.</p>
+            <p>API Call para verificar se um serviço está online: JSONPath = <code>$.status</code>, condition_op = <code>equals</code>, condition_value = <code>healthy</code>. Se verdadeiro, segue o fluxo normal; se falso, envia alerta por email.</p>
         </div>
     </div>
 </div>
@@ -1020,7 +1031,7 @@
     <div class="component-header" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
         <div class="icon-box"><i class="bi bi-gear-wide-connected"></i></div>
         <div class="info">
-            <h4>Rotina <span class="cat-tag cat-action">Ação</span></h4>
+            <h4>Rotina <span class="cat-tag cat-data">Dados</span></h4>
             <p>Executa uma rotina ETL completa (da tela de Rotinas) dentro do pipeline.</p>
         </div>
         <div class="badges">
@@ -1033,9 +1044,33 @@
             <thead><tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr></thead>
             <tbody>
                 <tr><td><code>rotina_id</code></td><td>Seleção</td><td>Rotina ETL cadastrada. O painel exibe nome, descrição, conexão e status</td></tr>
+                <tr><td><code>output_variable</code></td><td>Texto</td><td>Nome da variável de saída com o resultado da execução</td></tr>
+                <tr><td><code>stop_on_error</code></td><td>Boolean</td><td>Se <code>true</code> (padrão), interrompe o pipeline quando a rotina falha. Se <code>false</code>, continua a execução</td></tr>
             </tbody>
         </table>
-        <p><strong>Saída:</strong> <code>{ rotina_id, blocos_executados, blocos_sucesso, blocos_falha, registros_total, duracao_ms }</code></p>
+
+        <p><strong>Saída</strong> (salva na variável definida em <code>output_variable</code>):</p>
+        <table class="config-table">
+            <thead><tr><th>Propriedade</th><th>Tipo</th><th>Descrição</th></tr></thead>
+            <tbody>
+                <tr><td><code>sucesso</code></td><td>Boolean</td><td><code>true</code> se todos os blocos executaram com sucesso, <code>false</code> caso contrário</td></tr>
+                <tr><td><code>status</code></td><td>Texto</td><td><code>"sucesso"</code>, <code>"parcial"</code> ou <code>"falha"</code></td></tr>
+                <tr><td><code>mensagem</code></td><td>Texto</td><td>Mensagem descritiva do resultado</td></tr>
+                <tr><td><code>rotina_id</code></td><td>Número</td><td>ID da rotina executada</td></tr>
+                <tr><td><code>blocos_executados</code></td><td>Número</td><td>Total de blocos processados</td></tr>
+                <tr><td><code>blocos_sucesso</code></td><td>Número</td><td>Blocos concluídos com sucesso</td></tr>
+                <tr><td><code>blocos_falha</code></td><td>Número</td><td>Blocos que falharam</td></tr>
+                <tr><td><code>registros_total</code></td><td>Número</td><td>Total de registros processados</td></tr>
+                <tr><td><code>duracao_ms</code></td><td>Número</td><td>Duração da execução em milissegundos</td></tr>
+            </tbody>
+        </table>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Uso com Condition</div>
+            <p>Para bifurcar o fluxo baseado no resultado da rotina, defina <code>output_variable</code> = <code>resultado</code> e use com <strong>stop_on_error = false</strong>. No Condition, acesse a propriedade aninhada:</p>
+            <p><code>{{resultado.sucesso}}</code> == <code>true</code> → Email de sucesso / <code>false</code> → Email de falha</p>
+            <p><strong>Importante:</strong> Usar <code>{{resultado}}</code> sem <code>.sucesso</code> retorna o <strong>objeto completo</strong> (array), que em comparações será sempre avaliado como verdadeiro, mesmo que a rotina tenha falhado. Sempre use <code>.sucesso</code> para verificar o resultado.</p>
+        </div>
     </div>
 </div>
 
@@ -1069,8 +1104,16 @@
         <p><strong>Saída 1</strong> (superior) = condição <strong>VERDADEIRA</strong> &mdash; <strong>Saída 2</strong> (inferior) = condição <strong>FALSA</strong></p>
 
         <div class="example-box">
-            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo</div>
-            <p>Verificar se há registros: left = <code>{{total_registros}}</code>, operator = <code>&gt;</code>, right = <code>0</code>. Se verdadeiro, prossegue com export; se falso, envia alerta &ldquo;sem dados&rdquo;.</p>
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo 1 &mdash; Verificar quantidade</div>
+            <p>left_operand = <code>{{total_registros}}</code>, operator = <code>&gt;</code>, right_operand = <code>0</code>. Se verdadeiro, prossegue com export; se falso, envia alerta &ldquo;sem dados&rdquo;.</p>
+        </div>
+
+        <div class="example-box">
+            <div class="title"><i class="bi bi-lightbulb"></i> Exemplo 2 &mdash; Verificar resultado de Rotina</div>
+            <p>Após uma <strong>Rotina</strong> com output_variable = <code>resultado</code>:</p>
+            <p>left_operand = <code>{{resultado.sucesso}}</code>, operator = <code>==</code>, right_operand = <code>true</code></p>
+            <p>✅ Verdadeiro = rotina executou com sucesso → prossegue normalmente<br>❌ Falso = rotina falhou → envia alerta ou trata o erro</p>
+            <p><strong>Nota:</strong> Use <strong>acesso aninhado</strong> com ponto (<code>{{var.propriedade}}</code>) para acessar propriedades específicas de objetos. Sem o <code>.sucesso</code>, a variável retorna o objeto completo que sempre será avaliado como verdadeiro.</p>
         </div>
     </div>
 </div>
@@ -1419,14 +1462,19 @@ Status: {{status_processamento}}</pre>
 
 <h3>Como criar variáveis</h3>
 <ul>
-    <li><strong>Variável de saída</strong> — Componentes de dados (SQL Query, HTTP Request, Transform, etc.) têm campo <code>output_variable</code> que define o nome da variável com os resultados</li>
+    <li><strong>Variável de saída</strong> — Componentes de dados (SQL Query, HTTP Request, Transform, Rotina, etc.) têm campo <code>output_variable</code> que define o nome da variável com os resultados</li>
     <li><strong>Set Variable</strong> — Define manualmente variáveis com valores fixos ou compostos</li>
     <li><strong>Loop</strong> — Cria automaticamente <code>{{item}}</code> e <code>{{_index}}</code> dentro do loop</li>
     <li><strong>Counter</strong> — Cria/atualiza um contador numérico</li>
 </ul>
 
-<h3>Acessando propriedades de variáveis</h3>
-<p>Quando uma variável contém um objeto, você pode acessar suas propriedades:</p>
+<h3>Acesso aninhado (dot notation)</h3>
+<p>Quando uma variável contém um objeto (array associativo), você pode acessar suas propriedades usando <strong>ponto</strong> (<code>.</code>):</p>
+<pre><span class="comment">// Sintaxe geral</span>
+{{nome_variavel.propriedade}}      <span class="comment">→ acessa a propriedade do objeto</span>
+{{nome_variavel.prop.subprop}}     <span class="comment">→ acesso múltiplos níveis</span></pre>
+
+<p><strong>⚠️ Importante:</strong> Usar <code>{{variavel}}</code> sem ponto retorna o <strong>objeto completo</strong>. Em comparações, um objeto (array) é sempre avaliado como <code>true</code>, mesmo que o conteúdo indique falha. Sempre acesse a propriedade específica para comparações corretas.</p>
 <pre><span class="comment">// Variável de SQL Query (output_variable = "dados")</span>
 {{dados}}          <span class="comment">→ o array completo de resultados</span>
 {{dados.rows}}     <span class="comment">→ array de registros</span>
@@ -1435,7 +1483,17 @@ Status: {{status_processamento}}</pre>
 <span class="comment">// Variável de Data Format (output_variable = "arquivo")</span>
 {{arquivo.file_path}}   <span class="comment">→ caminho do arquivo gerado</span>
 {{arquivo.records}}     <span class="comment">→ quantidade de registros</span>
-{{arquivo.file_size_formatted}}  <span class="comment">→ tamanho formatado (ex: "1.2 KB")</span></pre>
+{{arquivo.file_size_formatted}}  <span class="comment">→ tamanho formatado (ex: "1.2 KB")</span>
+
+<span class="comment">// Variável de Rotina (output_variable = "resultado")</span>
+{{resultado.sucesso}}           <span class="comment">→ true/false — use no Condition para bifurcar fluxo</span>
+{{resultado.status}}            <span class="comment">→ "sucesso", "parcial" ou "falha"</span>
+{{resultado.mensagem}}          <span class="comment">→ mensagem descritiva do resultado</span>
+{{resultado.blocos_executados}}  <span class="comment">→ total de blocos processados</span>
+{{resultado.blocos_sucesso}}    <span class="comment">→ blocos concluídos com sucesso</span>
+{{resultado.blocos_falha}}      <span class="comment">→ blocos que falharam</span>
+{{resultado.registros_total}}   <span class="comment">→ registros processados</span>
+{{resultado.duracao_ms}}        <span class="comment">→ duração em ms</span></pre>
 
 <h3>Placeholders para nomes de arquivo</h3>
 <p>Nos componentes File Export e Data Format, o campo <code>filename</code> aceita placeholders especiais:</p>
@@ -1510,9 +1568,9 @@ Status: {{status_processamento}}</pre>
     <p><strong>Configurações:</strong></p>
     <ul>
         <li><strong>SQL Query:</strong> <code>SELECT * FROM clientes WHERE data_cadastro >= '2026-01-01'</code> → variável: <code>clientes</code></li>
-        <li><strong>Transform (Filter):</strong> input = <code>clientes</code>, campo = <code>status</code>, operador = <code>equals</code>, valor = <code>ativo</code></li>
-        <li><strong>SQL Upsert:</strong> tabela = <code>clientes_ativos</code>, operação = <code>upsert</code>, conflict_keys = <code>cpf</code></li>
-        <li><strong>Email:</strong> assunto = <code>ETL Concluído - {{total_inseridos}} registros</code></li>
+        <li><strong>Transform (Filter):</strong> input_variable = <code>clientes</code>, transform_type = <code>filter</code>, filter_field = <code>status</code>, filter_operator = <code>equals</code>, filter_value = <code>ativo</code></li>
+        <li><strong>SQL Upsert:</strong> target_table = <code>clientes_ativos</code>, operation = <code>upsert</code>, conflict_keys = <code>cpf</code></li>
+        <li><strong>Email:</strong> email_subject = <code>ETL Concluído - {{total_inseridos}} registros</code></li>
     </ul>
 </div>
 
@@ -1534,8 +1592,8 @@ Status: {{status_processamento}}</pre>
     <ul>
         <li><strong>Trigger:</strong> Cron = <code>0 8 * * *</code></li>
         <li><strong>SQL Query:</strong> <code>SELECT * FROM pedidos WHERE data_pedido = CURRENT_DATE - 1</code> → variável: <code>pedidos</code></li>
-        <li><strong>Data Format:</strong> input = <code>pedidos</code>, formato = <code>csv</code>, delimiter = <code>;</code>, filename = <code>pedidos_{date}</code> → variável: <code>arquivo</code></li>
-        <li><strong>Email:</strong> assunto = <code>Relatório de Pedidos - {date}</code>, corpo = <code>&lt;h2&gt;Relatório Diário&lt;/h2&gt;&lt;p&gt;{{arquivo.records}} pedidos em anexo.&lt;/p&gt;</code>, anexos = <code>arquivo</code></li>
+        <li><strong>Data Format:</strong> input_variable = <code>pedidos</code>, format = <code>csv</code>, csv_delimiter = <code>;</code>, filename = <code>pedidos_{date}</code> → variável: <code>arquivo</code></li>
+        <li><strong>Email:</strong> email_subject = <code>Relatório de Pedidos - {date}</code>, email_body = <code>&lt;h2&gt;Relatório Diário&lt;/h2&gt;&lt;p&gt;{{arquivo.records}} pedidos em anexo.&lt;/p&gt;</code>, email_attachments = <code>arquivo</code></li>
     </ul>
 </div>
 
@@ -1560,8 +1618,8 @@ Status: {{status_processamento}}</pre>
     </div>
 
     <ul>
-        <li><strong>API Call:</strong> API = "API Pagamentos", JSONPath = <code>$.status</code>, operador = <code>equals</code>, valor = <code>healthy</code></li>
-        <li><strong>Email (Saída 2/Falso):</strong> assunto = <code>⚠️ ALERTA: API de Pagamentos FORA DO AR</code></li>
+        <li><strong>API Call:</strong> API = "API Pagamentos", JSONPath = <code>$.status</code>, condition_op = <code>equals</code>, condition_value = <code>healthy</code></li>
+        <li><strong>Email (Saída 2/Falso):</strong> email_subject = <code>⚠️ ALERTA: API de Pagamentos FORA DO AR</code></li>
     </ul>
 </div>
 
@@ -1585,8 +1643,8 @@ Status: {{status_processamento}}</pre>
     <ul>
         <li><strong>SQL 1:</strong> <code>SELECT id, nome, categoria FROM produtos</code> → <code>produtos</code></li>
         <li><strong>SQL 2:</strong> <code>SELECT produto_id, preco, desconto FROM tabela_precos</code> → <code>precos</code></li>
-        <li><strong>Data Merge:</strong> left = <code>produtos</code>, right = <code>precos</code>, tipo = <code>inner_join</code>, left_key = <code>id</code>, right_key = <code>produto_id</code></li>
-        <li><strong>SQL Upsert:</strong> tabela = <code>catalogo_completo</code>, operation = <code>upsert</code>, conflict = <code>id</code></li>
+        <li><strong>Data Merge:</strong> left_variable = <code>produtos</code>, right_variable = <code>precos</code>, merge_type = <code>inner_join</code>, left_key = <code>id</code>, right_key = <code>produto_id</code></li>
+        <li><strong>SQL Upsert:</strong> target_table = <code>catalogo_completo</code>, operation = <code>upsert</code>, conflict_keys = <code>id</code></li>
     </ul>
 </div>
 
@@ -1611,7 +1669,7 @@ Status: {{status_processamento}}</pre>
 
     <ul>
         <li><strong>CSV Parse:</strong> delimiter = <code>;</code>, has_header = <code>true</code></li>
-        <li><strong>Regex:</strong> mode = <code>test</code>, pattern = <code>/^\d{3}\.\d{3}\.\d{3}-\d{2}$/</code></li>
+        <li><strong>Regex:</strong> regex_mode = <code>test</code>, pattern = <code>/^\d{3}\.\d{3}\.\d{3}-\d{2}$/</code></li>
         <li><strong>Condition:</strong> Se regex = true → SQL Upsert (salvar). Se false → Log ("CPF inválido: {{item.nome}}")</li>
     </ul>
 </div>
@@ -1641,7 +1699,7 @@ Status: {{status_processamento}}</pre>
     </div>
 
     <ul>
-        <li><strong>Try/Catch:</strong> action = <code>http_request</code>, max_retries = <code>3</code>, retry_delay = <code>5</code> segundos, error_variable = <code>last_error</code></li>
+        <li><strong>Try/Catch:</strong> action_type = <code>http_request</code>, max_retries = <code>3</code>, retry_delay_seconds = <code>5</code>, error_variable = <code>last_error</code></li>
     </ul>
 </div>
 
@@ -1693,7 +1751,7 @@ Status: {{status_processamento}}</pre>
     </div>
 
     <ul>
-        <li><strong>Loop:</strong> input = <code>novos_clientes</code>, iterator_variable = <code>cliente</code></li>
+        <li><strong>Loop:</strong> input_variable = <code>novos_clientes</code>, iterator_variable = <code>cliente</code></li>
         <li><strong>HTTP Request:</strong> URL = <code>https://api.enrich.com/company/{{cliente.cnpj}}</code></li>
         <li><strong>Delay:</strong> 1 segundo (respeita rate limit da API)</li>
         <li><strong>Counter:</strong> Conta quantas chamadas foram feitas</li>
@@ -1701,11 +1759,1613 @@ Status: {{status_processamento}}</pre>
 </div>
 
 
+<!-- ================ SEÇÃO: EXEMPLOS AVANÇADOS DE COMBINAÇÕES ================ -->
+
+<h2 id="combinacoes" style="margin-top:60px; padding-top:30px; border-top:2px solid var(--border);">
+    <span class="section-number">10</span> Exemplos Avançados de Combinações
+</h2>
+<p style="margin-bottom:30px; color: var(--text-muted);">
+    Esta seção apresenta <strong>52 exemplos práticos</strong> combinando os 24 componentes disponíveis no Pipeline Builder.
+    Cada exemplo demonstra uma combinação diferente de componentes para resolver cenários reais de integração, ETL, automação e monitoramento.
+</p>
+
+<!-- ========== CATEGORIA: ETL & Integração de Dados ========== -->
+<h3 style="margin-top:40px; margin-bottom:20px; color:var(--primary);">
+    <i class="bi bi-database-gear me-2"></i>ETL &amp; Integração de Dados
+</h3>
+
+<!-- EXEMPLO 9 -->
+<div class="example-box" id="ex9" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-9-circle-fill"></i> Trigger → Rotina → Condition → Email</div>
+    <p><strong>Cenário:</strong> Executar uma rotina ETL mensal e, dependendo do resultado (sucesso ou falha), enviar email de confirmação ou alerta.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron mensal)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (ETL Mensal)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Sucesso →</span>
+        <span class="flow-node" style="background:#ec4899;">Email ("ETL concluído")</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Falha →</span>
+        <span class="flow-node" style="background:#ec4899;">Email ("ALERTA: ETL falhou")</span>
+    </div>
+    <ul>
+        <li><strong>Trigger:</strong> cron = <code>0 2 1 * *</code> (todo dia 1 às 2h)</li>
+        <li><strong>Rotina:</strong> rotina_id = id da rotina ETL cadastrada, output_variable = <code>resultado</code>, stop_on_error = <code>false</code></li>
+        <li><strong>Condition:</strong> <code>{{resultado.sucesso}}</code> == <code>true</code></li>
+        <li><strong>Email (sucesso):</strong> email_to = <code>equipe@empresa.com</code>, email_subject = <code>ETL Mensal OK - {{resultado.registros_total}} registros processados</code></li>
+        <li><strong>Email (falha):</strong> email_to = <code>admin@empresa.com</code>, email_subject = <code>ALERTA: ETL Mensal falhou - {{resultado.blocos_falha}} blocos com erro</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 10 -->
+<div class="example-box" id="ex10" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 10. SQL Query → Transform → Data Merge → SQL Upsert → Log → Email</div>
+    <p><strong>Cenário:</strong> Cruzar dados de vendas com estoque, filtrar produtos com estoque crítico, atualizar tabela de alertas e notificar o gestor.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (vendas)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (estoque)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (filter)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>SQL (vendas):</strong> <code>SELECT produto_id, SUM(qtd) as total_vendido FROM vendas WHERE mes = EXTRACT(MONTH FROM NOW()) GROUP BY produto_id</code></li>
+        <li><strong>SQL (estoque):</strong> <code>SELECT id, nome, qtd_estoque, estoque_minimo FROM produtos</code></li>
+        <li><strong>Data Merge:</strong> merge_type = <code>inner_join</code>, left_key = <code>produto_id</code>, right_key = <code>id</code></li>
+        <li><strong>Transform:</strong> transform_type = <code>filter</code>, filter_field = <code>qtd_estoque</code>, filter_operator = <code>&lt;</code>, filter_value = <code>estoque_minimo</code></li>
+        <li><strong>SQL Upsert:</strong> target_table = <code>alertas_estoque</code>, conflict_keys = <code>produto_id</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 11 -->
+<div class="example-box" id="ex11" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 11. Trigger (Webhook) → CSV Parse → Loop → Condition → SQL Upsert / Log</div>
+    <p><strong>Cenário:</strong> Receber CSV via webhook, parsear cada linha, validar se o valor é positivo e inserir no banco. Linhas inválidas são logadas.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Webhook)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#059669;">CSV Parse</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Válido →</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Inválido →</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+    </div>
+    <ul>
+        <li><strong>Trigger:</strong> type = <code>webhook</code></li>
+        <li><strong>CSV Parse:</strong> delimiter = <code>,</code>, has_header = <code>true</code></li>
+        <li><strong>Condition:</strong> <code>{{item.valor}}</code> > <code>0</code></li>
+        <li><strong>Log:</strong> level = <code>warning</code>, message = <code>Linha inválida: {{item.nome}} valor={{item.valor}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 12 -->
+<div class="example-box" id="ex12" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 12. SQL → Transform (map) → Format Template → Email</div>
+    <p><strong>Cenário:</strong> Consultar clientes inadimplentes, mapear para incluir campos calculados (dias em atraso), gerar corpo de email personalizado.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (map)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#a855f7;">Format Template</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT nome, email, valor_divida, data_vencimento FROM faturas WHERE status = 'vencida'</code></li>
+        <li><strong>Transform:</strong> transform_type = <code>map</code>, field_mapping = <code>{"nome": "nome", "email": "email", "valor_divida": "valor_divida", "dias_atraso": "NOW() - data_vencimento"}</code></li>
+        <li><strong>Format Template:</strong> template = <code>Prezado {{item.nome}}, sua fatura de R$ {{item.valor_divida}} está vencida há {{item.dias_atraso}} dias.</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 13 -->
+<div class="example-box" id="ex13" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 13. HTTP Request → Transform (filter + sort) → File Export (JSON) → End</div>
+    <p><strong>Cenário:</strong> Buscar lista de produtos de API externa, filtrar os ativos, ordenar por preço decrescente e salvar como JSON.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP Request (GET)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (filter)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (sort)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">File Export (JSON)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <ul>
+        <li><strong>HTTP:</strong> method = <code>GET</code>, url = <code>https://api.fornecedor.com/products</code>, auth_type = <code>bearer</code></li>
+        <li><strong>Transform 1:</strong> transform_type = <code>filter</code>, filter_field = <code>status</code>, filter_operator = <code>==</code>, filter_value = <code>active</code></li>
+        <li><strong>Transform 2:</strong> transform_type = <code>sort</code>, sort_field = <code>price</code>, sort_direction = <code>desc</code></li>
+        <li><strong>File Export:</strong> export_format = <code>json</code>, filename = <code>produtos_ativos_{date}.json</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 14 -->
+<div class="example-box" id="ex14" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 14. Trigger → SQL → Loop → HTTP POST → Try/Catch → Counter → Condition → Email</div>
+    <p><strong>Cenário:</strong> Para cada pedido pendente, enviar para API de fulfillment. Se falhar, contar erros. No final, se tiver erros > 0, enviar alerta.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (pedidos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (sucesso++)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ →</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (erros++)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:0;">Após loop →</span>
+        <span class="flow-node" style="background:#eab308;">Condition (erros > 0)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (resumo)</span>
+    </div>
+    <ul>
+        <li><strong>Try/Catch:</strong> action_type = <code>http_request</code>, url = <code>https://api.fulfillment.com/orders</code>, method = <code>POST</code>, max_retries = <code>2</code></li>
+        <li><strong>Counter (sucesso):</strong> counter_name = <code>enviados</code>, counter_action = <code>increment</code></li>
+        <li><strong>Counter (erros):</strong> counter_name = <code>falhas</code>, counter_action = <code>increment</code></li>
+        <li><strong>Condition:</strong> <code>{{falhas.value}}</code> > <code>0</code></li>
+        <li><strong>Email:</strong> email_subject = <code>Fulfillment: {{enviados.value}} OK / {{falhas.value}} falhas</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 15 -->
+<div class="example-box" id="ex15" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 15. SQL → Switch/Case → 3 Destinos Diferentes</div>
+    <p><strong>Cenário:</strong> Categorizar clientes por faixa de faturamento e direcionar para 3 fluxos diferentes de tratamento.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#d946ef;">Switch/Case</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "premium" →</span>
+        <span class="flow-node" style="background:#ec4899;">Email (atendimento VIP)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "standard" →</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (fila padrão)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Default →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("cliente sem classificação")</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT id, nome, faturamento, classificacao FROM clientes WHERE ativo = true</code></li>
+        <li><strong>Switch/Case:</strong> switch_variable = <code>{{item.classificacao}}</code>, case_1 = <code>premium</code>, case_2 = <code>standard</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 16 -->
+<div class="example-box" id="ex16" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 16. API Call → Condition → Set Variable → HTTP Request → SQL Upsert</div>
+    <p><strong>Cenário:</strong> Consultar API de câmbio, verificar se o dólar subiu, salvar cotação atualizada e registrar no banco.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#10b981;">API Call (câmbio)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Subiu →</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (alerta cotação)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Não subiu →</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+    </div>
+    <ul>
+        <li><strong>API Call:</strong> API cadastrada de câmbio, JSONPath = <code>$.rates.USD</code></li>
+        <li><strong>Condition:</strong> <code>{{api_result.USD}}</code> > <code>{{ultima_cotacao}}</code></li>
+        <li><strong>Set Variable:</strong> variable_name = <code>ultima_cotacao</code>, variable_value = <code>{{api_result.USD}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 17 -->
+<div class="example-box" id="ex17" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 17. SQL → Data Format (HTML) → Format Template → Email (relatório inline)</div>
+    <p><strong>Cenário:</strong> Gerar tabela HTML com top 10 produtos mais vendidos e enviar por email com corpo HTML formatado.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (HTML)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#a855f7;">Format Template</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT nome, SUM(qtd) as total FROM vendas GROUP BY nome ORDER BY total DESC LIMIT 10</code></li>
+        <li><strong>Data Format:</strong> format = <code>html</code> → gera <code>&lt;table&gt;</code> HTML</li>
+        <li><strong>Format Template:</strong> <code>&lt;h2&gt;Top 10 Produtos&lt;/h2&gt;{{tabela_html}}...</code></li>
+        <li><strong>Email:</strong> html = <code>true</code>, email_body = variável do Format Template</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 18 -->
+<div class="example-box" id="ex18" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 18. HTTP → CSV Parse → Transform (aggregate) → Set Variable → Condition → Email</div>
+    <p><strong>Cenário:</strong> Baixar CSV de vendas de API parceira, agregar totais por região, verificar se alguma região bateu a meta.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP Request (GET CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#059669;">CSV Parse</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (aggregate)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>HTTP:</strong> url = <code>https://parceiro.com/export/vendas.csv</code></li>
+        <li><strong>Transform:</strong> transform_type = <code>aggregate</code>, group_by = <code>regiao</code>, agg_field = <code>valor</code>, agg_operation = <code>sum</code></li>
+        <li><strong>Set Variable:</strong> <code>total_geral</code> = <code>{{aggregate.sum_valor}}</code></li>
+        <li><strong>Condition:</strong> <code>{{total_geral}}</code> >= <code>100000</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 19 -->
+<div class="example-box" id="ex19" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 19. Trigger → Rotina → SQL Query → Condition → Rotina (segunda) → End</div>
+    <p><strong>Cenário:</strong> Executar rotina de extração. Se extraiu mais de 1000 registros, executar rotina secundária de processamento pesado.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (extração)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query (contar)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ > 1000 →</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (processamento)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ ≤ 1000 →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Volume baixo, skip")</span>
+    </div>
+    <ul>
+        <li><strong>SQL Query:</strong> <code>SELECT COUNT(*) as total FROM staging_table</code></li>
+        <li><strong>Condition:</strong> <code>{{sql.total}}</code> > <code>1000</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 20 -->
+<div class="example-box" id="ex20" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 20. Loop → Script (PHP) → Regex → Condition → SQL Upsert</div>
+    <p><strong>Cenário:</strong> Para cada registro, executar script de normalização de telefone com PHP, validar formato com regex, e salvar apenas os válidos.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ef4444;">Script (PHP)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (test)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Válido →</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+    </div>
+    <ul>
+        <li><strong>Script:</strong> <code>preg_replace('/[^0-9]/', '', $item['telefone'])</code> — remove caracteres não numéricos</li>
+        <li><strong>Regex:</strong> pattern = <code>/^(\d{2})(9?\d{4})(\d{4})$/</code>, regex_mode = <code>test</code></li>
+        <li><strong>Condition:</strong> <code>{{regex.match}}</code> == <code>true</code></li>
+    </ul>
+</div>
+
+<!-- ========== CATEGORIA: Monitoramento & Alertas ========== -->
+<h3 style="margin-top:40px; margin-bottom:20px; color:var(--danger);">
+    <i class="bi bi-bell-fill me-2"></i>Monitoramento &amp; Alertas
+</h3>
+
+<!-- EXEMPLO 21 -->
+<div class="example-box" id="ex21" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 21. Trigger (Cron 5min) → API Call → Condition → Log + Email</div>
+    <p><strong>Cenário:</strong> Monitorar status de um serviço externo a cada 5 minutos. Se estiver offline, logar e enviar alerta.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (*/5 * * * *)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#10b981;">API Call</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Online →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Serviço OK")</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Offline →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("OFFLINE!")</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (alerta)</span>
+    </div>
+    <ul>
+        <li><strong>API Call:</strong> API cadastrada com health check, condição de bifurcação = <code>status == 200</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 22 -->
+<div class="example-box" id="ex22" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 22. SQL → Transform (aggregate) → Condition → Switch/Case → Email (3 níveis)</div>
+    <p><strong>Cenário:</strong> Monitorar uso de disco dos servidores. Classificar por criticidade: normal, aviso, crítico.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron hourly)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (uso_disco)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#d946ef;">Switch/Case</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "critico" (>90%) →</span>
+        <span class="flow-node" style="background:#ec4899;">Email (urgente)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "aviso" (>70%) →</span>
+        <span class="flow-node" style="background:#6b7280;">Log (warning)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Default (<70%) →</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <ul>
+        <li><strong>Switch/Case:</strong> switch_variable = <code>{{item.nivel}}</code>, case_1 = <code>critico</code>, case_2 = <code>aviso</code></li>
+        <li><strong>Email:</strong> email_subject = <code>🔴 DISCO CRÍTICO: {{item.servidor}} em {{item.percentual}}%</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 23 -->
+<div class="example-box" id="ex23" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 23. Trigger → HTTP (múltiplos endpoints) → Counter → Condition → Email resumo</div>
+    <p><strong>Cenário:</strong> Fazer health check de 5 microserviços. Contar quantos estão offline e enviar resumo consolidado.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (endpoints)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch (HTTP GET)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (online++)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ →</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (offline++)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span>Pós-loop →</span>
+        <span class="flow-node" style="background:#ec4899;">Email ("Online: {{online.value}}/5, Offline: {{offline.value}}/5")</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT nome, url_health FROM microservicos WHERE ativo = true</code></li>
+        <li><strong>Try/Catch:</strong> HTTP GET <code>{{item.url_health}}</code>, retries = <code>1</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 24 -->
+<div class="example-box" id="ex24" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 24. SQL → Condition (threshold) → Set Variable → Format Template → Email + Log</div>
+    <p><strong>Cenário:</strong> Monitorar crescimento da tabela de logs. Se ultrapassar 1 milhão de registros, gerar alerta com detalhes formatados.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron diário)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (count logs)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (> 1M)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable (tamanho_mb)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#a855f7;">Format Template</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("OK: {{sql.total}} registros")</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT COUNT(*) as total, pg_total_relation_size('tb_logs') as bytes FROM tb_logs</code></li>
+        <li><strong>Set Variable:</strong> <code>tamanho_mb</code> = <code>{{sql.bytes / 1048576}}</code></li>
+        <li><strong>Format Template:</strong> <code>A tabela tb_logs possui {{sql.total}} registros ({{tamanho_mb}} MB). Recomenda-se purge.</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 25 -->
+<div class="example-box" id="ex25" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 25. API Call → Script (calcular SLA) → Condition → Email + SQL Upsert</div>
+    <p><strong>Cenário:</strong> Consultar SLA de serviço externo via API, calcular percentual de uptime com script, registrar e alertar se abaixo de 99.5%.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#10b981;">API Call (SLA)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ef4444;">Script (calcular %)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (histórico SLA)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (&lt; 99.5%)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Abaixo →</span>
+        <span class="flow-node" style="background:#ec4899;">Email (SLA violado)</span>
+    </div>
+    <ul>
+        <li><strong>Script:</strong> <code>round(($uptime_seconds / $total_seconds) * 100, 3)</code></li>
+        <li><strong>Condition:</strong> <code>{{sla_percent}}</code> &lt; <code>99.5</code></li>
+    </ul>
+</div>
+
+<!-- ========== CATEGORIA: Relatórios & Exportação ========== -->
+<h3 style="margin-top:40px; margin-bottom:20px; color:var(--accent);">
+    <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>Relatórios &amp; Exportação
+</h3>
+
+<!-- EXEMPLO 26 -->
+<div class="example-box" id="ex26" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 26. SQL → Transform (sort + limit) → Data Format (PDF) → Email (anexo)</div>
+    <p><strong>Cenário:</strong> Top 20 vendedores do mês em PDF, enviado por email à diretoria toda sexta-feira.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron sextas 18h)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (sort + limit)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (PDF)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>Trigger:</strong> cron = <code>0 18 * * 5</code></li>
+        <li><strong>SQL:</strong> <code>SELECT vendedor, SUM(valor) as total FROM vendas WHERE mes_atual GROUP BY vendedor</code></li>
+        <li><strong>Transform:</strong> sort by <code>total DESC</code>, limit = <code>20</code></li>
+        <li><strong>Data Format:</strong> format = <code>pdf</code>, title = <code>Ranking Vendedores - {{Y}}/{{m}}</code></li>
+        <li><strong>Email:</strong> email_attachments = variável do Data Format, email_to = <code>diretoria@empresa.com</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 27 -->
+<div class="example-box" id="ex27" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 27. SQL (3 queries) → Data Merge (union) → File Export (CSV) → File Export (SQL) → End</div>
+    <p><strong>Cenário:</strong> Consolidar dados de 3 tabelas diferentes (vendas online, loja física, marketplace) em CSV único e backup SQL.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (online)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (loja)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (union)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (marketplace)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (union)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">File Export (CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">File Export (SQL)</span>
+    </div>
+    <ul>
+        <li><strong>Data Merge 1:</strong> merge_type = <code>union</code> — combina online + loja</li>
+        <li><strong>Data Merge 2:</strong> merge_type = <code>union</code> — combina resultado + marketplace</li>
+        <li><strong>File Export CSV:</strong> filename = <code>consolidado_{date}.csv</code></li>
+        <li><strong>File Export SQL:</strong> export_format = <code>sql</code>, filename = <code>backup_consolidado_{date}.sql</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 28 -->
+<div class="example-box" id="ex28" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 28. SQL → Loop → Format Template (por cliente) → Email personalizado</div>
+    <p><strong>Cenário:</strong> Enviar email personalizado com extrato mensal para cada cliente, um por um.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron dia 5)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (clientes com saldo)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#a855f7;">Format Template</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#9ca3af;">Delay (2s)</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT nome, email, saldo, ultima_movimentacao FROM clientes WHERE saldo != 0</code></li>
+        <li><strong>Format Template:</strong> <code>Prezado(a) {{item.nome}}, seu saldo atual é R$ {{item.saldo}}. Última movimentação: {{item.ultima_movimentacao}}.</code></li>
+        <li><strong>Email:</strong> email_to = <code>{{item.email}}</code>, email_subject = <code>Seu extrato mensal - {{Y}}/{{m}}</code></li>
+        <li><strong>Delay:</strong> 2 segundos (evitar blacklist de SMTP)</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 29 -->
+<div class="example-box" id="ex29" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 29. SQL → Data Format (XML) → File Export (XML) → HTTP POST → Log</div>
+    <p><strong>Cenário:</strong> Gerar nota fiscal em XML e enviar para o webservice da SEFAZ via HTTP POST.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (NFs pendentes)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (XML)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+    </div>
+    <ul>
+        <li><strong>Data Format:</strong> format = <code>xml</code>, root_element = <code>nfe</code></li>
+        <li><strong>HTTP POST:</strong> url = <code>https://sefaz.gov.br/nfe/ws</code>, content-type = <code>application/xml</code></li>
+        <li><strong>Log:</strong> <code>NF {{item.numero}} enviada - Status: {{http.status_code}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 30 -->
+<div class="example-box" id="ex30" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 30. SQL (multi-banco) → Data Merge (diff) → File Export → Email</div>
+    <p><strong>Cenário:</strong> Comparar dados entre produção e homologação, encontrar diferenças e exportar relatório.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (produção)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (homologação)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (diff)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (tem diff?)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Sim →</span>
+        <span class="flow-node" style="background:#0891b2;">File Export (CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (divergências)</span>
+    </div>
+    <ul>
+        <li><strong>SQL 1:</strong> conexão = <code>Produção</code>, query = <code>SELECT id, hash FROM tabela ORDER BY id</code></li>
+        <li><strong>SQL 2:</strong> conexão = <code>Homologação</code>, mesma query</li>
+        <li><strong>Data Merge:</strong> merge_type = <code>diff</code>, left_key = <code>id</code>, right_key = <code>id</code></li>
+        <li><strong>Condition:</strong> <code>{{merge.count}}</code> > <code>0</code></li>
+    </ul>
+</div>
+
+<!-- ========== CATEGORIA: Automação de Processos ========== -->
+<h3 style="margin-top:40px; margin-bottom:20px; color:var(--success);">
+    <i class="bi bi-gear-wide-connected me-2"></i>Automação de Processos
+</h3>
+
+<!-- EXEMPLO 31 -->
+<div class="example-box" id="ex31" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 31. Trigger (Webhook) → Set Variable → SQL Upsert → HTTP POST (callback) → End</div>
+    <p><strong>Cenário:</strong> Receber dado de sistema externo via webhook, salvar no banco e responder com callback confirmando recebimento.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Webhook)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST (callback)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <ul>
+        <li><strong>Set Variable:</strong> <code>payload</code> = <code>{{trigger.body}}</code></li>
+        <li><strong>SQL Upsert:</strong> target_table = <code>integracao_recebidos</code>, conflict_keys = <code>external_id</code></li>
+        <li><strong>HTTP POST:</strong> url = <code>{{trigger.callback_url}}</code>, body = <code>{"status": "received", "id": "{{upsert.id}}"}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 32 -->
+<div class="example-box" id="ex32" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 32. Trigger → SQL → Loop → Switch/Case → 3 HTTP Endpoints diferentes</div>
+    <p><strong>Cenário:</strong> Distribuir notificações para canais diferentes (Slack, Teams, Telegram) conforme preferência de cada usuário.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (usuários + prefs)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#d946ef;">Switch/Case</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "slack" →</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST (Slack webhook)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "teams" →</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST (Teams webhook)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Default →</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>Switch/Case:</strong> switch_variable = <code>{{item.canal_preferido}}</code>, case_1 = <code>slack</code>, case_2 = <code>teams</code></li>
+        <li><strong>HTTP (Slack):</strong> url = <code>https://hooks.slack.com/services/...</code>, body = <code>{"text": "{{mensagem}}"}</code></li>
+        <li><strong>HTTP (Teams):</strong> url = <code>https://outlook.office.com/webhook/...</code>, body = formato Adaptive Card</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 33 -->
+<div class="example-box" id="ex33" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 33. SQL → Condition → Rotina → Try/Catch → Log + Email</div>
+    <p><strong>Cenário:</strong> Verificar se há dados novos para processar. Se sim, executar rotina ETL dentro de Try/Catch para capturar falhas.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (dados novos?)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (count > 0)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:80px;">✅ →</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("OK")</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:80px;">❌ →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Erro")</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT COUNT(*) as pendentes FROM staging WHERE processado = false</code></li>
+        <li><strong>Condition:</strong> <code>{{sql.pendentes}}</code> > <code>0</code></li>
+        <li><strong>Try/Catch:</strong> max_retries = <code>2</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 34 -->
+<div class="example-box" id="ex34" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 34. Trigger → HTTP GET → CSV Parse → Transform (filter + map) → SQL Upsert → Counter → Log</div>
+    <p><strong>Cenário:</strong> Buscar arquivo CSV de fornecedor via HTTP, parsear, filtrar produtos com preço > 0, mapear campos e salvar no catálogo.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#059669;">CSV Parse</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (filter)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (map)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0d9488;">Counter</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+    </div>
+    <ul>
+        <li><strong>HTTP GET:</strong> url = <code>https://fornecedor.com/api/export/products.csv</code></li>
+        <li><strong>CSV Parse:</strong> delimiter = <code>;</code>, has_header = <code>true</code></li>
+        <li><strong>Transform (filter):</strong> filter_field = <code>preco</code>, filter_operator = <code>&gt;</code>, filter_value = <code>0</code> (e estoque &gt; 0)</li>
+        <li><strong>Transform (map):</strong> field_mapping = <code>{"codigo_produto": "sku", "nome_produto": "nome", "preco_unitario": "preco"}</code></li>
+        <li><strong>Counter:</strong> counter_name = <code>importados</code>, counter_action = <code>set</code>, counter_value = <code>{{upsert.affected_rows}}</code></li>
+        <li><strong>Log:</strong> <code>Importação concluída: {{importados.value}} produtos atualizados</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 35 -->
+<div class="example-box" id="ex35" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 35. Trigger (Cron) → Rotina 1 → Rotina 2 → Rotina 3 → Email (pipeline de rotinas)</div>
+    <p><strong>Cenário:</strong> Orquestrar 3 rotinas em sequência: extração, transformação e carga, com email final de confirmação.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron 3h)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (Extract)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (Transform)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (Load)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <ul>
+        <li><strong>Rotina 1:</strong> ID da rotina de extração de dados brutos</li>
+        <li><strong>Rotina 2:</strong> ID da rotina de limpeza e transformação</li>
+        <li><strong>Rotina 3:</strong> ID da rotina de carga no data warehouse</li>
+        <li><strong>Email:</strong> summary com métricas de cada rotina</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 36 -->
+<div class="example-box" id="ex36" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 36. SQL → Transform (aggregate: sum, avg) → Script (calcular KPIs) → Data Format (HTML) → Email</div>
+    <p><strong>Cenário:</strong> Calcular KPIs de vendas (ticket médio, taxa de conversão, faturamento) e enviar dashboard por email em HTML.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (vendas)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (aggregate)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ef4444;">Script</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (HTML)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>Transform:</strong> agg_field = <code>valor</code>, agg_operation = <code>sum</code> (também avg, count, min, max em pipelines separados ou sequenciais)</li>
+        <li><strong>Script:</strong> calcula <code>ticket_medio = sum_valor / count_id</code>, <code>conversao = vendas_fechadas / leads_total * 100</code></li>
+        <li><strong>Data Format:</strong> gera tabela HTML com indicadores e cores condicionais (verde/amarelo/vermelho)</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 37 -->
+<div class="example-box" id="ex37" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 37. Trigger (Webhook) → Regex (extrair dados) → Set Variable → SQL Query → HTTP PUT</div>
+    <p><strong>Cenário:</strong> Receber texto não-estruturado via webhook, extrair campos com regex, consultar banco e atualizar sistema externo.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Webhook)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (match_all)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP PUT</span>
+    </div>
+    <ul>
+        <li><strong>Regex:</strong> pattern = <code>/Pedido #(\d+) - Cliente: (.+?) - Valor: R\$ ([\d.,]+)/</code>, regex_mode = <code>match</code></li>
+        <li><strong>Set Variable:</strong> <code>pedido_id</code> = <code>{{regex.match.1}}</code>, <code>cliente</code> = <code>{{regex.match.2}}</code>, <code>valor</code> = <code>{{regex.match.3}}</code></li>
+        <li><strong>SQL:</strong> <code>SELECT * FROM pedidos WHERE id = {{pedido_id}}</code></li>
+        <li><strong>HTTP PUT:</strong> atualiza status no ERP externo</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 38 -->
+<div class="example-box" id="ex38" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 38. SQL → Data Merge (left_join) → Transform (filter null) → Counter → Condition → Email</div>
+    <p><strong>Cenário:</strong> Encontrar produtos que existem no catálogo mas não têm preço na tabela de preços (left join + filtrar nulls).</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (catálogo)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (preços)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (left_join)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (filter)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0d9488;">Counter</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>Data Merge:</strong> merge_type = <code>left_join</code>, left_key = <code>sku</code>, right_key = <code>sku</code></li>
+        <li><strong>Transform:</strong> filter where <code>preco IS NULL</code> → produtos sem preço</li>
+        <li><strong>Counter:</strong> conta quantos produtos sem preço</li>
+        <li><strong>Condition:</strong> <code>{{counter.value}}</code> > <code>0</code> → envia alerta</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 39 -->
+<div class="example-box" id="ex39" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 39. Loop → Delay → HTTP Request → Regex (replace) → SQL Upsert</div>
+    <p><strong>Cenário:</strong> Para cada URL do sitemap, fazer scraping, limpar HTML com regex replace e salvar conteúdo limpo.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (urls do sitemap)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#9ca3af;">Delay (1s)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (replace)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+    </div>
+    <ul>
+        <li><strong>Delay:</strong> 1s entre requests (respeitar robots.txt)</li>
+        <li><strong>HTTP GET:</strong> url = <code>{{item.url}}</code></li>
+        <li><strong>Regex:</strong> regex_mode = <code>replace</code>, pattern = <code>/&lt;[^&gt;]+&gt;/</code>, replacement = <code></code> (remove HTML tags)</li>
+        <li><strong>SQL Upsert:</strong> conflict_keys = <code>url</code>, columns = <code>url, conteudo_limpo, data_coleta</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 40 -->
+<div class="example-box" id="ex40" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 40. Trigger → Set Variable (config) → SQL → Condition → Rotina → Set Variable → Email</div>
+    <p><strong>Cenário:</strong> Configurar variáveis de threshold no início, consultar dados, decidir se executa rotina pesada e comunicar resultado.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable (threshold=5000)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ > threshold →</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable (resultado)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ ≤ threshold →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Abaixo do threshold")</span>
+    </div>
+    <ul>
+        <li><strong>Set Variable 1:</strong> <code>threshold</code> = <code>5000</code> (fácil de alterar sem editar SQL)</li>
+        <li><strong>SQL:</strong> <code>SELECT COUNT(*) as total FROM fila_processamento WHERE status = 'pendente'</code></li>
+        <li><strong>Condition:</strong> <code>{{sql.total}}</code> > <code>{{threshold}}</code></li>
+    </ul>
+</div>
+
+<!-- ========== CATEGORIA: Integração com APIs ========== -->
+<h3 style="margin-top:40px; margin-bottom:20px; color:#8b5cf6;">
+    <i class="bi bi-cloud-arrow-up-fill me-2"></i>Integração com APIs Externas
+</h3>
+
+<!-- EXEMPLO 41 -->
+<div class="example-box" id="ex41" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 41. HTTP GET (paginado) → Loop → HTTP GET (próxima página) → Data Merge (union) → SQL Upsert</div>
+    <p><strong>Cenário:</strong> Consumir API paginada: buscar primeira página, iterar pelas próximas até acabar, consolidar todos os resultados.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET (page 1)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable (next_page)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop (while next_page)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET (next)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (batch)</span>
+    </div>
+    <ul>
+        <li><strong>HTTP 1:</strong> url = <code>https://api.com/data?page=1&per_page=100</code></li>
+        <li><strong>Set Variable:</strong> <code>next_page</code> = <code>{{http.headers.x-next-page}}</code></li>
+        <li><strong>Loop:</strong> continua enquanto <code>next_page</code> não for vazio (max 50 iterações)</li>
+        <li><strong>SQL Upsert:</strong> batch insert a cada página recebida</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 42 -->
+<div class="example-box" id="ex42" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 42. Trigger → HTTP POST (auth) → Set Variable (token) → HTTP GET (dados) → Transform → File Export</div>
+    <p><strong>Cenário:</strong> Autenticar via OAuth2, salvar token, usar para buscar dados protegidos e exportar.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST (login)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable (token)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET (dados)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">File Export</span>
+    </div>
+    <ul>
+        <li><strong>HTTP POST:</strong> url = <code>https://api.com/oauth/token</code>, body = <code>{"grant_type":"client_credentials","client_id":"...","client_secret":"..."}</code></li>
+        <li><strong>Set Variable:</strong> <code>token</code> = <code>{{http.body.access_token}}</code></li>
+        <li><strong>HTTP GET:</strong> url = <code>https://api.com/v2/data</code>, headers = <code>Authorization: Bearer {{token}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 43 -->
+<div class="example-box" id="ex43" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 43. SQL → Loop → HTTP POST (API ViaCEP) → Delay → SQL Upsert → Counter</div>
+    <p><strong>Cenário:</strong> Enriquecer cadastro de clientes buscando endereço completo na API ViaCEP a partir do CEP.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (clientes sem endereço)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET (ViaCEP)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#9ca3af;">Delay (500ms)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0d9488;">Counter</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT id, cep FROM clientes WHERE logradouro IS NULL AND cep IS NOT NULL</code></li>
+        <li><strong>HTTP GET:</strong> url = <code>https://viacep.com.br/ws/{{item.cep}}/json/</code></li>
+        <li><strong>SQL Upsert:</strong> target_table = <code>clientes</code>, conflict_keys = <code>id</code>, columns = <code>logradouro, bairro, cidade, uf</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 44 -->
+<div class="example-box" id="ex44" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 44. API Call → Condition (bifurcação) → HTTP POST (ok) / HTTP POST (retry) → Try/Catch</div>
+    <p><strong>Cenário:</strong> Verificar status de pagamento em gateway. Se aprovado, confirmar entrega. Se pendente, tentar novamente com retry.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#10b981;">API Call (gateway)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Aprovado →</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST (confirmar entrega)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (update status='enviado')</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Pendente →</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch (3 retries)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST (reprocessar)</span>
+    </div>
+    <ul>
+        <li><strong>API Call:</strong> Bifurca baseado em <code>status == 'aprovado'</code></li>
+        <li><strong>Try/Catch:</strong> max_retries = <code>3</code>, retry_delay_seconds = <code>10</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 45 -->
+<div class="example-box" id="ex45" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 45. HTTP GET → Script (JSON parse) → Loop → Set Variable → SQL → Condition → SQL Upsert</div>
+    <p><strong>Cenário:</strong> Consumir API REST complexa, parsear resposta aninhada com script, iterar elementos e salvar apenas os novos.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ef4444;">Script (parse nested JSON)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (EXISTS?)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Não existe →</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (inserir novo)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Já existe →</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (duplicatas++)</span>
+    </div>
+    <ul>
+        <li><strong>Script:</strong> <code>json_decode($body)['data']['results']</code> — extrai array aninhado</li>
+        <li><strong>SQL:</strong> <code>SELECT COUNT(*) as existe FROM tabela WHERE external_id = '{{item.id}}'</code></li>
+        <li><strong>Condition:</strong> <code>{{sql.existe}}</code> == <code>0</code> (não duplicar)</li>
+    </ul>
+</div>
+
+<!-- ========== CATEGORIA: Segurança & Compliance ========== -->
+<h3 style="margin-top:40px; margin-bottom:20px; color:#ef4444;">
+    <i class="bi bi-shield-lock-fill me-2"></i>Segurança &amp; Compliance
+</h3>
+
+<!-- EXEMPLO 46 -->
+<div class="example-box" id="ex46" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 46. SQL (logins suspeitos) → Condition (tentativas > 5) → Email (alerta segurança) + SQL (bloquear)</div>
+    <p><strong>Cenário:</strong> Detectar tentativas de login excessivas, bloquear conta e notificar equipe de segurança.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron */10)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (login fails)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (> 5)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Suspeito →</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (bloquear conta)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log (warning)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (Security Team)</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT user_id, COUNT(*) as tentativas FROM login_attempts WHERE created_at > NOW() - INTERVAL '10 min' AND sucesso = false GROUP BY user_id HAVING COUNT(*) > 5</code></li>
+        <li><strong>SQL (bloqueio):</strong> <code>UPDATE usuarios SET bloqueado = true WHERE id = {{item.user_id}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 47 -->
+<div class="example-box" id="ex47" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 47. SQL (dados sensíveis expostos) → Regex (mascarar) → SQL Upsert (atualizar) → Log</div>
+    <p><strong>Cenário:</strong> Varrer tabela buscando CPFs/CNPJs não mascarados, aplicar máscara com regex e atualizar.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron semanal)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (dados expostos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (replace)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0d9488;">Counter</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT id, cpf FROM clientes WHERE cpf NOT LIKE '***%'</code></li>
+        <li><strong>Regex:</strong> pattern = <code>/^(\d{3})(\d{3})(\d{3})(\d{2})$/</code>, replacement = <code>***.$2.***-**</code></li>
+        <li><strong>SQL Upsert:</strong> <code>UPDATE clientes SET cpf_mascarado = '{{regex.result}}' WHERE id = {{item.id}}</code></li>
+        <li><strong>Counter:</strong> total de registros mascarados</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 48 -->
+<div class="example-box" id="ex48" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 48. SQL (audit trail) → Transform (filter última hora) → Condition → Data Format (PDF) → Email</div>
+    <p><strong>Cenário:</strong> Gerar relatório de auditoria com todas as alterações da última hora e enviar caso haja atividade.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron hourly)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (auditoria)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (tem registros?)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (PDF)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (compliance)</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT usuario, acao, tabela, dados_anteriores, dados_novos, ip, created_at FROM tb_auditoria WHERE created_at > NOW() - INTERVAL '1 hour'</code></li>
+        <li><strong>Condition:</strong> <code>{{sql.row_count}}</code> > <code>0</code></li>
+        <li><strong>Data Format:</strong> format = <code>pdf</code>, title = <code>Relatório de Auditoria - {{datetime}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 49 -->
+<div class="example-box" id="ex49" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 49. SQL (certificados SSL) → Script (calcular dias) → Condition → Switch/Case → Email / Log</div>
+    <p><strong>Cenário:</strong> Monitorar vencimento de certificados SSL. Alertar 30 dias antes, logar 60 dias antes, ignorar o resto.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron diário)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (certificados)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ef4444;">Script (dias p/ vencer)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#d946ef;">Switch/Case</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "urgente" (≤30d) →</span>
+        <span class="flow-node" style="background:#ec4899;">Email (alerta urgente)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "aviso" (≤60d) →</span>
+        <span class="flow-node" style="background:#6b7280;">Log (warning)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Default (>60d) →</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT dominio, data_expiracao FROM certificados_ssl WHERE ativo = true</code></li>
+        <li><strong>Script:</strong> <code>(strtotime($item['data_expiracao']) - time()) / 86400</code> → dias restantes</li>
+        <li><strong>Switch/Case:</strong> switch_variable = <code>{{nivel}}</code>, case_1 = <code>urgente</code>, case_2 = <code>aviso</code></li>
+    </ul>
+</div>
+
+<!-- ========== CATEGORIA: Pipelines Complexos Multi-Etapa ========== -->
+<h3 style="margin-top:40px; margin-bottom:20px; color:#7c3aed;">
+    <i class="bi bi-diagram-3-fill me-2"></i>Pipelines Complexos Multi-Etapa
+</h3>
+
+<!-- EXEMPLO 50 -->
+<div class="example-box" id="ex50" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 50. Trigger → Set Variable (config) → Rotina → SQL → Condition → Try/Catch → HTTP → Email → Log → End</div>
+    <p><strong>Cenário:</strong> Pipeline completo de sincronização: configurar, executar ETL, validar, enviar para API externa com retry, notificar e registrar.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (ETL)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (validar)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Dados OK →</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (sucesso)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Dados inválidos →</span>
+        <span class="flow-node" style="background:#ec4899;">Email (erro)</span>
+    </div>
+    <ul>
+        <li><strong>Set Variable:</strong> <code>ambiente</code> = <code>producao</code>, <code>api_url</code> = <code>https://api.erp.com/sync</code></li>
+        <li><strong>SQL (validar):</strong> <code>SELECT COUNT(*) as invalidos FROM staging WHERE campo_obrigatorio IS NULL</code></li>
+        <li><strong>Condition:</strong> <code>{{sql.invalidos}}</code> == <code>0</code></li>
+        <li><strong>Try/Catch:</strong> max_retries = <code>3</code>, retry_delay_seconds = <code>15</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 51 -->
+<div class="example-box" id="ex51" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 51. SQL → Data Merge → Transform → Loop → Switch/Case → (SQL Upsert | HTTP POST | Email) → Counter → Log</div>
+    <p><strong>Cenário:</strong> Cruzar clientes com pedidos, classificar por região, e para cada região executar ação diferente: inserir no banco regional, enviar para API parceira ou notificar representante.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (clientes)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (pedidos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (sort)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#d946ef;">Switch/Case</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "sudeste" →</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (DB regional)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "nordeste" →</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP POST (API parceira)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Default →</span>
+        <span class="flow-node" style="background:#ec4899;">Email (representante)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span>Pós-loop →</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (resumo)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+    </div>
+    <ul>
+        <li><strong>Data Merge:</strong> inner_join em <code>cliente_id</code></li>
+        <li><strong>Switch/Case:</strong> switch_variable = <code>{{item.regiao}}</code>, case_1 = <code>sudeste</code>, case_2 = <code>nordeste</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 52 -->
+<div class="example-box" id="ex52" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 52. HTTP → CSV Parse → Transform → Regex → Condition → SQL Upsert → Data Format (PDF) → Email</div>
+    <p><strong>Cenário:</strong> Importar planilha de RH via API, parsear CSV, transformar, validar emails com regex, salvar e gerar relatório PDF.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET (CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#059669;">CSV Parse</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (map)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (test email)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Email válido →</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span>Pós-loop →</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (PDF)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (relatório importação)</span>
+    </div>
+    <ul>
+        <li><strong>Transform:</strong> map = <code>nome_completo, email, cargo, data_admissao → DATE format</code></li>
+        <li><strong>Regex:</strong> pattern = <code>/^[\w.-]+@[\w.-]+\.\w{2,}$/</code>, regex_mode = <code>test</code></li>
+        <li><strong>Data Format:</strong> PDF com resumo: importados, rejeitados, data</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 53 -->
+<div class="example-box" id="ex53" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 53. Trigger → SQL → Transform (aggregate) → Script → Set Variable → Condition → Email + File Export + Log</div>
+    <p><strong>Cenário:</strong> Calcular fechamento mensal: agregar vendas, calcular comissões com script, e se valor > R$10k, exportar, emailar e logar.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron dia 1)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (vendas mês anterior)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (aggregate)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ef4444;">Script (calcular comissões)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ > R$10k →</span>
+        <span class="flow-node" style="background:#0891b2;">File Export (CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+    </div>
+    <ul>
+        <li><strong>Transform:</strong> group_by = <code>vendedor</code>, agg_field = <code>valor</code>, agg_operation = <code>sum</code> (e count separado para <code>id</code>)</li>
+        <li><strong>Script:</strong> <code>$comissao = $total * ($faixa > 50000 ? 0.05 : 0.03)</code></li>
+        <li><strong>Set Variable:</strong> <code>total_comissoes</code> = soma de todas as comissões</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 54 -->
+<div class="example-box" id="ex54" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 54. Trigger (Webhook) → Regex → Switch/Case → Rotina 1 / Rotina 2 / Log</div>
+    <p><strong>Cenário:</strong> Receber comando via webhook, extrair ação com regex, e executar rotina diferente conforme o comando recebido.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Webhook)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (match)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable (acao)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#d946ef;">Switch/Case</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "sync" →</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (sincronização)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Case "report" →</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (relatório)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">Default →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Comando desconhecido")</span>
+    </div>
+    <ul>
+        <li><strong>Regex:</strong> pattern = <code>/^\/(\w+)\s*(.*)$/</code>, regex_mode = <code>match</code> — extrai <code>/sync</code>, <code>/report</code></li>
+        <li><strong>Set Variable:</strong> <code>acao</code> = <code>{{regex.match.1}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 55 -->
+<div class="example-box" id="ex55" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 55. SQL (2 bancos) → Data Merge (full_join) → Condition → File Export + SQL Upsert + Email</div>
+    <p><strong>Cenário:</strong> Reconciliação entre dois sistemas: encontrar registros que existem em um mas não no outro, exportar e sincronizar.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (sistema A)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (sistema B)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (full_join)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (filter nulls)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Divergências →</span>
+        <span class="flow-node" style="background:#0891b2;">File Export</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (sync)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+    </div>
+    <ul>
+        <li><strong>Data Merge:</strong> merge_type = <code>full_join</code>, left_key = <code>codigo</code>, right_key = <code>codigo</code></li>
+        <li><strong>Transform:</strong> filter = <code>left_codigo IS NULL OR right_codigo IS NULL</code> — só divergências</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 56 -->
+<div class="example-box" id="ex56" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 56. Loop aninhado: SQL → Loop (clientes) → SQL → Loop (faturas) → Condition → Email individualizado</div>
+    <p><strong>Cenário:</strong> Para cada cliente, buscar suas faturas vencidas. Se tiver faturas, enviar email de cobrança personalizado.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (clientes ativos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop (clientes)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (faturas do cliente)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (tem faturas?)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#a855f7;">Format Template (corpo)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#9ca3af;">Delay (3s)</span>
+    </div>
+    <ul>
+        <li><strong>SQL (faturas):</strong> <code>SELECT * FROM faturas WHERE cliente_id = {{item.id}} AND vencida = true</code></li>
+        <li><strong>Condition:</strong> <code>{{faturas.row_count}}</code> > <code>0</code></li>
+        <li><strong>Format Template:</strong> lista as faturas com valor e data de vencimento</li>
+        <li><strong>Delay:</strong> 3s entre emails (anti-spam)</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 57 -->
+<div class="example-box" id="ex57" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 57. Trigger → API Call → HTTP GET → Data Merge → Transform → Condition → SQL + Email</div>
+    <p><strong>Cenário:</strong> Combinar dados de duas APIs distintas (CRM e ERP), encontrar inconsistências e corrigir automaticamente.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#10b981;">API Call (CRM)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET (ERP)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (left_join)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (filter)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ Inconsistências →</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (corrigir)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (relatório)</span>
+    </div>
+    <ul>
+        <li><strong>API Call:</strong> API cadastrada do CRM, extrai clientes</li>
+        <li><strong>HTTP GET:</strong> <code>https://erp.empresa.com/api/clientes</code></li>
+        <li><strong>Data Merge:</strong> left_join em <code>cnpj</code></li>
+        <li><strong>Transform:</strong> filter = <code>crm_nome != erp_nome OR crm_email != erp_email</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 58 -->
+<div class="example-box" id="ex58" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 58. Trigger → SQL → Transform (limit) → Loop → Try/Catch → HTTP DELETE → Counter → Log</div>
+    <p><strong>Cenário:</strong> Purge de registros antigos: buscar IDs para exclusão, deletar via API externa em lote com proteção de erro.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (registros antigos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (limit 100)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP DELETE</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0d9488;">Counter (deletados++)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Falha ao deletar {{item.id}}")</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span>Pós-loop →</span>
+        <span class="flow-node" style="background:#6b7280;">Log ("Purge: {{deletados.value}} removidos")</span>
+    </div>
+    <ul>
+        <li><strong>SQL:</strong> <code>SELECT id, external_id FROM registros WHERE created_at &lt; NOW() - INTERVAL '2 years'</code></li>
+        <li><strong>Transform:</strong> limit = <code>100</code> (batch seguro)</li>
+        <li><strong>HTTP DELETE:</strong> url = <code>https://api.com/records/{{item.external_id}}</code></li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 59 -->
+<div class="example-box" id="ex59" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 59. Trigger → Rotina → SQL → Data Format (CSV + PDF) → Email (2 anexos) → Log → End</div>
+    <p><strong>Cenário:</strong> Executar rotina ETL, extrair resultados, gerar CSV para equipe técnica e PDF para gestão, enviar ambos no mesmo email.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (ETL)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL (resultados)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (PDF)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (2 anexos)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#6b7280;">Log</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <ul>
+        <li><strong>Data Format (CSV):</strong> arquivo técnico com todos os campos</li>
+        <li><strong>Data Format (PDF):</strong> relatório resumido com gráficos</li>
+        <li><strong>Email:</strong> ambos os arquivos como anexos, corpo com resumo da execução</li>
+    </ul>
+</div>
+
+<!-- EXEMPLO 60 -->
+<div class="example-box" id="ex60" style="margin-bottom:32px;">
+    <div class="title" style="font-size: 1.1rem;"><i class="bi bi-circle-fill" style="font-size:0.7rem;"></i> 60. Pipeline completo: Todos os 24 componentes em uso</div>
+    <p><strong>Cenário:</strong> Mega-pipeline de integração que demonstra TODOS os componentes disponíveis trabalhando juntos em um fluxo de importação, validação, processamento e distribuição.</p>
+    <div class="flow-diagram">
+        <span class="flow-node" style="background:#10b981;">Trigger (Cron)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#14b8a6;">Set Variable (configs)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#10b981;">API Call (source)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#8b5cf6;">HTTP GET (CSV file)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#059669;">CSV Parse</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:0;">→</span>
+        <span class="flow-node" style="background:#f59e0b;">Transform (filter+map)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#3b82f6;">SQL Query (existentes)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0ea5e9;">Data Merge (left_join)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#06b6d4;">Loop</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:0;">→</span>
+        <span class="flow-node" style="background:#e11d48;">Regex (validar campo)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#eab308;">Condition (válido?)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">✅ →</span>
+        <span class="flow-node" style="background:#ef4444;">Script (normalizar)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#d946ef;">Switch/Case (região)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:80px;">Case1 →</span>
+        <span class="flow-node" style="background:#2563eb;">SQL Upsert (DB regional)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0d9488;">Counter++</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:80px;">Case2 →</span>
+        <span class="flow-node" style="background:#f97316;">Try/Catch → HTTP POST (API parceira)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#9ca3af;">Delay (1s)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:80px;">Default →</span>
+        <span class="flow-node" style="background:#7c3aed;">Rotina (processamento especial)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span style="margin-left:40px;">❌ Inválido →</span>
+        <span class="flow-node" style="background:#6b7280;">Log (warning)</span>
+    </div>
+    <div class="flow-diagram" style="padding-top:0;">
+        <span>Pós-loop →</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">Data Format (PDF)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#0891b2;">File Export (JSON backup)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#a855f7;">Format Template (HTML body)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#ec4899;">Email (PDF + CSV)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-node" style="background:#dc2626;">End</span>
+    </div>
+    <ul>
+        <li>Este pipeline demonstra o uso de <strong>todos os 24 componentes</strong> disponíveis</li>
+        <li><strong>Trigger</strong> inicia → <strong>Set Variable</strong> configura → <strong>API Call</strong> busca fonte → <strong>HTTP</strong> baixa arquivo → <strong>CSV Parse</strong> interpreta</li>
+        <li><strong>Transform</strong> filtra/mapeia → <strong>SQL Query</strong> busca existentes → <strong>Data Merge</strong> cruza → <strong>Loop</strong> itera</li>
+        <li><strong>Regex</strong> valida → <strong>Condition</strong> decide → <strong>Script</strong> normaliza → <strong>Switch/Case</strong> distribui</li>
+        <li><strong>SQL Upsert</strong> salva → <strong>Counter</strong> conta → <strong>Try/Catch</strong> protege → <strong>Delay</strong> controla ritmo → <strong>Rotina</strong> processa especiais</li>
+        <li><strong>Data Format</strong> (CSV/PDF) gera relatórios → <strong>File Export</strong> salva backup → <strong>Format Template</strong> formata → <strong>Email</strong> notifica → <strong>Log</strong> registra → <strong>End</strong> finaliza</li>
+    </ul>
+</div>
+
+
 <!-- ================ FOOTER ================ -->
 <div class="doc-footer">
     <p><strong>DMC DataLoad — Pipeline Builder</strong></p>
-    <p>Documentação gerada em 10 de Junho de 2025 &bull; Versão 1.0</p>
-    <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 8px;">Dynamic Motion Century &copy; 2025. Todos os direitos reservados.</p>
+    <p>Documentação gerada em 10 de Junho de 2025 &bull; Atualizada em 25 de Março de 2026 &bull; Versão 2.0</p>
+    <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 8px;">Dynamic Motion Century &copy; 2025-2026. Todos os direitos reservados.</p>
 </div>
 
 </div><!-- /container -->

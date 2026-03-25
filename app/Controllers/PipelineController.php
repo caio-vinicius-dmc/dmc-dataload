@@ -426,7 +426,8 @@ class PipelineController
                     ];
 
                     // Verificar se deve parar na falha
-                    $stopOnError = $nodeConfig['stop_on_error'] ?? true;
+                    $stopRaw = $nodeConfig['stop_on_error'] ?? true;
+                    $stopOnError = filter_var($stopRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true;
                     if ($stopOnError) break;
                 }
             }
@@ -1533,9 +1534,18 @@ class PipelineController
      */
     private function replaceVariables(string $text, array $vars): string
     {
-        return preg_replace_callback('/\{\{(\w+)\}\}/', function($m) use ($vars) {
-            $val = $vars[$m[1]] ?? $m[0];
-            return is_array($val) ? json_encode($val) : (string) $val;
+        return preg_replace_callback('/\{\{([\w.]+)\}\}/', function($m) use ($vars) {
+            $path = explode('.', $m[1]);
+            $val = $vars[$path[0]] ?? null;
+            for ($i = 1; $i < count($path); $i++) {
+                if (is_array($val) && array_key_exists($path[$i], $val)) {
+                    $val = $val[$path[$i]];
+                } else {
+                    return $m[0];
+                }
+            }
+            if ($val === null) return $m[0];
+            return is_array($val) ? json_encode($val) : (is_bool($val) ? ($val ? 'true' : 'false') : (string) $val);
         }, $text);
     }
 
@@ -1544,12 +1554,39 @@ class PipelineController
      */
     private function resolveValue($value, array $vars)
     {
-        if (is_string($value) && preg_match('/^\{\{(\w+)\}\}$/', $value, $m)) {
-            return $vars[$m[1]] ?? $value;
+        // Suporte a acesso simples {{var}} e aninhado {{var.key}}
+        if (is_string($value) && preg_match('/^\{\{([\w.]+)\}\}$/', $value, $m)) {
+            $path = explode('.', $m[1]);
+            $resolved = $vars[$path[0]] ?? null;
+            for ($i = 1; $i < count($path); $i++) {
+                if (is_array($resolved) && array_key_exists($path[$i], $resolved)) {
+                    $resolved = $resolved[$path[$i]];
+                } else {
+                    return $value; // caminho inválido, retorna string original
+                }
+            }
+            return $resolved ?? $value;
         }
         if (is_string($value) && strpos($value, '{{') !== false) {
             return $this->replaceVariables($value, $vars);
         }
+
+        // Fallback: nome de variável sem {{}} (ex: "resultado" ou "resultado.sucesso")
+        if (is_string($value) && preg_match('/^[\w.]+$/', $value) && !is_numeric($value) && !in_array($value, ['true', 'false', 'null'], true)) {
+            $path = explode('.', $value);
+            if (array_key_exists($path[0], $vars)) {
+                $resolved = $vars[$path[0]];
+                for ($i = 1; $i < count($path); $i++) {
+                    if (is_array($resolved) && array_key_exists($path[$i], $resolved)) {
+                        $resolved = $resolved[$path[$i]];
+                    } else {
+                        return $value;
+                    }
+                }
+                return $resolved;
+            }
+        }
+
         if (is_numeric($value)) return $value + 0;
         if ($value === 'true') return true;
         if ($value === 'false') return false;
@@ -2005,24 +2042,34 @@ class PipelineController
             throw new \Exception('ID da rotina não especificado');
         }
 
+        $stopRaw = $config['stop_on_error'] ?? true;
+        $stopOnError = filter_var($stopRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true;
+
         $controller = new RotinasController();
         $resultado = $controller->executar((int)$idRotina);
 
-        if (empty($resultado['sucesso'])) {
+        $metricas = $resultado['metricas'] ?? [];
+        $data = [
+            'rotina_id' => (int)$idRotina,
+            'sucesso' => !empty($resultado['sucesso']),
+            'status' => $resultado['status'] ?? ($resultado['sucesso'] ? 'sucesso' : 'falha'),
+            'mensagem' => $resultado['mensagem'] ?? '',
+            'blocos_executados' => $metricas['blocos_executados'] ?? 0,
+            'blocos_sucesso' => $metricas['blocos_sucesso'] ?? 0,
+            'blocos_falha' => $metricas['blocos_falha'] ?? 0,
+            'registros_total' => $metricas['registros_total'] ?? 0,
+            'duracao_ms' => $metricas['duracao_ms'] ?? 0,
+        ];
+
+        if (!empty($config['output_variable'])) {
+            $context['variables'][$config['output_variable']] = $data;
+        }
+
+        if (empty($resultado['sucesso']) && $stopOnError) {
             throw new \Exception($resultado['mensagem'] ?? 'Erro ao executar rotina');
         }
 
-        $metricas = $resultado['metricas'] ?? [];
-        return [
-            'data' => [
-                'rotina_id' => (int)$idRotina,
-                'blocos_executados' => $metricas['blocos_executados'] ?? 0,
-                'blocos_sucesso' => $metricas['blocos_sucesso'] ?? 0,
-                'blocos_falha' => $metricas['blocos_falha'] ?? 0,
-                'registros_total' => $metricas['registros_total'] ?? 0,
-                'duracao_ms' => $metricas['duracao_ms'] ?? 0,
-            ]
-        ];
+        return ['data' => $data];
     }
 
     /**

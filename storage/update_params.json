@@ -1,0 +1,11 @@
+{
+    "nome": "CARGA | MENSAL: 4 | PRODU\u00c7\u00c3O",
+    "descricao": "Atualiza\u00e7\u00e3o da base SGIC (OUTRAS ENTIDADES)",
+    "id_conexao": "4",
+    "webhook_sucesso": null,
+    "webhook_falha": null,
+    "ativa": false,
+    "agendamento_cron": null,
+    "max_tentativas": 3,
+    "id": "5"
+}

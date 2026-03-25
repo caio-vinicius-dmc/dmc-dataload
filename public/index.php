@@ -180,7 +180,6 @@ if ($requerAutenticacao && !AuthMiddleware::verificarAutenticacao()) {
     $isApiRoute = strpos($path, '/api/') === 0 
         || strpos($path, '/conexoes/') === 0
         || strpos($path, '/rotinas/') === 0
-        || strpos($path, '/workflows/') === 0
         || strpos($path, '/pipelines/') === 0
         || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest');
     
@@ -248,11 +247,6 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
         $stmt->execute($fPip['params']);
         $pipIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-        $fWf = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
-        $stmt = $db->prepare("SELECT w.id FROM tb_workflows w WHERE ({$fWf['where']})");
-        $stmt->execute($fWf['params']);
-        $wfIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
         // Helper: cria cláusula IN segura (intval previne injection)
         $inSql = function(array $ids): string {
             if (empty($ids)) return '(0)';
@@ -260,7 +254,6 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
         };
         $rotIn = $inSql($rotIds);
         $pipIn = $inSql($pipIds);
-        $wfIn  = $inSql($wfIds);
         
         // Total de rotinas visíveis
         $total = $db->query("SELECT COUNT(*) FROM tb_rotinas WHERE id IN {$rotIn}")->fetchColumn();
@@ -269,21 +262,24 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
         $emExec = $db->query("
             SELECT (SELECT COUNT(*) FROM tb_rotinas WHERE esta_executando = true AND id IN {$rotIn})
                  + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'running' AND id_pipeline IN {$pipIn})
-                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'running' AND id_workflow IN {$wfIn})
         ")->fetchColumn();
         
         // Execuções hoje (filtrado)
         $execHoje = $db->query("
             SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE AND id_rotina IN {$rotIn})
                  + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE AND id_pipeline IN {$pipIn})
-                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE AND id_workflow IN {$wfIn})
         ")->fetchColumn();
         
         // Falhas hoje (filtrado)
         $falhasHoje = $db->query("
             SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE status IN ('falha','erro') AND data_inicio >= CURRENT_DATE AND id_rotina IN {$rotIn})
                  + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'error' AND data_inicio >= CURRENT_DATE AND id_pipeline IN {$pipIn})
-                 + (SELECT COUNT(*) FROM tb_workflow_execucoes WHERE status = 'failed' AND data_inicio >= CURRENT_DATE AND id_workflow IN {$wfIn})
+        ")->fetchColumn();
+        
+        // Parciais hoje (filtrado)
+        $parciaisHoje = $db->query("
+            SELECT (SELECT COUNT(*) FROM tb_logs_execucao WHERE status = 'parcial' AND data_inicio >= CURRENT_DATE AND id_rotina IN {$rotIn})
+                 + (SELECT COUNT(*) FROM tb_pipeline_execucoes WHERE status = 'partial' AND data_inicio >= CURRENT_DATE AND id_pipeline IN {$pipIn})
         ")->fetchColumn();
         
         // Rotinas ativas (agendadas, filtrado)
@@ -316,11 +312,9 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
         usort($todasProximas, fn($a, $b) => strcmp($a['proxima_execucao'] ?? '', $b['proxima_execucao'] ?? ''));
         $todasProximas = array_slice($todasProximas, 0, 5);
         
-        // Total de pipelines e workflows visíveis
+        // Total de pipelines visíveis
         $totalPipelines = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE id IN {$pipIn}")->fetchColumn();
         $pipelinesAtivos = $db->query("SELECT COUNT(*) FROM tb_pipelines WHERE ativo = true AND trigger_tipo = 'cron' AND id IN {$pipIn}")->fetchColumn();
-        $totalWorkflows = $db->query("SELECT COUNT(*) FROM tb_workflows WHERE id IN {$wfIn}")->fetchColumn();
-        $workflowsAtivos = $db->query("SELECT COUNT(*) FROM tb_workflows WHERE ativo = true AND id IN {$wfIn}")->fetchColumn();
         
         // Últimas execuções (10, filtrado)
         $ultimas = $db->query("
@@ -329,39 +323,29 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
             WHERE l.id_rotina IN {$rotIn})
             UNION ALL
             (SELECT pe.id, 
-                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' ELSE pe.status END,
+                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' WHEN 'partial' THEN 'parcial' ELSE pe.status END,
                 pe.data_inicio, pe.duracao_ms, p.nome, 'pipeline'
             FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id
             WHERE pe.id_pipeline IN {$pipIn})
-            UNION ALL
-            (SELECT we.id, 
-                CASE we.status WHEN 'completed' THEN 'sucesso' WHEN 'failed' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' WHEN 'paused' THEN 'pausado' ELSE we.status END,
-                we.data_inicio, we.duracao_ms, w.nome, 'workflow'
-            FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id
-            WHERE we.id_workflow IN {$wfIn})
             ORDER BY data_inicio DESC LIMIT 10
         ")->fetchAll(PDO::FETCH_ASSOC);
         
         // Dados para gráfico (últimos 7 dias, filtrado)
         $grafico = $db->query("SELECT data,
-            SUM(sucesso) as sucesso, SUM(falha) as falha
+            SUM(sucesso) as sucesso, SUM(falha) as falha, SUM(parcial) as parcial
             FROM (
                 SELECT DATE(data_inicio) as data,
                     COUNT(*) FILTER (WHERE status = 'sucesso') as sucesso,
-                    COUNT(*) FILTER (WHERE status IN ('falha','erro')) as falha
+                    COUNT(*) FILTER (WHERE status IN ('falha','erro')) as falha,
+                    COUNT(*) FILTER (WHERE status = 'parcial') as parcial
                 FROM tb_logs_execucao WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days' AND id_rotina IN {$rotIn}
                 GROUP BY DATE(data_inicio)
                 UNION ALL
                 SELECT DATE(data_inicio),
                     COUNT(*) FILTER (WHERE status = 'success'),
-                    COUNT(*) FILTER (WHERE status = 'error')
+                    COUNT(*) FILTER (WHERE status = 'error'),
+                    COUNT(*) FILTER (WHERE status = 'partial')
                 FROM tb_pipeline_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days' AND id_pipeline IN {$pipIn}
-                GROUP BY DATE(data_inicio)
-                UNION ALL
-                SELECT DATE(data_inicio),
-                    COUNT(*) FILTER (WHERE status = 'completed'),
-                    COUNT(*) FILTER (WHERE status = 'failed')
-                FROM tb_workflow_execucoes WHERE data_inicio >= CURRENT_DATE - INTERVAL '7 days' AND id_workflow IN {$wfIn}
                 GROUP BY DATE(data_inicio)
             ) combined
             GROUP BY data ORDER BY data ASC
@@ -373,12 +357,11 @@ if ($path === '/api/dashboard/metricas' && $method === 'GET') {
             'total_rotinas' => (int)$total,
             'execucoes_hoje' => (int)$execHoje,
             'falhas_hoje' => (int)$falhasHoje,
+            'parciais_hoje' => (int)$parciaisHoje,
             'em_execucao' => (int)$emExec,
             'rotinas_ativas' => (int)$ativas,
             'total_pipelines' => (int)$totalPipelines,
             'pipelines_agendados' => (int)$pipelinesAtivos,
-            'total_workflows' => (int)$totalWorkflows,
-            'workflows_ativos' => (int)$workflowsAtivos,
             'proximas_execucoes' => $todasProximas,
             'ultimas_execucoes' => $ultimas,
             'grafico_7dias' => $grafico
@@ -645,6 +628,23 @@ if (preg_match('#^/rotinas/delete/(\d+)$#', $path, $m) && $method === 'POST') {
     \App\Servicos\ServicoAuditoria::registrar('excluir', 'rotina', $id);
     $c = new RotinasController();
     echo json_encode($c->deletar($id));
+    exit;
+}
+
+// Duplicar rotina
+if (preg_match('#^/rotinas/duplicar/(\d+)$#', $path, $m) && $method === 'POST') {
+    $csrfToken = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!AuthMiddleware::validarTokenCSRF($csrfToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['erro' => 'Token CSRF inválido', 'sucesso' => false]);
+        exit;
+    }
+    $id = intval($m[1]);
+    header('Content-Type: application/json');
+    $c = new RotinasController();
+    \App\Servicos\ServicoAuditoria::registrar('duplicar', 'rotina', $id);
+    echo json_encode($c->duplicar($id));
     exit;
 }
 
@@ -1471,7 +1471,7 @@ if ($path === '/api/logs/exportar' && $method === 'GET') {
 
 // ========== FIM NOVAS ROTAS ==========
 
-// API Histórico - Listar (Unificado: rotinas + pipelines + workflows)
+// API Histórico - Listar (Unificado: rotinas + pipelines)
 if ($path === '/api/historico' && $method === 'GET') {
     try {
         $db = Database::getConexao();
@@ -1479,10 +1479,8 @@ if ($path === '/api/historico' && $method === 'GET') {
         
         $partsRotina = [];
         $partsPipeline = [];
-        $partsWorkflow = [];
         $paramsRotina = [];
         $paramsPipeline = [];
-        $paramsWorkflow = [];
         
         // Filtros comuns
         if (!empty($_GET['status'])) {
@@ -1491,25 +1489,19 @@ if ($path === '/api/historico' && $method === 'GET') {
             $partsRotina[] = "l.status = ?";
             $paramsRotina[] = $statusVal;
             // Pipeline usa 'success'/'error' em vez de 'sucesso'/'falha'
-            $statusPipeline = str_replace(['sucesso','falha','executando'], ['success','error','running'], $statusVal);
+            $statusPipeline = str_replace(['sucesso','falha','executando','parcial'], ['success','error','running','partial'], $statusVal);
             $partsPipeline[] = "pe.status = ?";
             $paramsPipeline[] = $statusPipeline;
-            // Workflow usa 'completed'/'failed' em vez de 'sucesso'/'falha'
-            $statusWorkflow = str_replace(['sucesso','falha','executando'], ['completed','failed','running'], $statusVal);
-            $partsWorkflow[] = "we.status = ?";
-            $paramsWorkflow[] = $statusWorkflow;
         }
         if (!empty($_GET['data_inicio'])) {
             $di = $_GET['data_inicio'] . ' 00:00:00';
             $partsRotina[] = "l.data_inicio >= ?"; $paramsRotina[] = $di;
             $partsPipeline[] = "pe.data_inicio >= ?"; $paramsPipeline[] = $di;
-            $partsWorkflow[] = "we.data_inicio >= ?"; $paramsWorkflow[] = $di;
         }
         if (!empty($_GET['data_fim'])) {
             $df = $_GET['data_fim'] . ' 23:59:59';
             $partsRotina[] = "l.data_inicio <= ?"; $paramsRotina[] = $df;
             $partsPipeline[] = "pe.data_inicio <= ?"; $paramsPipeline[] = $df;
-            $partsWorkflow[] = "we.data_inicio <= ?"; $paramsWorkflow[] = $df;
         }
         if (!empty($_GET['rotina'])) {
             $partsRotina[] = "l.id_rotina = ?"; $paramsRotina[] = (int)$_GET['rotina'];
@@ -1517,7 +1509,6 @@ if ($path === '/api/historico' && $method === 'GET') {
         
         $whereRotina = count($partsRotina) > 0 ? ' AND ' . implode(' AND ', $partsRotina) : '';
         $wherePipeline = count($partsPipeline) > 0 ? ' AND ' . implode(' AND ', $partsPipeline) : '';
-        $whereWorkflow = count($partsWorkflow) > 0 ? ' AND ' . implode(' AND ', $partsWorkflow) : '';
         
         $unions = [];
         $allParams = [];
@@ -1525,7 +1516,6 @@ if ($path === '/api/historico' && $method === 'GET') {
         // Filtros de visibilidade RBAC
         $filtroRotVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('rotina', 'r', 'id_usuario_criador');
         $filtroPipVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
-        $filtroWfVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
         
         // Rotinas
         if (!$tipo || $tipo === 'rotina') {
@@ -1542,25 +1532,13 @@ if ($path === '/api/historico' && $method === 'GET') {
         // Pipelines
         if (!$tipo || $tipo === 'pipeline') {
             $unions[] = "SELECT pe.id, 'pipeline' as tipo_execucao, p.nome as nome_origem,
-                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' ELSE pe.status END as status,
+                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' WHEN 'partial' THEN 'parcial' ELSE pe.status END as status,
                 pe.data_inicio, pe.data_fim, pe.duracao_ms, NULL::bigint as registros_processados,
                 pe.nodes_total, pe.nodes_sucesso, pe.nodes_falha,
                 pe.erro
                 FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id
                 WHERE 1=1 {$wherePipeline} AND ({$filtroPipVis['where']})";
             $allParams = array_merge($allParams, $paramsPipeline, $filtroPipVis['params']);
-        }
-        
-        // Workflows
-        if (!$tipo || $tipo === 'workflow') {
-            $unions[] = "SELECT we.id, 'workflow' as tipo_execucao, w.nome as nome_origem,
-                CASE we.status WHEN 'completed' THEN 'sucesso' WHEN 'failed' THEN 'falha' WHEN 'running' THEN 'executando' WHEN 'cancelled' THEN 'cancelado' WHEN 'paused' THEN 'pausado' ELSE we.status END as status,
-                we.data_inicio, we.data_fim, we.duracao_ms, NULL::bigint as registros_processados,
-                we.nodes_total, we.nodes_sucesso, we.nodes_falha,
-                we.erro
-                FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id
-                WHERE 1=1 {$whereWorkflow} AND ({$filtroWfVis['where']})";
-            $allParams = array_merge($allParams, $paramsWorkflow, $filtroWfVis['params']);
         }
         
         if (empty($unions)) {
@@ -1585,7 +1563,7 @@ if ($path === '/api/historico' && $method === 'GET') {
 }
 
 // API Histórico - Detalhes (por tipo)
-if (preg_match('#^/api/historico/(rotina|pipeline|workflow)/(\d+)$#', $path, $m) && $method === 'GET') {
+if (preg_match('#^/api/historico/(rotina|pipeline)/(\d+)$#', $path, $m) && $method === 'GET') {
     try {
         $tipoExec = $m[1];
         $id = (int)$m[2];
@@ -1677,7 +1655,7 @@ if (preg_match('#^/api/historico/(rotina|pipeline|workflow)/(\d+)$#', $path, $m)
             $log['tipo_execucao'] = 'pipeline';
             $log['nome_origem'] = $log['nome_pipeline'] ?? 'Pipeline #' . ($log['id_pipeline'] ?? '?');
             // Normalizar status
-            $statusMap = ['success'=>'sucesso','error'=>'falha','running'=>'executando','cancelled'=>'cancelado','pending'=>'pendente'];
+            $statusMap = ['success'=>'sucesso','error'=>'falha','running'=>'executando','cancelled'=>'cancelado','pending'=>'pendente','partial'=>'parcial'];
             $log['status'] = $statusMap[$log['status']] ?? $log['status'];
             
             // Processar log_execucao JSONB em blocos
@@ -1707,47 +1685,6 @@ if (preg_match('#^/api/historico/(rotina|pipeline|workflow)/(\d+)$#', $path, $m)
                 $log['resultado_decoded'] = is_string($log['resultado']) ? json_decode($log['resultado'], true) : $log['resultado'];
             }
             
-        } elseif ($tipoExec === 'workflow') {
-            $stmt = $db->prepare("SELECT we.*, w.nome as nome_workflow, w.criado_por as criador_recurso
-                FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id WHERE we.id = ?");
-            $stmt->execute([$id]);
-            $log = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$log) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Não encontrado']); exit; }
-            if (!empty($log['id_workflow']) && !\App\Servicos\ServicoPermissao::podeVerRecurso('workflow', (int)$log['id_workflow'], isset($log['criador_recurso']) ? (int)$log['criador_recurso'] : null)) {
-                http_response_code(403); header('Content-Type: application/json'); echo json_encode(['sucesso' => false, 'erro' => 'Acesso negado']); exit;
-            }
-            
-            $log['tipo_execucao'] = 'workflow';
-            $log['nome_origem'] = $log['nome_workflow'] ?? 'Workflow #' . ($log['id_workflow'] ?? '?');
-            $statusMap = ['completed'=>'sucesso','failed'=>'falha','running'=>'executando','cancelled'=>'cancelado','paused'=>'pausado','pending'=>'pendente'];
-            $log['status'] = $statusMap[$log['status']] ?? $log['status'];
-            
-            // Buscar execuções de nós
-            $stmtNodes = $db->prepare("SELECT * FROM tb_workflow_node_execucoes WHERE id_workflow_execucao = ? ORDER BY ordem, data_inicio");
-            $stmtNodes->execute([$id]);
-            $nodes = $stmtNodes->fetchAll(PDO::FETCH_ASSOC);
-            
-            $log['logs'] = [];
-            foreach ($nodes as $node) {
-                $nodeStatusMap = ['completed'=>'sucesso','failed'=>'erro','skipped'=>'pulado','running'=>'executando','waiting'=>'aguardando','pending'=>'pendente'];
-                $log['logs'][] = [
-                    'bloco' => $node['label'] ?? $node['node_id'] ?? 'Nó',
-                    'tipo' => strtoupper($node['tipo_node'] ?? 'NODE'),
-                    'ordem' => $node['ordem'] ?? null,
-                    'status' => $nodeStatusMap[$node['status']] ?? $node['status'],
-                    'duracao_ms' => $node['duracao_ms'] ?? null,
-                    'registros' => null,
-                    'resultado' => !empty($node['output_data']) ? (is_string($node['output_data']) ? $node['output_data'] : json_encode($node['output_data'])) : null,
-                    'erro' => $node['erro'] ?? null,
-                    'sql' => null,
-                    'arquivo_csv' => null
-                ];
-            }
-            
-            // Decodificar JSONs
-            if (!empty($log['trigger_data']) && is_string($log['trigger_data'])) $log['trigger_data'] = json_decode($log['trigger_data'], true);
-            if (!empty($log['contexto']) && is_string($log['contexto'])) $log['contexto'] = json_decode($log['contexto'], true);
-            if (!empty($log['resultado_json']) && is_string($log['resultado_json'])) $log['resultado_json'] = json_decode($log['resultado_json'], true);
         }
         
         header('Content-Type: application/json');
@@ -1865,7 +1802,7 @@ if (preg_match('#^/api/historico/(\d+)$#', $path, $m) && $method === 'GET') {
     exit;
 }
 
-// API Histórico - Exportar CSV (unificado: rotinas + pipelines + workflows)
+// API Histórico - Exportar CSV (unificado: rotinas + pipelines)
 if ($path === '/api/historico/exportar' && $method === 'GET') {
     try {
         $db = Database::getConexao();
@@ -1873,21 +1810,16 @@ if ($path === '/api/historico/exportar' && $method === 'GET') {
         $tipo = $_GET['tipo'] ?? '';
         $partsRotina = [];
         $partsPipeline = [];
-        $partsWorkflow = [];
         $paramsRotina = [];
         $paramsPipeline = [];
-        $paramsWorkflow = [];
         
         if (!empty($_GET['status'])) {
             $statusVal = $_GET['status'];
             $partsRotina[] = "l.status = ?";
             $paramsRotina[] = $statusVal;
-            $statusPipeline = str_replace(['sucesso','falha','executando'], ['success','error','running'], $statusVal);
+            $statusPipeline = str_replace(['sucesso','falha','executando','parcial'], ['success','error','running','partial'], $statusVal);
             $partsPipeline[] = "pe.status = ?";
             $paramsPipeline[] = $statusPipeline;
-            $statusWorkflow = str_replace(['sucesso','falha','executando'], ['completed','failed','running'], $statusVal);
-            $partsWorkflow[] = "we.status = ?";
-            $paramsWorkflow[] = $statusWorkflow;
         }
         if (!empty($_GET['rotina'])) {
             $partsRotina[] = "l.id_rotina = ?";
@@ -1896,12 +1828,10 @@ if ($path === '/api/historico/exportar' && $method === 'GET') {
         
         $whereRotina = count($partsRotina) > 0 ? ' AND ' . implode(' AND ', $partsRotina) : '';
         $wherePipeline = count($partsPipeline) > 0 ? ' AND ' . implode(' AND ', $partsPipeline) : '';
-        $whereWorkflow = count($partsWorkflow) > 0 ? ' AND ' . implode(' AND ', $partsWorkflow) : '';
         
         // Filtros de visibilidade RBAC
         $filtroRotVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('rotina', 'r', 'id_usuario_criador');
         $filtroPipVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('pipeline', 'p', 'criado_por');
-        $filtroWfVis = \App\Servicos\ServicoPermissao::filtroVisibilidadePosicional('workflow', 'w', 'criado_por');
         
         $unions = [];
         $allParams = [];
@@ -1917,21 +1847,12 @@ if ($path === '/api/historico/exportar' && $method === 'GET') {
         }
         if (!$tipo || $tipo === 'pipeline') {
             $unions[] = "SELECT pe.id, 'pipeline' as tipo_execucao, p.nome as nome_origem,
-                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' ELSE pe.status END as status,
+                CASE pe.status WHEN 'success' THEN 'sucesso' WHEN 'error' THEN 'falha' WHEN 'partial' THEN 'parcial' ELSE pe.status END as status,
                 pe.data_inicio, pe.data_fim, pe.duracao_ms, NULL::bigint as registros_processados,
                 pe.erro
                 FROM tb_pipeline_execucoes pe LEFT JOIN tb_pipelines p ON pe.id_pipeline = p.id
                 WHERE 1=1 {$wherePipeline} AND ({$filtroPipVis['where']})";
             $allParams = array_merge($allParams, $paramsPipeline, $filtroPipVis['params']);
-        }
-        if (!$tipo || $tipo === 'workflow') {
-            $unions[] = "SELECT we.id, 'workflow' as tipo_execucao, w.nome as nome_origem,
-                CASE we.status WHEN 'completed' THEN 'sucesso' WHEN 'failed' THEN 'falha' ELSE we.status END as status,
-                we.data_inicio, we.data_fim, we.duracao_ms, NULL::bigint as registros_processados,
-                we.erro
-                FROM tb_workflow_execucoes we LEFT JOIN tb_workflows w ON we.id_workflow = w.id
-                WHERE 1=1 {$whereWorkflow} AND ({$filtroWfVis['where']})";
-            $allParams = array_merge($allParams, $paramsWorkflow, $filtroWfVis['params']);
         }
         
         if (empty($unions)) {
@@ -3104,7 +3025,7 @@ if ($path === '/api/fila/enfileirar' && $method === 'POST') {
     $idRecurso = (int)($_POST['id_recurso'] ?? 0);
     $nomeRecurso = $_POST['nome_recurso'] ?? '';
     $prioridade = (int)($_POST['prioridade'] ?? 5);
-    if (!in_array($tipo, ['rotina', 'pipeline', 'workflow']) || $idRecurso <= 0) {
+    if (!in_array($tipo, ['rotina', 'pipeline']) || $idRecurso <= 0) {
         http_response_code(400);
         header('Content-Type: application/json');
         echo json_encode(['sucesso' => false, 'erro' => 'Tipo e id_recurso são obrigatórios']);

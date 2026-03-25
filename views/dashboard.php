@@ -27,7 +27,7 @@ ob_start();
 
 <!-- Stats Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 col-xl">
         <div class="stat-card-modern primary-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-play-circle-fill"></i>
@@ -41,7 +41,7 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 col-xl">
         <div class="stat-card-modern success-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-check-circle-fill"></i>
@@ -55,7 +55,7 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 col-xl">
         <div class="stat-card-modern danger-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-x-circle-fill"></i>
@@ -69,7 +69,21 @@ ob_start();
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-6 col-lg-3 col-xl">
+        <div class="stat-card-modern warning-card">
+            <div class="stat-icon-modern">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value-modern" id="parciaisHoje">0</div>
+                <div class="stat-label-modern">Parciais Hoje</div>
+            </div>
+            <div class="stat-trend warning-trend">
+                <i class="bi bi-slash-circle"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3 col-xl">
         <div class="stat-card-modern info-card">
             <div class="stat-icon-modern">
                 <i class="bi bi-lightning-fill"></i>
@@ -85,7 +99,7 @@ ob_start();
     </div>
 </div>
 
-<!-- Pipeline & Workflow Stats -->
+<!-- Pipeline Stats -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
         <div class="stat-card-modern" style="border-left: 4px solid #17a2b8;">
@@ -106,28 +120,6 @@ ob_start();
             <div class="stat-content">
                 <div class="stat-value-modern" id="pipelinesAgendados">0</div>
                 <div class="stat-label-modern">Pipelines Agendados</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card-modern" style="border-left: 4px solid #7c3aed;">
-            <div class="stat-icon-modern" style="color: #7c3aed;">
-                <i class="bi bi-shuffle"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value-modern" id="totalWorkflows">0</div>
-                <div class="stat-label-modern">Workflows</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card-modern" style="border-left: 4px solid #a78bfa;">
-            <div class="stat-icon-modern" style="color: #a78bfa;">
-                <i class="bi bi-toggle-on"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value-modern" id="workflowsAtivos">0</div>
-                <div class="stat-label-modern">Workflows Ativos</div>
             </div>
         </div>
     </div>
@@ -403,6 +395,7 @@ $extraStyles = <<<'STYLES'
 
 .success-card::before { background: var(--gradient-success); }
 .danger-card::before { background: var(--gradient-danger); }
+.warning-card::before { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
 .info-card::before { background: var(--gradient-info); }
 .primary-card::before { background: var(--gradient-primary); }
 
@@ -435,6 +428,11 @@ $extraStyles = <<<'STYLES'
 .primary-card .stat-icon-modern {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.15) 100%);
     color: #667eea;
+}
+
+.warning-card .stat-icon-modern {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.15) 100%);
+    color: #f59e0b;
 }
 
 .stat-content {
@@ -484,6 +482,11 @@ $extraStyles = <<<'STYLES'
 .primary-trend {
     background: rgba(102, 126, 234, 0.1);
     color: #667eea;
+}
+
+.warning-trend {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
 }
 
 /* ==== MODERN TABLE ==== */
@@ -541,6 +544,7 @@ $extraStyles = <<<'STYLES'
 .badge-danger { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
 .badge-warning { background: rgba(245, 158, 11, 0.15); color: #d97706; }
 .badge-info { background: rgba(59, 130, 246, 0.15); color: #2563eb; }
+.badge-secondary { background: rgba(107, 114, 128, 0.15); color: #4b5563; }
 
 /* ==== RESPONSIVE ==== */
 @media (max-width: 991px) {
@@ -612,6 +616,13 @@ function initCharts() {
                         label: 'Sucesso',
                         data: [],
                         backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    },
+                    {
+                        label: 'Parcial',
+                        data: [],
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
                         borderRadius: 8,
                         borderSkipped: false,
                     },
@@ -702,11 +713,12 @@ function initCharts() {
         chartSucesso = new Chart(ctxSucesso, {
             type: 'doughnut',
             data: {
-                labels: ['Sucesso', 'Falha'],
+                labels: ['Sucesso', 'Parcial', 'Falha'],
                 datasets: [{
-                    data: [0, 0],
+                    data: [0, 0, 0],
                     backgroundColor: [
                         'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
                         'rgba(239, 68, 68, 0.8)'
                     ],
                     borderWidth: 0,
@@ -767,11 +779,10 @@ function carregarMetricas() {
         $('#totalRotinas').text(res.total_rotinas || 0);
         $('#execHoje').text(res.execucoes_hoje || 0);
         $('#falhasHoje').text(res.falhas_hoje || 0);
+        $('#parciaisHoje').text(res.parciais_hoje || 0);
         $('#emExec').text(res.em_execucao || 0);
         $('#totalPipelines').text(res.total_pipelines || 0);
         $('#pipelinesAgendados').text(res.pipelines_agendados || 0);
-        $('#totalWorkflows').text(res.total_workflows || 0);
-        $('#workflowsAtivos').text(res.workflows_ativos || 0);
         
         // Atualizar gráfico de execuções dos últimos 7 dias
         if (res.grafico_7dias && res.grafico_7dias.length > 0 && chartExec) {
@@ -780,30 +791,34 @@ function carregarMetricas() {
                 return dt.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
             });
             const sucesso = res.grafico_7dias.map(d => parseInt(d.sucesso) || 0);
+            const parcial = res.grafico_7dias.map(d => parseInt(d.parcial) || 0);
             const falha = res.grafico_7dias.map(d => parseInt(d.falha) || 0);
             
             // FIX: Substituir completamente os dados (não usar push)
             chartExec.data.labels = labels;
             chartExec.data.datasets[0].data = sucesso;
-            chartExec.data.datasets[1].data = falha;
+            chartExec.data.datasets[1].data = parcial;
+            chartExec.data.datasets[2].data = falha;
             chartExec.update('none'); // 'none' desabilita animação para melhor performance
             
             // Calcular total da semana
-            const totalSemana = sucesso.reduce((a, b) => a + b, 0) + falha.reduce((a, b) => a + b, 0);
+            const totalSemana = sucesso.reduce((a, b) => a + b, 0) + parcial.reduce((a, b) => a + b, 0) + falha.reduce((a, b) => a + b, 0);
             $('#totalExecSemana').text(totalSemana + ' execuções');
         }
         
         // Atualizar gráfico de taxa de sucesso
         if (res.grafico_7dias && res.grafico_7dias.length > 0 && chartSucesso) {
             const sucesso = res.grafico_7dias.map(d => parseInt(d.sucesso) || 0);
+            const parcial = res.grafico_7dias.map(d => parseInt(d.parcial) || 0);
             const falha = res.grafico_7dias.map(d => parseInt(d.falha) || 0);
             const totalSucesso = sucesso.reduce((a, b) => a + b, 0);
+            const totalParcial = parcial.reduce((a, b) => a + b, 0);
             const totalFalha = falha.reduce((a, b) => a + b, 0);
-            const total = totalSucesso + totalFalha;
+            const total = totalSucesso + totalParcial + totalFalha;
             const taxaSucesso = total > 0 ? ((totalSucesso / total) * 100).toFixed(1) : 0;
             
             // FIX: Substituir completamente os dados
-            chartSucesso.data.datasets[0].data = [totalSucesso, totalFalha];
+            chartSucesso.data.datasets[0].data = [totalSucesso, totalParcial, totalFalha];
             chartSucesso.update('none');
             
             $('#taxaSucessoValor').text(taxaSucesso + '%');
@@ -821,8 +836,17 @@ function carregarMetricas() {
                 </td></tr>`);
             } else {
                 res.ultimas_execucoes.slice(0, 5).forEach(e => {
-                    const badgeClass = e.status === 'sucesso' ? 'badge-success' : 
-                                      (e.status === 'falha' || e.status === 'erro' ? 'badge-danger' : 'badge-warning');
+                    const statusMap = {
+                        sucesso: { badge: 'badge-success', label: 'sucesso' },
+                        falha: { badge: 'badge-danger', label: 'falha' },
+                        erro: { badge: 'badge-danger', label: 'erro' },
+                        parcial: { badge: 'badge-warning', label: 'parcial' },
+                        executando: { badge: 'badge-info', label: 'executando' },
+                        cancelado: { badge: 'badge-secondary', label: 'cancelado' },
+                        pausado: { badge: 'badge-secondary', label: 'pausado' }
+                    };
+                    const st = statusMap[e.status] || { badge: 'badge-secondary', label: e.status };
+                    const badgeClass = st.badge;
                     const data = e.data_inicio ? new Date(e.data_inicio).toLocaleString('pt-BR', { 
                         day: '2-digit', 
                         month: '2-digit', 
@@ -834,7 +858,7 @@ function carregarMetricas() {
                         e.duracao_ms < 60000 ? (e.duracao_ms / 1000).toFixed(1) + 's' : 
                         Math.floor(e.duracao_ms / 60000) + 'm' + Math.floor((e.duracao_ms % 60000) / 1000) + 's') : '-';
                     
-                    const tipoIcons = { rotina: '🔄', pipeline: '⚡', workflow: '🔀' };
+                    const tipoIcons = { rotina: '🔄', pipeline: '⚡' };
                     const tipoIcon = tipoIcons[e.tipo_execucao] || '';
                     
                     tbody.append(`<tr>
@@ -867,8 +891,7 @@ function carregarMetricas() {
                         minute: '2-digit'
                     }) : '-';
                     const tipoBadges = {
-                        pipeline: ' <span class="badge bg-info text-white" style="font-size:0.65rem;">Pipeline</span>',
-                        workflow: ' <span class="badge text-white" style="font-size:0.65rem; background:#7c3aed;">Workflow</span>'
+                        pipeline: ' <span class="badge bg-info text-white" style="font-size:0.65rem;">Pipeline</span>'
                     };
                     const tipoBadge = tipoBadges[e.tipo] || '';
                     

@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Core\Database;
 use App\Servicos\ServicoPermissao;
+use App\Servicos\ServicoAuditoria;
 use App\Utils\Crypto;
 use PDO;
 use Exception;
@@ -962,6 +963,15 @@ class SqlEditorController
                     $colunas = array_keys($dados[0]);
                 }
                 
+                ServicoAuditoria::registrar(
+                    'executar_sql',
+                    'sql_editor',
+                    (int)$conexaoId,
+                    $conexao['nome_conexao'] ?? null,
+                    [],
+                    ['sql' => $sql, 'tipo' => 'SELECT', 'linhas' => count($dados)]
+                );
+                
                 return [
                     'sucesso' => true,
                     'dados' => $dados,
@@ -974,6 +984,15 @@ class SqlEditorController
                 $stmt->execute();
                 $linhasAfetadas = $stmt->rowCount();
                 
+                ServicoAuditoria::registrar(
+                    'executar_sql',
+                    'sql_editor',
+                    (int)$conexaoId,
+                    $conexao['nome_conexao'] ?? null,
+                    [],
+                    ['sql' => $sql, 'tipo' => 'MODIFICAÇÃO', 'linhas_afetadas' => $linhasAfetadas]
+                );
+                
                 return [
                     'sucesso' => true,
                     'linhas_afetadas' => $linhasAfetadas,
@@ -982,6 +1001,15 @@ class SqlEditorController
             }
             
         } catch (Exception $e) {
+            ServicoAuditoria::registrar(
+                'executar_sql',
+                'sql_editor',
+                (int)($data['conexao_id'] ?? 0),
+                $conexao['nome_conexao'] ?? null,
+                [],
+                ['sql' => $data['sql'] ?? '', 'tipo' => 'ERRO', 'erro' => $e->getMessage()]
+            );
+            
             return [
                 'sucesso' => false,
                 'erro' => $e->getMessage()
