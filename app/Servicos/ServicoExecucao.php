@@ -13,9 +13,10 @@ class ServicoExecucao
 
     public function __construct()
     {
-        $this->storagePath = __DIR__ . '/../../storage/logs';
+        $this->storagePath = realpath(__DIR__ . '/../../storage/logs') ?: __DIR__ . '/../../storage/logs';
         if (!is_dir($this->storagePath)) {
             mkdir($this->storagePath, 0775, true);
+            $this->storagePath = realpath($this->storagePath) ?: $this->storagePath;
         }
 
         $this->encryptionKeyBase64 = $_ENV['ENCRYPTION_KEY'] ?? $_SERVER['ENCRYPTION_KEY'] ?? getenv('ENCRYPTION_KEY') ?: '';
@@ -31,6 +32,54 @@ class ServicoExecucao
         ];
 
         return strtr($sql, $map);
+    }
+
+    /**
+     * Remove comentários SQL (-- e /* *\/) para detectar o verdadeiro tipo de operação
+     */
+    private function stripSqlComments(string $sql): string
+    {
+        $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
+        $sql = preg_replace('/^--[^\n]*/m', '', $sql);
+        return trim($sql);
+    }
+
+    /**
+     * Detecta o tipo real da operação SQL a partir do conteúdo,
+     * independente do campo tipo_bloco (que pode estar errado).
+     * 
+     * Retorna: 'SELECT', 'DML', 'DDL' ou 'CALL'
+     */
+    private function detectarTipoSql(string $sql): string
+    {
+        $clean = $this->stripSqlComments($sql);
+        $upper = strtoupper(trim($clean));
+
+        if ($upper === '') return 'DML';
+
+        // CTE: WITH ... seguido da operação real
+        if (preg_match('/^WITH\b/', $upper)) {
+            // Encontrar a operação final após as CTEs
+            if (preg_match('/\)\s*(INSERT|UPDATE|DELETE|MERGE)\b/', $upper)) {
+                return 'DML';
+            }
+            return 'SELECT';
+        }
+
+        if (preg_match('/^SELECT\b/', $upper)) return 'SELECT';
+        if (preg_match('/^(INSERT|UPDATE|DELETE|MERGE|UPSERT)\b/', $upper)) return 'DML';
+        if (preg_match('/^(CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|COMMENT|ANALYZE|VACUUM|REINDEX|CLUSTER|REFRESH|SET)\b/', $upper)) return 'DDL';
+        if (preg_match('/^(CALL|DO|EXECUTE)\b/', $upper)) return 'CALL';
+
+        return 'DML';
+    }
+
+    /**
+     * Verifica se o SQL é uma operação DDL (para controle de transação)
+     */
+    private function isDDL(string $sql): bool
+    {
+        return $this->detectarTipoSql($sql) === 'DDL';
     }
 
     private function decryptSenha(string $enc): string
@@ -125,10 +174,14 @@ class ServicoExecucao
         $sql = $this->processarVariaveis($sqlRaw);
         $registrosProcessados = 0;
 
-        try {
-            $tipo = strtoupper($bloco['tipo_bloco'] ?? 'SELECT');
+        // Detectar tipo REAL da operação SQL pelo conteúdo (não confiar em tipo_bloco)
+        $tipoReal = $this->detectarTipoSql($sql);
+        $tipoBlocoField = $bloco['tipo_bloco'] ?? 'UNKNOWN';
+        error_log("ServicoExecucao::executarBloco rotina={$idRotina} bloco={$codigoBloco} tipo_bloco={$tipoBlocoField} tipo_real={$tipoReal} inTransaction=" . ($pdoAlvo->inTransaction() ? 'SIM' : 'NAO') . " sql=" . substr(trim($sql), 0, 120));
 
-            if ($tipo === 'SELECT') {
+        try {
+            if ($tipoReal === 'SELECT') {
+                // SELECT: executar query, buscar resultados, gerar CSV
                 $stmt = $pdoAlvo->query($sql);
                 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -142,7 +195,6 @@ class ServicoExecucao
                     fputcsv($fp, array_keys($rows[0]), ';');
                     $count = 0;
                     foreach ($rows as $r) {
-                        // Sanitizar ; dentro dos dados
                         $r = array_map(function ($v) {
                             if ($v === null) return '';
                             return str_replace(';', ',', (string)$v);
@@ -151,7 +203,6 @@ class ServicoExecucao
                         $count++;
                     }
                 } else {
-                    // se sem linhas, apenas gravar cabeçalho vazio
                     fputcsv($fp, [], ';');
                     $count = 0;
                 }
@@ -165,29 +216,26 @@ class ServicoExecucao
 
                 $resultado = sprintf('Arquivo gerado: %s (Linhas: %d)', $filepath, $count);
 
-                // Inserir auditoria no banco alvo - tentar esquema novo, senão usar fallback para esquemas legados
                 try {
                     $insertSql = "INSERT INTO tb_auditoria_rotina (id_rotina, bloco_codigo, data_execucao, resultado, caminho_csv) VALUES (?, ?, now(), ?, ?)";
                     $ins = $pdoAlvo->prepare($insertSql);
                     $ins->execute([$idRotina, $codigoBloco, $resultado, $filepath]);
                 } catch (\Throwable $e) {
-                    // fallback para esquema legado (rotina, bloco, inicio, fim, status, resultado, id_arquivo)
                     try {
                         $fins = $pdoAlvo->prepare("INSERT INTO tb_auditoria_rotina (rotina, bloco, inicio, status, resultado) VALUES (?, ?, now(), ?, ?)");
                         $fins->execute([$idRotina, $codigoBloco, 'sucesso', $resultado]);
-                    } catch (\Throwable $e2) {
-                        // não conseguir escrever auditoria não é fatal aqui
-                    }
+                    } catch (\Throwable $e2) { /* auditoria não é fatal */ }
                 }
 
                 $fim = microtime(true);
                 $duracaoMs = round(($fim - $inicio) * 1000);
                 return ['sucesso' => true, 'resultado' => $resultado, 'linhas' => $count, 'arquivo' => $filepath, 'duracao_ms' => $duracaoMs, 'registros' => $registrosProcessados];
-            } else {
-                $stmt = $pdoAlvo->prepare($sql);
-                $stmt->execute();
-                $af = $stmt->rowCount();
-                $registrosProcessados = $af;
+
+            } elseif ($tipoReal === 'DDL' || $tipoReal === 'CALL') {
+                // DDL (TRUNCATE, CREATE, ALTER, DROP, GRANT, etc.) e CALL: usar exec()
+                $af = $pdoAlvo->exec($sql);
+                if ($af === false) $af = 0;
+                $registrosProcessados = (int)$af;
 
                 $resultado = sprintf('Linhas afetadas: %d', $af);
                 try {
@@ -197,9 +245,29 @@ class ServicoExecucao
                     try {
                         $fins = $pdoAlvo->prepare("INSERT INTO tb_auditoria_rotina (rotina, bloco, inicio, status, resultado) VALUES (?, ?, now(), ?, ?)");
                         $fins->execute([$idRotina, $codigoBloco, 'sucesso', $resultado]);
-                    } catch (\Throwable $e2) {
-                        // ignore
-                    }
+                    } catch (\Throwable $e2) { /* ignore */ }
+                }
+
+                $fim = microtime(true);
+                $duracaoMs = round(($fim - $inicio) * 1000);
+                return ['sucesso' => true, 'resultado' => $resultado, 'linhas' => $af, 'duracao_ms' => $duracaoMs, 'registros' => $registrosProcessados];
+
+            } else {
+                // DML (INSERT, UPDATE, DELETE, MERGE, etc.): usar prepare/execute
+                $stmt = $pdoAlvo->prepare($sql);
+                $stmt->execute();
+                $af = $stmt->rowCount();
+                $registrosProcessados = (int)$af;
+
+                $resultado = sprintf('Linhas afetadas: %d', $af);
+                try {
+                    $ins = $pdoAlvo->prepare("INSERT INTO tb_auditoria_rotina (id_rotina, bloco_codigo, data_execucao, resultado) VALUES (?, ?, now(), ?)");
+                    $ins->execute([$idRotina, $codigoBloco, $resultado]);
+                } catch (\Throwable $e) {
+                    try {
+                        $fins = $pdoAlvo->prepare("INSERT INTO tb_auditoria_rotina (rotina, bloco, inicio, status, resultado) VALUES (?, ?, now(), ?, ?)");
+                        $fins->execute([$idRotina, $codigoBloco, 'sucesso', $resultado]);
+                    } catch (\Throwable $e2) { /* ignore */ }
                 }
 
                 $fim = microtime(true);
@@ -311,10 +379,12 @@ class ServicoExecucao
                     continue;
                 }
                 
-                // DDL causa auto-commit em MySQL/MariaDB — reiniciar transação após DDL
-                $isDDL = in_array($tipoBlocoUpper, ['CREATE', 'ALTER', 'DROP', 'TRUNCATE']);
+                // DDL causa auto-commit em MySQL/MariaDB — gerenciar transação
+                // Detecção baseada no conteúdo SQL real (não confiar em tipo_bloco)
+                $isDDL = $this->isDDL($bloco['script_sql'] ?? '');
                 if ($isDDL && $emTransacao) {
                     // Commit antes do DDL, pois DDL força commit implícito em MySQL
+                    // e em PostgreSQL queremos que TRUNCATE/DROP persistam independente de rollback posterior
                     try { $pdoAlvo->commit(); } catch (\Throwable $e) { /* ignore */ }
                     $emTransacao = false;
                 }
@@ -446,22 +516,24 @@ class ServicoExecucao
             $insLog->execute([$idRotina, $statusFinal, $mensagemErro, $duracaoTotal, $blocosExecutados, $blocosSucesso, $blocosFalha, $registrosTotal, json_encode($metaCompleto)]);
 
             // Notificações baseadas no status
+            $metricasNotif = [
+                'blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso,
+                'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal
+            ];
             if ($statusFinal === 'sucesso') {
-                ServicoWebhook::notificarSucesso('rotina', $rotina['nome'] ?? "Rotina #{$idRotina}", $idRotina, [
-                    'blocos_executados' => $blocosExecutados, 'blocos_sucesso' => $blocosSucesso,
-                    'blocos_falha' => $blocosFalha, 'registros_total' => $registrosTotal, 'duracao_ms' => $duracaoTotal
-                ]);
-                ServicoCanalNotificacao::notificar('sucesso', "Sucesso: " . ($rotina['nome'] ?? "Rotina #{$idRotina}"), [
-                    'blocos' => "{$blocosSucesso}/{$blocosExecutados}", 'registros' => $registrosTotal, 'duracao' => "{$duracaoTotal}ms"
-                ], 'rotina');
+                ServicoNotificacao::notificarSucessoRotina(
+                    $idRotina,
+                    $rotina['nome'] ?? "Rotina #{$idRotina}",
+                    $metricasNotif
+                );
             } else {
                 // Parcial ou com falhas
-                $msgNotif = $statusFinal === 'parcial' ? 'Parcial' : 'Falha';
-                $rollbackMsg = $rollbackRealizado ? ' (rollback realizado)' : '';
-                ServicoWebhook::notificarFalha('rotina', $rotina['nome'] ?? "Rotina #{$idRotina}", $mensagemErro ?? 'Erro em blocos', $idRotina);
-                ServicoCanalNotificacao::notificar($statusFinal === 'parcial' ? 'aviso' : 'falha', "{$msgNotif}{$rollbackMsg}: " . ($rotina['nome'] ?? "Rotina #{$idRotina}"), [
-                    'blocos' => "{$blocosSucesso}/{$blocosExecutados}", 'falhas' => $blocosFalha, 'registros' => $registrosTotal, 'duracao' => "{$duracaoTotal}ms"
-                ], 'rotina');
+                ServicoNotificacao::notificarFalhaRotina(
+                    $idRotina,
+                    $rotina['nome'] ?? "Rotina #{$idRotina}",
+                    $mensagemErro ?? 'Erro em blocos',
+                    $metricasNotif
+                );
             }
 
             $sucessoGeral = $statusFinal === 'sucesso';

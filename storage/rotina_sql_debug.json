@@ -1,9 +1,9 @@
 {
     "sql": "INSERT INTO tb_rotinas (nome, descricao, id_conexao, id_usuario_criador, parar_em_erro, rollback_em_erro) VALUES (?, ?, ?, ?, ?::boolean, ?::boolean) RETURNING id",
     "params": [
-        "CARGA | MENSAL: 4",
-        "Atualiza\u00e7\u00e3o da base SGIC (OUTRAS ENTIDADES)",
-        "2",
+        "CARGA | MENSAL: 2 | HOMOLOGA\u00c7\u00c3O",
+        "Atualiza\u00e7\u00e3o de bases de homologa\u00e7\u00e3o SGP para SGD",
+        "5",
         "1",
         "t",
         "f"

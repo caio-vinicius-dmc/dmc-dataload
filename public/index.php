@@ -1938,10 +1938,14 @@ if (preg_match('#^/api/download-csv-bloco/(\d+)/(\d+)$#', $path, $m) && $method 
         }
         
         $detalhes = json_decode($detalhesRaw, true);
-        // Suportar todas as estruturas de armazenamento de caminho
+        // Suportar novo formato {blocos: [...], opcoes: {...}} e formato legado (array direto)
+        $blocos = $detalhes;
+        if (is_array($detalhes) && isset($detalhes['blocos']) && is_array($detalhes['blocos'])) {
+            $blocos = $detalhes['blocos'];
+        }
         $caminho = null;
-        if (is_array($detalhes) && isset($detalhes[$blocoIndex])) {
-            $bloco = $detalhes[$blocoIndex];
+        if (is_array($blocos) && isset($blocos[$blocoIndex])) {
+            $bloco = $blocos[$blocoIndex];
             $caminho = $bloco['arquivo_csv'] ?? $bloco['arquivo'] ?? $bloco['res']['arquivo'] ?? null;
             // Detectar path no campo resultado
             if (!$caminho && !empty($bloco['res']['resultado']) && is_string($bloco['res']['resultado'])) {

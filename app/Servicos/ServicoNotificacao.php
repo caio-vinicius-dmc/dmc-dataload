@@ -109,10 +109,51 @@ class ServicoNotificacao
     }
 
     /**
+     * Obtém configurações de notificação da tb_configuracoes
+     */
+    private static function obterConfigNotificacoes(): array
+    {
+        try {
+            $db = Database::getConexao();
+            $stmt = $db->query("SELECT chave, valor FROM tb_configuracoes WHERE grupo = 'notificacoes'");
+            $configs = [];
+            foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                $configs[$row['chave']] = $row['valor'];
+            }
+            return $configs;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Notifica sucesso na execução de uma rotina
+     */
+    public static function notificarSucessoRotina(int $idRotina, string $nomeRotina, array $metricas = []): void
+    {
+        $config = self::obterConfigNotificacoes();
+        if (($config['notif_sucesso'] ?? '0') !== '1') return;
+
+        $dados = array_merge(['id_rotina' => $idRotina, 'nome' => $nomeRotina], $metricas);
+        self::criarParaUsuariosDoRecurso(
+            'rotina', $idRotina,
+            'rotina_sucesso',
+            "Sucesso na execução: {$nomeRotina}",
+            "A rotina \"{$nomeRotina}\" (ID: {$idRotina}) foi executada com sucesso.",
+            $dados
+        );
+        ServicoWebhook::notificarSucesso('rotina', $nomeRotina, $idRotina, $metricas);
+        ServicoCanalNotificacao::notificar('sucesso', "Sucesso: {$nomeRotina}", $metricas, 'rotina');
+    }
+
+    /**
      * Notifica falha na execução de uma rotina
      */
     public static function notificarFalhaRotina(int $idRotina, string $nomeRotina, string $erro, array $metricas = []): void
     {
+        $config = self::obterConfigNotificacoes();
+        if (($config['notif_falha'] ?? '1') !== '1') return;
+
         $dados = array_merge(['id_rotina' => $idRotina, 'nome' => $nomeRotina, 'erro' => $erro], $metricas);
         self::criarParaUsuariosDoRecurso(
             'rotina', $idRotina,
@@ -127,10 +168,33 @@ class ServicoNotificacao
     }
 
     /**
+     * Notifica sucesso na execução de um pipeline
+     */
+    public static function notificarSucessoPipeline(int $idPipeline, string $nomePipeline, array $metricas = [], int $execId = 0): void
+    {
+        $config = self::obterConfigNotificacoes();
+        if (($config['notif_sucesso'] ?? '0') !== '1') return;
+
+        $dados = array_merge(['id_pipeline' => $idPipeline, 'nome' => $nomePipeline, 'execucao_id' => $execId], $metricas);
+        self::criarParaUsuariosDoRecurso(
+            'pipeline', $idPipeline,
+            'pipeline_sucesso',
+            "Sucesso no pipeline: {$nomePipeline}",
+            "O pipeline \"{$nomePipeline}\" (ID: {$idPipeline}) foi executado com sucesso.",
+            $dados
+        );
+        ServicoWebhook::notificarSucesso('pipeline', $nomePipeline, $idPipeline, $metricas);
+        ServicoCanalNotificacao::notificar('sucesso', "Sucesso: {$nomePipeline}", $metricas, 'pipeline');
+    }
+
+    /**
      * Notifica falha na execução de um pipeline
      */
     public static function notificarFalhaPipeline(int $idPipeline, string $nomePipeline, string $erro, int $execId = 0): void
     {
+        $config = self::obterConfigNotificacoes();
+        if (($config['notif_falha'] ?? '1') !== '1') return;
+
         $dados = ['id_pipeline' => $idPipeline, 'nome' => $nomePipeline, 'erro' => $erro, 'execucao_id' => $execId];
         self::criarParaUsuariosDoRecurso(
             'pipeline', $idPipeline,
@@ -145,10 +209,33 @@ class ServicoNotificacao
     }
 
     /**
+     * Notifica sucesso na execução de um workflow
+     */
+    public static function notificarSucessoWorkflow(int $idWorkflow, string $nomeWorkflow, array $metricas = [], int $execId = 0): void
+    {
+        $config = self::obterConfigNotificacoes();
+        if (($config['notif_sucesso'] ?? '0') !== '1') return;
+
+        $dados = array_merge(['id_workflow' => $idWorkflow, 'nome' => $nomeWorkflow, 'execucao_id' => $execId], $metricas);
+        self::criarParaUsuariosDoRecurso(
+            'workflow', $idWorkflow,
+            'workflow_sucesso',
+            "Sucesso no workflow: {$nomeWorkflow}",
+            "O workflow \"{$nomeWorkflow}\" (ID: {$idWorkflow}) foi executado com sucesso.",
+            $dados
+        );
+        ServicoWebhook::notificarSucesso('workflow', $nomeWorkflow, $idWorkflow, $metricas);
+        ServicoCanalNotificacao::notificar('sucesso', "Sucesso: {$nomeWorkflow}", $metricas, 'workflow');
+    }
+
+    /**
      * Notifica falha na execução de um workflow
      */
     public static function notificarFalhaWorkflow(int $idWorkflow, string $nomeWorkflow, string $erro, int $execId = 0): void
     {
+        $config = self::obterConfigNotificacoes();
+        if (($config['notif_falha'] ?? '1') !== '1') return;
+
         $dados = ['id_workflow' => $idWorkflow, 'nome' => $nomeWorkflow, 'erro' => $erro, 'execucao_id' => $execId];
         self::criarParaUsuariosDoRecurso(
             'workflow', $idWorkflow,

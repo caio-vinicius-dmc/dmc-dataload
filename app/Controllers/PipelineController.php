@@ -456,12 +456,19 @@ class PipelineController
             $execId
         ]);
 
-        // Notificar falha
+        // Notificar resultado
         if ($hasError) {
             \App\Servicos\ServicoNotificacao::notificarFalhaPipeline(
                 $id,
                 $pipeline['nome'] ?? "Pipeline #{$id}",
                 $errorMsg,
+                $execId
+            );
+        } else {
+            \App\Servicos\ServicoNotificacao::notificarSucessoPipeline(
+                $id,
+                $pipeline['nome'] ?? "Pipeline #{$id}",
+                ['nodes_executados' => $nodesExecuted, 'nodes_sucesso' => $nodesSuccess, 'duracao_ms' => $totalMs],
                 $execId
             );
         }

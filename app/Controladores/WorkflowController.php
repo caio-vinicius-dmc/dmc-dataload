@@ -345,12 +345,19 @@ class WorkflowController
                 $execucaoId
             ]);
             
-            // Notificar falha
+            // Notificar resultado
             if ($statusFinal === 'failed') {
                 \App\Servicos\ServicoNotificacao::notificarFalhaWorkflow(
                     $id,
                     $workflow['nome'] ?? "Workflow #{$id}",
                     $resultado['erro'] ?? 'Erro desconhecido',
+                    $execucaoId
+                );
+            } else {
+                \App\Servicos\ServicoNotificacao::notificarSucessoWorkflow(
+                    $id,
+                    $workflow['nome'] ?? "Workflow #{$id}",
+                    ['nodes_executados' => $resultado['nodes_executados'] ?? 0, 'nodes_sucesso' => $resultado['nodes_sucesso'] ?? 0, 'duracao_ms' => $resultado['duracao_ms'] ?? 0],
                     $execucaoId
                 );
             }

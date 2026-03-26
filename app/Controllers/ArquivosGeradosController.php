@@ -90,7 +90,13 @@ class ArquivosGeradosController
                 $detalhes = json_decode($log['meta'] ?? '[]', true);
                 if (!is_array($detalhes)) $detalhes = [];
 
-                foreach ($detalhes as $idx => $bloco) {
+                // Suportar novo formato {blocos: [...], opcoes: {...}} e formato legado (array direto)
+                $blocos = $detalhes;
+                if (isset($detalhes['blocos']) && is_array($detalhes['blocos'])) {
+                    $blocos = $detalhes['blocos'];
+                }
+
+                foreach ($blocos as $idx => $bloco) {
                     if (empty($bloco['arquivo_csv'])) continue;
                     $caminho = $bloco['arquivo_csv'];
                     $existe = file_exists($caminho);

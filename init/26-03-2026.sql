@@ -5,7 +5,7 @@
 -- Dumped from database version 17.5
 -- Dumped by pg_dump version 17.5
 
--- Started on 2026-03-25 17:34:18
+-- Started on 2026-03-26 16:58:40
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -2293,38 +2293,11 @@ INSERT INTO public.connections VALUES (1, 'local_sqlite', 'sqlite', NULL, '', 'C
 -- Data for Name: tb_auditoria; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_auditoria VALUES (50, 'editar', 'conexao', 2, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:23:19.822545-03');
-INSERT INTO public.tb_auditoria VALUES (51, 'editar', 'conexao', 4, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:23:37.938852-03');
-INSERT INTO public.tb_auditoria VALUES (52, 'editar', 'rotina', 1, 'CARGA | MENSAL: 3 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:23:59.694065-03');
-INSERT INTO public.tb_auditoria VALUES (53, 'editar', 'rotina', 4, 'CARGA | MENSAL: 3 | PRODUÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:24:11.427364-03');
-INSERT INTO public.tb_auditoria VALUES (54, 'editar', 'rotina', 2, 'CARGA | MENSAL: 4 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:24:24.620549-03');
-INSERT INTO public.tb_auditoria VALUES (55, 'editar', 'rotina', 5, 'CARGA | MENSAL: 4 | PRODUÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:24:39.210364-03');
-INSERT INTO public.tb_auditoria VALUES (56, 'criar', 'usuario', 111, 'caio', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:25:19.701527-03');
-INSERT INTO public.tb_auditoria VALUES (57, 'logout', 'sessao', NULL, NULL, 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:25:26.646467-03');
-INSERT INTO public.tb_auditoria VALUES (58, 'login', 'sessao', 111, 'caio', 111, 'caio', 'desenvolvedor', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:25:30.508105-03');
-INSERT INTO public.tb_auditoria VALUES (59, 'logout', 'sessao', NULL, NULL, 111, 'caio', 'desenvolvedor', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:25:49.240176-03');
-INSERT INTO public.tb_auditoria VALUES (60, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:25:53.008492-03');
-INSERT INTO public.tb_auditoria VALUES (61, 'editar', 'pipeline', 34, 'CARGA | MENSAL: 4 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:26:05.109072-03');
-INSERT INTO public.tb_auditoria VALUES (62, 'editar', 'pipeline', 1, 'CARGA | MENSAL: 3 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:26:18.306007-03');
-INSERT INTO public.tb_auditoria VALUES (63, 'criar', 'conexao', 5, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:32:36.347474-03');
-INSERT INTO public.tb_auditoria VALUES (64, 'editar', 'conexao', 5, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:33:31.408553-03');
-INSERT INTO public.tb_auditoria VALUES (65, 'criar', 'conexao', 6, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:34:44.060039-03');
-INSERT INTO public.tb_auditoria VALUES (66, 'criar', 'conexao', 7, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:35:55.80065-03');
-INSERT INTO public.tb_auditoria VALUES (67, 'criar', 'conexao', 8, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:38:38.799522-03');
-INSERT INTO public.tb_auditoria VALUES (68, 'editar', 'usuario', 111, 'caio', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:39:25.237022-03');
-INSERT INTO public.tb_auditoria VALUES (69, 'editar', 'usuario', 3, 'leonardo', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:39:52.79425-03');
-INSERT INTO public.tb_auditoria VALUES (70, 'editar', 'usuario', 32, 'lucas', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:39:58.125891-03');
-INSERT INTO public.tb_auditoria VALUES (71, 'editar', 'configuracao', NULL, 'Grupo: scheduler', 1, 'admin', 'super_admin', '{"scheduler_ativo": "1", "scheduler_retry": "1", "scheduler_timeout": "120", "scheduler_intervalo": "30", "scheduler_max_paralelo": "3", "scheduler_max_tentativas": "5", "scheduler_intervalo_retry": "600"}', '{"scheduler_ativo": "1", "scheduler_retry": "1", "scheduler_timeout": "3600", "scheduler_intervalo": "30", "scheduler_max_paralelo": "10", "scheduler_max_tentativas": "3", "scheduler_intervalo_retry": "600"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:12.073688-03');
-INSERT INTO public.tb_auditoria VALUES (72, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:51.89893-03');
-INSERT INTO public.tb_auditoria VALUES (73, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:54.490049-03');
-INSERT INTO public.tb_auditoria VALUES (74, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:54.929639-03');
-INSERT INTO public.tb_auditoria VALUES (75, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:55.825839-03');
-INSERT INTO public.tb_auditoria VALUES (76, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:56.489166-03');
-INSERT INTO public.tb_auditoria VALUES (77, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:57.027125-03');
-INSERT INTO public.tb_auditoria VALUES (78, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:57.537499-03');
-INSERT INTO public.tb_auditoria VALUES (79, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:58.103668-03');
-INSERT INTO public.tb_auditoria VALUES (80, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:58:58.753241-03');
-INSERT INTO public.tb_auditoria VALUES (81, 'executar_sql', 'sql_editor', 8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 1, 'admin', 'super_admin', '[]', '{"sql": "select * from ergon.funcionarios where rownum < 10", "tipo": "SELECT", "linhas": 9}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-25 15:59:01.211435-03');
+INSERT INTO public.tb_auditoria VALUES (90, 'editar', 'usuario', 112, 'renan', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 13:37:12.972082-03');
+INSERT INTO public.tb_auditoria VALUES (91, 'executar_sql', 'sql_editor', 2, 'SGIC - HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '{"sql": "SELECT CPF,\n       NOME\n  FROM SCH_SGIC.SGIC_USUARIO U\n WHERE U.IND_ATIVO = FALSE\n   AND EXISTS (SELECT X.CPF\n                 FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X\n                WHERE U.CPF = X.CPF)\nLIMIT 100 OFFSET 0", "erro": "SQLSTATE[42P01]: Undefined table: 7 ERRO:  relação \"sch_sgic.aux_usuario_outras_entidades\" não existe\nLINE 6:                  FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES ...\n                              ^", "tipo": "ERRO"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 13:40:05.805542-03');
+INSERT INTO public.tb_auditoria VALUES (92, 'executar_sql', 'sql_editor', 2, 'SGIC - HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '{"sql": "SELECT CPF,\n       NOME\n  FROM SCH_SGIC.SGIC_USUARIO U\n\nLIMIT 100 OFFSET 0", "tipo": "SELECT", "linhas": 100}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 13:40:27.544734-03');
+INSERT INTO public.tb_auditoria VALUES (93, 'criar', 'rotina', 6, 'CARGA | MENSAL: 2 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 16:45:33.779116-03');
+INSERT INTO public.tb_auditoria VALUES (94, 'editar', 'rotina', 6, 'CARGA | MENSAL: 2 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 16:48:49.892852-03');
 
 
 --
@@ -2518,56 +2491,35 @@ INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (639, 5, '21'
                          AND EXISTS (SELECT distinct id_outras_entidades
                                        FROM sch_sgic.aux_usuario_outras_entidades x2
                                       WHERE x2.id_outras_entidades = uo.id_outras_entidades));', 'UPDATE', '2026-03-25 15:24:39.19487-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (640, 5, '22', 22, 'INSERT INTO sch_sgic.sgic_usuario_outras_entidades(
-            id_usuario, ind_ativo, matricula, id_outras_entidades)
-SELECT u.id_usuario,
-       true,
-       LPAD(TRIM(a.matricula),11,''0'') matricula,
-       a.id_outras_entidades
-  from sch_sgic.sgic_usuario u join sch_sgic.aux_usuario_outras_entidades a
-    on u.cpf = a.cpf
- where not exists (select 1
-                       from sch_sgic.sgic_usuario_outras_entidades uo
-                      where uo.id_usuario = u.id_usuario
-                        and LPAD(a.matricula,11,''0'') = LPAD(uo.matricula,11,''0'')
-                        and a.id_outras_entidades = uo.id_outras_entidades)
-     AND NOT EXISTS (SELECT 1
-                     FROM sch_sad.sad_servidor s JOIN sch_sad.sad_vinculo v
-                       ON s.codigo = v.codigo_sad_servidor
-                    WHERE s.cpf = u.cpf
-                      AND s.ind_ativo = ''1''
-                      AND v.ind_ativo = ''1''
-                      AND v.codigo_srh_empresa in (''029'',''045'',''047'',''133'')
-                      AND v.codigo_srh_categoria_funcional in (''APO'',''RF'',''RFB'',''RR'',''RRB''));', 'INSERT', '2026-03-25 15:24:39.195376-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (641, 5, '23', 23, '-------------------------------------------------------------
---REATIVANDO USUÁRIOS EXISTENTES NA BASE QUE ESTÃO NO ARQUIVO
--------------------------------------------------------------
-SELECT CPF,
-       NOME
-  FROM SCH_SGIC.SGIC_USUARIO U
- WHERE U.IND_ATIVO = FALSE
-   AND EXISTS (SELECT X.CPF
-                 FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
-                WHERE U.CPF = X.CPF);', 'SELECT', '2026-03-25 15:24:39.195899-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (642, 5, '24', 24, 'UPDATE SCH_SGIC.SGIC_USUARIO U
-   SET IND_ATIVO = TRUE
-WHERE U.IND_ATIVO = FALSE
-  AND EXISTS (SELECT X.CPF
-               FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
-              WHERE U.CPF = X.CPF);', 'UPDATE', '2026-03-25 15:24:39.196365-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (643, 5, '25', 25, '------------------------------
---ATUALIZANDO O CHEFE IMEDIATO
-------------------------------
-SELECT *
-  FROM SCH_SGIC.SGIC_USUARIO U JOIN (SELECT DISTINCT C.CPF_FUNC,
-U2.ID_USUARIO
-FROM SCH_SGIC.SGIC_USUARIO U2 JOIN (SELECT X.CPF AS CPF_FUNC,
-                                X2.CPF AS CPF_CHEFE
-                            FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
-            JOIN SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X2
-            ON X.MATRICULA_CHEFIA = X2.MATRICULA) C
-ON U2.CPF = C.CPF_CHEFE) UC
-ON U.CPF = UC.CPF_FUNC;', 'SELECT', '2026-03-25 15:24:39.196836-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (608, 2, '26', 26, 'UPDATE SCH_SGIC.SGIC_USUARIO U set
+    DATA_ALTERACAO = CURRENT_DATE,
+  ID_CHEFE_IMEDIATO = UC.ID_USUARIO,
+  MATRICULA_CHEFIA_IMEDIATA = LPAD(TRIM(UC.MATRICULA),11,''0'')
+ FROM (SELECT DISTINCT C.CPF_FUNC,
+                       U2.ID_USUARIO,
+                       C.MATRICULA
+         FROM SCH_SGIC.SGIC_USUARIO U2 JOIN (SELECT X.CPF AS CPF_FUNC,
+                                              X2.CPF AS CPF_CHEFE,
+                                              X2.MATRICULA
+                                         FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
+                 JOIN SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X2
+                   ON X.MATRICULA_CHEFIA = X2.MATRICULA) C
+     ON U2.CPF = C.CPF_CHEFE) UC
+WHERE U.CPF = UC.CPF_FUNC;', 'UPDATE', '2026-03-25 15:24:24.607667-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (610, 2, '28', 28, '----------------------------------------------
+-- Consulta inconsistência na coluna matricula
+----------------------------------------------
+select * -- count(*)
+from sch_sgic.sgic_usuario_outras_entidades
+where length(matricula) < 11
+or matricula ~ ''[^0-9]''; -- caracter não numérico', 'SELECT', '2026-03-25 15:24:24.608519-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (611, 2, '29', 29, '-----------------------------------------------------
+-- Remove caractres não numéricos na coluna matricula
+-----------------------------------------------------
+UPDATE SCH_SGIC.SGIC_USUARIO_OUTRAS_ENTIDADES
+ SET MATRICULA =  REGEXP_REPLACE(MATRICULA, ''[^0-9]'', '''', ''gi'')
+WHERE LENGTH(MATRICULA) < 11
+OR MATRICULA ~ ''[^0-9]'';', 'UPDATE', '2026-03-25 15:24:24.609031-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (644, 5, '26', 26, 'UPDATE SCH_SGIC.SGIC_USUARIO U set
     DATA_ALTERACAO = CURRENT_DATE,
   ID_CHEFE_IMEDIATO = UC.ID_USUARIO,
@@ -2614,10 +2566,6 @@ WHERE LENGTH(T2.MATRICULA) < 11
 AND T1.ID_USUARIO = T2.ID_USUARIO
 AND T1.ID_OUTRAS_ENTIDADES = T2.ID_OUTRAS_ENTIDADES
 AND T1.MATRICULA = LPAD(TRIM(T2.MATRICULA),11,''0'');', 'DELETE', '2026-03-25 15:24:39.199388-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (649, 5, '31', 31, '-- Tratar o valor da coluna matrícula com 11 caracteres
-UPDATE SCH_SGIC.SGIC_USUARIO_OUTRAS_ENTIDADES
- SET MATRICULA = LPAD(TRIM(MATRICULA),11,''0'')
-WHERE LENGTH(MATRICULA) < 11;', 'UPDATE', '2026-03-25 15:24:39.199855-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (650, 5, '32', 32, '--------------------------------------------------------------------------------------------
 -- Consulta a quantidade de usuários outras entidades na tabela sch_sgic.sgic_usuario_escola
 --------------------------------------------------------------------------------------------
@@ -2780,9 +2728,43 @@ WHERE
 ;', 'UPDATE', '2026-03-25 15:23:59.674108-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (546, 1, '14', 14, 'TRUNCATE TABLE SCH_SAD.SAD_INSTITUICAO CASCADE;', 'TRUNCATE', '2026-03-25 15:23:59.674729-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (547, 1, '15', 15, 'TRUNCATE TABLE SCH_SAD.SAD_VINCULO CASCADE;', 'TRUNCATE', '2026-03-25 15:23:59.675395-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (548, 1, '16', 16, 'INSERT INTO SCH_SAD.SAD_INSTITUICAO SELECT * FROM SCH_SAD.IMP_INSTITUICAO;', 'INSERT', '2026-03-25 15:23:59.676015-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (549, 1, '17', 17, 'INSERT INTO SCH_SAD.SAD_SERVIDOR SELECT * FROM SCH_SAD.IMP_SERVIDOR;', 'INSERT', '2026-03-25 15:23:59.676694-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (550, 1, '18', 18, 'INSERT INTO SCH_SAD.SAD_VINCULO
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (553, 1, '22', 22, 'SELECT SETVAL(''sch_sad.sad_instituicao_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_instituicao;', 'SELECT', '2026-03-25 15:23:59.681933-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (557, 1, '26', 26, 'SELECT sch_sad.fn_excluir_tab_imp();', 'SELECT', '2026-03-25 15:23:59.684975-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (556, 1, '25', 25, 'insert into sch_sgic.sgic_usuario_escola (id_usuario, ind_ativo, matricula, codigo_instituicao, id_escola, id_outras_entidades)
+select distinct u.id_usuario
+      , CASE WHEN v.ind_ativo = ''1'' THEN true else false end ind_ativo
+      , LPAD(v.matricula, 11, ''0'')
+      , v.codigo_sad_instituicao
+      , e.id_escola
+      , 0 id_outras_entidades
+from 
+	sch_sad.sad_servidor s
+	join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
+	join sch_sgic.sgic_usuario u on s.cpf = u.cpf
+	join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
+where
+	s.ind_ativo = ''1'';', 'INSERT', '2026-03-25 15:23:59.683981-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (555, 1, '24', 24, 'delete from sch_sgic.sgic_usuario_escola
+where id_usuario in (
+  select u.id_usuario
+  from sch_sad.sad_servidor s
+  join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
+  join sch_sgic.sgic_usuario u on s.cpf = u.cpf
+  join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
+  where s.ind_ativo = ''1''
+);', 'SELECT', '2026-03-25 15:23:59.683162-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (554, 1, '23', 23, 'select 
+	count(u.id_usuario)
+from
+	sch_sad.sad_servidor s
+	join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
+	join sch_sgic.sgic_usuario u on s.cpf = u.cpf
+	join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
+where 
+	s.ind_ativo = ''1'';', 'SELECT', '2026-03-25 15:23:59.682525-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (552, 1, '21', 21, 'SELECT SETVAL(''sch_sad.sad_vinculo_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_vinculo;', 'SELECT', '2026-03-25 15:23:59.68132-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (551, 1, '20', 20, 'SELECT SETVAL(''sch_sad.sad_servidor_codigo_seq'', MAX(CODIGO)) FROM sch_sad.sad_servidor;', 'SELECT', '2026-03-25 15:23:59.680569-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (550, 1, '19', 19, 'INSERT INTO SCH_SAD.SAD_VINCULO
 SELECT codigo, ind_ativo, matricula, codigo_sad_instituicao, nome_sad_instituicao,
   data_efetivo_exercicio, ind_lider, ind_vinculo_exercicio, codigo_srh_cargo,
   nome_sad_cargo, codigo_srh_cargo_origem, nome_cargo_origem, matricula_origem,
@@ -2798,42 +2780,195 @@ SELECT codigo, ind_ativo, matricula, codigo_sad_instituicao, nome_sad_instituica
   codigo_srh_categoria_funcional_sadrh, descricao_sad_categoria_funcional_sadrh, codigo_srh_tipo_vinculo_sadrh,
   descricao_sad_tipo_vinculo_sadrh, codigo_sad_servidor_sadrh, matricula_sadrh
 FROM sch_sad.imp_vinculo;', 'INSERT', '2026-03-25 15:23:59.677346-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (551, 1, '19', 19, 'SELECT SETVAL(''sch_sad.sad_servidor_codigo_seq'', MAX(CODIGO)) FROM sch_sad.sad_servidor;', 'SELECT', '2026-03-25 15:23:59.680569-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (552, 1, '20', 20, 'SELECT SETVAL(''sch_sad.sad_vinculo_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_vinculo;', 'SELECT', '2026-03-25 15:23:59.68132-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (553, 1, '21', 21, 'SELECT SETVAL(''sch_sad.sad_instituicao_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_instituicao;', 'SELECT', '2026-03-25 15:23:59.681933-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (554, 1, '22', 22, 'select 
-	count(u.id_usuario)
-from
-	sch_sad.sad_servidor s
-	join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
-	join sch_sgic.sgic_usuario u on s.cpf = u.cpf
-	join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
-where 
-	s.ind_ativo = ''1'';', 'SELECT', '2026-03-25 15:23:59.682525-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (555, 1, '23', 23, 'delete from sch_sgic.sgic_usuario_escola
-where id_usuario in (
-  select u.id_usuario
-  from sch_sad.sad_servidor s
-  join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
-  join sch_sgic.sgic_usuario u on s.cpf = u.cpf
-  join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
-  where s.ind_ativo = ''1''
-);', 'SELECT', '2026-03-25 15:23:59.683162-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (556, 1, '24', 24, 'insert into sch_sgic.sgic_usuario_escola (id_usuario, ind_ativo, matricula, codigo_instituicao, id_escola, id_outras_entidades)
-select distinct u.id_usuario
-      , CASE WHEN v.ind_ativo = ''1'' THEN true else false end ind_ativo
-      , LPAD(v.matricula, 11, ''0'')
-      , v.codigo_sad_instituicao
-      , e.id_escola
-      , 0 id_outras_entidades
-from 
-	sch_sad.sad_servidor s
-	join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
-	join sch_sgic.sgic_usuario u on s.cpf = u.cpf
-	join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
-where
-	s.ind_ativo = ''1'';', 'INSERT', '2026-03-25 15:23:59.683981-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (557, 1, '25', 25, 'SELECT sch_sad.fn_excluir_tab_imp();', 'SELECT', '2026-03-25 15:23:59.684975-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (549, 1, '18', 18, 'INSERT INTO SCH_SAD.SAD_SERVIDOR SELECT * FROM SCH_SAD.IMP_SERVIDOR;', 'INSERT', '2026-03-25 15:23:59.676694-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (548, 1, '17', 17, 'INSERT INTO SCH_SAD.SAD_INSTITUICAO SELECT * FROM SCH_SAD.IMP_INSTITUICAO;', 'INSERT', '2026-03-25 15:23:59.676015-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (655, 1, '16', 16, 'TRUNCATE TABLE SCH_SAD.SAD_SERVIDOR CASCADE;', 'TRUNCATE', '2026-03-26 12:06:35.195498-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (685, 6, '1', 1, '-------------------------
+--CRIAÇÃO TABELA DE LOG-- | --> PARA BANCO DE DADOS POSTGRES VERSÃO 8.4.11
+-------------------------
+CREATE OR REPLACE FUNCTION sch_sad.fn_criar_log_carga() 
+RETURNS void AS 
+$$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.tables 
+        WHERE table_schema = ''sch_sad'' 
+          AND table_name = ''log_carga_sgd''
+    ) THEN
+        EXECUTE ''
+            CREATE TABLE sch_sad.log_carga_sgd
+            (
+              id serial4 primary key,
+              numero_script CHAR(3),
+              momento_execucao TIMESTAMP,
+              descricao CHARACTER VARYING (100)
+            )'';
+    END IF;
+END;
+$$ 
+LANGUAGE plpgsql;', 'CREATE', '2026-03-26 16:48:49.87091-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (686, 6, '', 2, '-------------------------
+--CRIAÇÃO TABELA DE LOG-- | --> PARA BANCO DE DADOS POSTGRES VERSÃO 8.4.11
+-------------------------
+SELECT sch_sad.fn_criar_log_carga();', 'SELECT', '2026-03-26 16:48:49.872767-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (687, 6, '', 3, 'GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE sch_sad.log_carga_sgd TO sadsisweb;', 'GRANT', '2026-03-26 16:48:49.873315-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (688, 6, '', 4, 'GRANT SELECT ON TABLE sch_sad.log_carga_sgd TO saduserr;', 'GRANT', '2026-03-26 16:48:49.873798-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (689, 6, '', 5, '----------------------------------------
+--CONFERÊNCIA DE TOTAIS DE TABELAS AUX--
+----------------------------------------
+select count(*) from sch_sad.aux_sad_empresa_estab;', 'CREATE', '2026-03-26 16:48:49.874259-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (690, 6, '', 6, 'select count(*) from sch_sad.aux_sad_tab_sal_cargo;', 'SELECT', '2026-03-26 16:48:49.874722-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (691, 6, '', 7, 'select count(*) from sch_sad.aux_sad_grupo_ocupacional;', 'SELECT', '2026-03-26 16:48:49.875189-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (692, 6, '', 8, 'select count(*) from sch_sad.aux_sad_categoria_funcional;', 'SELECT', '2026-03-26 16:48:49.876355-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (693, 6, '', 9, 'select count(*) from sch_sad.aux_sad_cargo;', 'SELECT', '2026-03-26 16:48:49.876924-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (694, 6, '', 10, 'select count(*) from sch_sad.aux_sad_servidor;', 'SELECT', '2026-03-26 16:48:49.877379-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (695, 6, '', 11, 'select count(*) from sch_sad.aux_sad_vinculo;', 'SELECT', '2026-03-26 16:48:49.877807-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (696, 6, '', 12, '------------
+-- PASSO 1-- -- formatar AUX
+------------
+CREATE OR REPLACE FUNCTION public.fn_aux_chartoint(columnconvert character varying)
+ RETURNS integer
+ LANGUAGE sql
+ IMMUTABLE STRICT
+AS $function$
+SELECT CASE WHEN trim($1) SIMILAR TO ''[0-9]+''
+    THEN CAST(trim($1) AS int4)
+ELSE NULL END;
+$function$
+;', 'CREATE', '2026-03-26 16:48:49.878349-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (697, 6, '', 13, 'ALTER TABLE sch_sad.aux_sad_vinculo
+ALTER COLUMN codigo_cargo TYPE int4 USING fn_aux_ChartoInt(codigo_cargo);', 'ALTER', '2026-03-26 16:48:49.878847-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (698, 6, '', 14, 'ALTER TABLE sch_sad.aux_sad_vinculo
+ALTER COLUMN codigo_funcao TYPE int4 USING fn_aux_ChartoInt(codigo_funcao);', 'ALTER', '2026-03-26 16:48:49.879261-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (699, 6, '', 15, 'ALTER TABLE sch_sad.aux_sad_vinculo
+ALTER COLUMN data_admissao TYPE date USING fn_aux_ChartoDate(data_admissao);', 'ALTER', '2026-03-26 16:48:49.879655-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (700, 6, '', 16, 'ALTER TABLE sch_sad.aux_sad_vinculo
+ALTER COLUMN codigo_tipo_vinculo TYPE int4 USING fn_aux_ChartoInt(codigo_tipo_vinculo);', 'ALTER', '2026-03-26 16:48:49.880046-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (701, 6, '', 17, 'ALTER TABLE sch_sad.aux_sad_vinculo
+ALTER COLUMN codigo_situacao_func TYPE int4 USING fn_aux_ChartoInt(codigo_situacao_func);', 'ALTER', '2026-03-26 16:48:49.880425-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (702, 6, '', 18, 'ALTER TABLE sch_sad.aux_sad_vinculo
+ALTER COLUMN cargo_origem TYPE int4 USING fn_aux_ChartoInt(cargo_origem);', 'ALTER', '2026-03-26 16:48:49.880811-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (703, 6, '', 19, 'CREATE OR REPLACE FUNCTION sch_sad.fn_formata_aux()
+ RETURNS void
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+BEGIN
+	PERFORM sch_sad.fn_formata_empresa_estab();
+	PERFORM sch_sad.fn_formata_grupo_ocupacional();
+	PERFORM sch_sad.fn_formata_categoria_funcional();
+	PERFORM sch_sad.fn_formata_cargo();
+
+END;
+$function$
+;', 'CREATE', '2026-03-26 16:48:49.881214-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (704, 6, '', 20, 'SELECT sch_sad.fn_formata_aux();', 'SELECT', '2026-03-26 16:48:49.881612-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (575, 4, '19', 19, 'INSERT INTO SCH_SAD.SAD_VINCULO
+SELECT codigo, ind_ativo, matricula, codigo_sad_instituicao, nome_sad_instituicao,
+  data_efetivo_exercicio, ind_lider, ind_vinculo_exercicio, codigo_srh_cargo,
+  nome_sad_cargo, codigo_srh_cargo_origem, nome_cargo_origem, matricula_origem,
+  codigo_instituicao_origem, codigo_srh_funcao, nome_sad_funcao, codigo_srh_cargo_comissionado,
+  nome_cargo_comissionado, codigo_srh_funcao_gratificada, nome_funcao_gratificada, codigo_instituicao_chefia_imediata,
+  matricula_chefe_sad_servidor, codigo_srh_estrut_orgn, nome_sad_estrut_orgn, codigo_srh_categoria_funcional,
+  descricao_sad_categoria_funcional, codigo_srh_situacao_funcional, descricao_sad_situacao_funcional, codigo_srh_tipo_vinculo,
+  descricao_sad_tipo_vinculo, email, codigo_srh_afastamento, descricao_afastamento, codigo_srh_grupo_ocupacional, descricao_sad_grupo_ocupacional,
+  data_hora_incl, data_hora_altr, usuario_incl, usuario_altr, codigo_sad_servidor, tab_sal_cargo, tab_sal_funcao,
+  codigo_srh_grupo_ocupacional_origem, codigo_sad_empresa_estab, codigo_srh_empresa, codigo_srh_estabelecimento,
+  ind_atualizacao_srh, codigo_empresa_estab_origem, emp_origem, ind_busca_origem, ind_preenchimento,
+  matricula_origem_sadrh, matricula_chefe_sad_servidor_sadrh, codigo_srh_empresa_sadrh, codigo_srh_estabelecimento_sadrh,
+  codigo_srh_categoria_funcional_sadrh, descricao_sad_categoria_funcional_sadrh, codigo_srh_tipo_vinculo_sadrh,
+  descricao_sad_tipo_vinculo_sadrh, codigo_sad_servidor_sadrh, matricula_sadrh
+FROM sch_sad.imp_vinculo;', 'INSERT', '2026-03-25 15:24:11.409037-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (657, 4, '16', 16, 'TRUNCATE TABLE SCH_SAD.SAD_SERVIDOR CASCADE;', 'TRUNCATE', '2026-03-26 13:04:58.799845-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (609, 2, '27', 27, '------------------------
+--ATUALIZAÇÃO DO USUÁRIO
+------------------------
+UPDATE SCH_SGIC.SGIC_USUARIO U
+   SET DATA_ALTERACAO = CURRENT_DATE,
+       NOME = UPPER(X.NOME)
+  FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
+WHERE U.CPF = X.CPF;', 'UPDATE', '2026-03-25 15:24:24.608093-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (649, 5, '31', 31, '-- Tratar o valor da coluna matrícula com 11 caracteres
+UPDATE SCH_SGIC.SGIC_USUARIO_OUTRAS_ENTIDADES
+ SET MATRICULA = LPAD(TRIM(MATRICULA),11,''0'')
+WHERE LENGTH(MATRICULA) < 11;', 'UPDATE', '2026-03-25 15:24:39.199855-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (705, 6, '', 21, '------------
+-- PASSO 2-- 
+------------
+--Exclusão, Inclusão e Atualização Tabelas Auxiliares
+--VERIFICAÇÃO DE INTEGRIDADE ENTRE AS TABELAS SAD_EMPRESA_ESTAB E SAD_INSTITUICAO
+SELECT COUNT(0) 
+FROM SCH_SAD.SAD_EMPRESA_ESTAB
+WHERE IND_ATIVO = ''t'' 
+AND CODIGO_SAD_INSTITUICAO NOT IN 
+(SELECT DISTINCT CODIGO 
+FROM SCH_SAD.SAD_INSTITUICAO);', 'SELECT', '2026-03-26 16:48:49.882003-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (706, 6, '', 22, '-- Script 002
+-- VERIFICAÇÃO SE HÁ ALGUM REGISTRO ATIVO NA TABELA SAD_INSTITUICAO NÃO EXISTENTE NA TABELA SAD_EMPRESA_ESTAB
+-- CODIGO = 140 REFERE-SE A DETELPE(FUNAFIN), CUJO O CODIGO_SAD_INSTITUICAO NÃO É 66, DEVIDO AO CONTRACHEQUE.
+-- ?????????????VERIFICAR COM ANDREA O CASO DA FUNAFIN - ARPE
+-- ROWS: 0
+
+SELECT CODIGO FROM SCH_SAD.SAD_INSTITUICAO I
+WHERE ATIVO = ''t''
+AND NOT EXISTS 
+(SELECT 1 FROM SCH_SAD.SAD_EMPRESA_ESTAB E 
+WHERE I.CODIGO_SRH_EMPRESA = E.CODIGO_SRH_EMPRESA 
+AND I.CODIGO_SRH_ESTABELECIMENTO = E.CODIGO_SRH_ESTABELECIMENTO)
+AND CODIGO NOT IN (66,140)
+ORDER BY CODIGO_SRH_EMPRESA, CODIGO_SRH_ESTABELECIMENTO;', 'SELECT', '2026-03-26 16:48:49.882411-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (707, 6, '', 23, '--- Script 003
+-- CONTINUAR DAQUI E REFAZER O SELECT ACIMA COLOCANDO COMO CHAVE O CODIGO_SRH_EMPRESA 
+-- E CODIGO_SRH_ESTABELECIMENTO, UTILIZAR O NOT EXISTS.
+UPDATE 
+	SCH_SAD.SAD_INSTITUICAO
+SET 
+		ATIVO = FALSE
+WHERE 
+	CODIGO in (
+		SELECT
+			CODIGO 
+		FROM 
+			SCH_SAD.SAD_INSTITUICAO I
+		WHERE 
+			ATIVO = ''t''
+			AND NOT EXISTS ( 
+				SELECT 
+					1 
+				FROM 
+					SCH_SAD.SAD_EMPRESA_ESTAB E 
+				WHERE 
+					I.CODIGO_SRH_EMPRESA = E.CODIGO_SRH_EMPRESA 
+					AND I.CODIGO_SRH_ESTABELECIMENTO = E.CODIGO_SRH_ESTABELECIMENTO
+			)
+			AND CODIGO NOT IN (66,140)
+			ORDER BY 
+				CODIGO_SRH_EMPRESA
+				,CODIGO_SRH_ESTABELECIMENTO
+);', 'UPDATE', '2026-03-26 16:48:49.88284-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (708, 6, '', 24, '-- Script 004
+-- VALIDAÇÃO, EXCLUSÃO LÓGICA, INCLUSÃO E ATUALIZAÇÃO DA TABELA SAD_GRUPO_OCUPACIONAL 
+-- PELA TABELA AUX_SAD_GRUPO_OCUPACIONAL
+-- VALIDAÇÃO NA TABELA SAD_GRUPO_OCUPACIONAL
+-- ROWS: 0
+SELECT COUNT(0) 
+FROM SCH_SAD.SAD_GRUPO_OCUPACIONAL G
+WHERE NOT EXISTS (SELECT CODIGO_SRH_GRUPO_OCUPACIONAL FROM SCH_SAD.AUX_SAD_GRUPO_OCUPACIONAL A 
+                    WHERE G.CODIGO_SRH_GRUPO_OCUPACIONAL = A.CODIGO_SRH_GRUPO_OCUPACIONAL)
+                    AND G.IND_ATIVO = ''t'' 
+                    AND G.IND_ATUALIZACAO_SRH = ''1'';', 'SELECT', '2026-03-26 16:48:49.883548-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (709, 6, '', 25, '-- Script 005
+-- EXCLUSÃO LÓGICA NA TABELA SAD_GRUPO_OCUPACIONAL
+-- ROWS: 0
+UPDATE SCH_SAD.SAD_GRUPO_OCUPACIONAL G
+SET IND_ATIVO = ''f''
+WHERE G.IND_ATIVO = ''t'' 
+AND G.IND_ATUALIZACAO_SRH = ''1''
+AND NOT EXISTS (SELECT CODIGO_SRH_GRUPO_OCUPACIONAL FROM SCH_SAD.AUX_SAD_GRUPO_OCUPACIONAL A 
+                WHERE G.CODIGO_SRH_GRUPO_OCUPACIONAL = A.CODIGO_SRH_GRUPO_OCUPACIONAL);', 'UPDATE', '2026-03-26 16:48:49.884032-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (578, 4, '22', 22, 'SELECT SETVAL(''sch_sad.sad_instituicao_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_instituicao;', 'SELECT', '2026-03-25 15:24:11.412125-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (577, 4, '21', 21, 'SELECT SETVAL(''sch_sad.sad_vinculo_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_vinculo;', 'SELECT', '2026-03-25 15:24:11.410998-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (558, 4, '1', 1, '-- CRIACAO DE TABELA DE LOG DE CARGA SGIC. CRIAR APENAS SE NÃO EXISTIR.
 CREATE TABLE IF NOT EXISTS sch_sgic.log_carga_sgic
 (
@@ -2958,46 +3093,11 @@ WHERE
 ;', 'UPDATE', '2026-03-25 15:24:11.405435-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (571, 4, '14', 14, 'TRUNCATE TABLE SCH_SAD.SAD_INSTITUICAO CASCADE;', 'TRUNCATE', '2026-03-25 15:24:11.406193-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (572, 4, '15', 15, 'TRUNCATE TABLE SCH_SAD.SAD_VINCULO CASCADE;', 'TRUNCATE', '2026-03-25 15:24:11.406923-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (573, 4, '16', 16, 'INSERT INTO SCH_SAD.SAD_INSTITUICAO SELECT * FROM SCH_SAD.IMP_INSTITUICAO;', 'INSERT', '2026-03-25 15:24:11.407646-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (574, 4, '17', 17, 'INSERT INTO SCH_SAD.SAD_SERVIDOR SELECT * FROM SCH_SAD.IMP_SERVIDOR;', 'INSERT', '2026-03-25 15:24:11.40835-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (575, 4, '18', 18, 'INSERT INTO SCH_SAD.SAD_VINCULO
-SELECT codigo, ind_ativo, matricula, codigo_sad_instituicao, nome_sad_instituicao,
-  data_efetivo_exercicio, ind_lider, ind_vinculo_exercicio, codigo_srh_cargo,
-  nome_sad_cargo, codigo_srh_cargo_origem, nome_cargo_origem, matricula_origem,
-  codigo_instituicao_origem, codigo_srh_funcao, nome_sad_funcao, codigo_srh_cargo_comissionado,
-  nome_cargo_comissionado, codigo_srh_funcao_gratificada, nome_funcao_gratificada, codigo_instituicao_chefia_imediata,
-  matricula_chefe_sad_servidor, codigo_srh_estrut_orgn, nome_sad_estrut_orgn, codigo_srh_categoria_funcional,
-  descricao_sad_categoria_funcional, codigo_srh_situacao_funcional, descricao_sad_situacao_funcional, codigo_srh_tipo_vinculo,
-  descricao_sad_tipo_vinculo, email, codigo_srh_afastamento, descricao_afastamento, codigo_srh_grupo_ocupacional, descricao_sad_grupo_ocupacional,
-  data_hora_incl, data_hora_altr, usuario_incl, usuario_altr, codigo_sad_servidor, tab_sal_cargo, tab_sal_funcao,
-  codigo_srh_grupo_ocupacional_origem, codigo_sad_empresa_estab, codigo_srh_empresa, codigo_srh_estabelecimento,
-  ind_atualizacao_srh, codigo_empresa_estab_origem, emp_origem, ind_busca_origem, ind_preenchimento,
-  matricula_origem_sadrh, matricula_chefe_sad_servidor_sadrh, codigo_srh_empresa_sadrh, codigo_srh_estabelecimento_sadrh,
-  codigo_srh_categoria_funcional_sadrh, descricao_sad_categoria_funcional_sadrh, codigo_srh_tipo_vinculo_sadrh,
-  descricao_sad_tipo_vinculo_sadrh, codigo_sad_servidor_sadrh, matricula_sadrh
-FROM sch_sad.imp_vinculo;', 'INSERT', '2026-03-25 15:24:11.409037-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (576, 4, '19', 19, 'SELECT SETVAL(''sch_sad.sad_servidor_codigo_seq'', MAX(CODIGO)) FROM sch_sad.sad_servidor;', 'SELECT', '2026-03-25 15:24:11.410031-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (577, 4, '20', 20, 'SELECT SETVAL(''sch_sad.sad_vinculo_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_vinculo;', 'SELECT', '2026-03-25 15:24:11.410998-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (578, 4, '21', 21, 'SELECT SETVAL(''sch_sad.sad_instituicao_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_instituicao;', 'SELECT', '2026-03-25 15:24:11.412125-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (579, 4, '22', 22, 'select 
-	count(u.id_usuario)
-from
-	sch_sad.sad_servidor s
-	join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
-	join sch_sgic.sgic_usuario u on s.cpf = u.cpf
-	join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
-where 
-	s.ind_ativo = ''1'';', 'SELECT', '2026-03-25 15:24:11.413209-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (580, 4, '23', 23, 'delete from sch_sgic.sgic_usuario_escola
-where id_usuario in (
-  select u.id_usuario
-  from sch_sad.sad_servidor s
-  join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
-  join sch_sgic.sgic_usuario u on s.cpf = u.cpf
-  join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
-  where s.ind_ativo = ''1''
-);', 'SELECT', '2026-03-25 15:24:11.414203-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (581, 4, '24', 24, 'insert into sch_sgic.sgic_usuario_escola (id_usuario, ind_ativo, matricula, codigo_instituicao, id_escola, id_outras_entidades)
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (576, 4, '20', 20, 'SELECT SETVAL(''sch_sad.sad_servidor_codigo_seq'', MAX(CODIGO)) FROM sch_sad.sad_servidor;', 'SELECT', '2026-03-25 15:24:11.410031-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (574, 4, '18', 18, 'INSERT INTO SCH_SAD.SAD_SERVIDOR SELECT * FROM SCH_SAD.IMP_SERVIDOR;', 'INSERT', '2026-03-25 15:24:11.40835-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (573, 4, '17', 17, 'INSERT INTO SCH_SAD.SAD_INSTITUICAO SELECT * FROM SCH_SAD.IMP_INSTITUICAO;', 'INSERT', '2026-03-25 15:24:11.407646-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (582, 4, '26', 26, 'SELECT sch_sad.fn_excluir_tab_imp();', 'SELECT', '2026-03-25 15:24:11.415827-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (581, 4, '25', 25, 'insert into sch_sgic.sgic_usuario_escola (id_usuario, ind_ativo, matricula, codigo_instituicao, id_escola, id_outras_entidades)
 select distinct u.id_usuario
       , CASE WHEN v.ind_ativo = ''1'' THEN true else false end ind_ativo
       , LPAD(v.matricula, 11, ''0'')
@@ -3011,7 +3111,74 @@ from
 	join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
 where
 	s.ind_ativo = ''1'';', 'INSERT', '2026-03-25 15:24:11.415027-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (582, 4, '25', 25, 'SELECT sch_sad.fn_excluir_tab_imp();', 'SELECT', '2026-03-25 15:24:11.415827-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (580, 4, '24', 24, 'delete from sch_sgic.sgic_usuario_escola
+where id_usuario in (
+  select u.id_usuario
+  from sch_sad.sad_servidor s
+  join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
+  join sch_sgic.sgic_usuario u on s.cpf = u.cpf
+  join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
+  where s.ind_ativo = ''1''
+);', 'SELECT', '2026-03-25 15:24:11.414203-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (579, 4, '23', 23, 'select 
+	count(u.id_usuario)
+from
+	sch_sad.sad_servidor s
+	join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor
+	join sch_sgic.sgic_usuario u on s.cpf = u.cpf
+	join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true
+where 
+	s.ind_ativo = ''1'';', 'SELECT', '2026-03-25 15:24:11.413209-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (640, 5, '22', 22, 'INSERT INTO sch_sgic.sgic_usuario_outras_entidades(
+            id_usuario, ind_ativo, matricula, id_outras_entidades)
+SELECT u.id_usuario,
+       true,
+       LPAD(TRIM(a.matricula),11,''0'') matricula,
+       a.id_outras_entidades
+  from sch_sgic.sgic_usuario u join sch_sgic.aux_usuario_outras_entidades a
+    on u.cpf = a.cpf
+ where not exists (select 1
+                       from sch_sgic.sgic_usuario_outras_entidades uo
+                      where uo.id_usuario = u.id_usuario
+                        and LPAD(a.matricula,11,''0'') = LPAD(uo.matricula,11,''0'')
+                        and a.id_outras_entidades = uo.id_outras_entidades)
+     AND NOT EXISTS (SELECT 1
+                     FROM sch_sad.sad_servidor s JOIN sch_sad.sad_vinculo v
+                       ON s.codigo = v.codigo_sad_servidor
+                    WHERE s.cpf = u.cpf
+                      AND s.ind_ativo = ''1''
+                      AND v.ind_ativo = ''1''
+                      AND v.codigo_srh_empresa in (''029'',''045'',''047'',''133'')
+                      AND v.codigo_srh_categoria_funcional in (''APO'',''RF'',''RFB'',''RR'',''RRB''));', 'INSERT', '2026-03-25 15:24:39.195376-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (641, 5, '23', 23, '-------------------------------------------------------------
+--REATIVANDO USUÁRIOS EXISTENTES NA BASE QUE ESTÃO NO ARQUIVO
+-------------------------------------------------------------
+SELECT CPF,
+       NOME
+  FROM SCH_SGIC.SGIC_USUARIO U
+ WHERE U.IND_ATIVO = FALSE
+   AND EXISTS (SELECT X.CPF
+                 FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
+                WHERE U.CPF = X.CPF);', 'SELECT', '2026-03-25 15:24:39.195899-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (642, 5, '24', 24, 'UPDATE SCH_SGIC.SGIC_USUARIO U
+   SET IND_ATIVO = TRUE
+WHERE U.IND_ATIVO = FALSE
+  AND EXISTS (SELECT X.CPF
+               FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
+              WHERE U.CPF = X.CPF);', 'UPDATE', '2026-03-25 15:24:39.196365-03');
+INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (643, 5, '25', 25, '------------------------------
+--ATUALIZANDO O CHEFE IMEDIATO
+------------------------------
+SELECT *
+  FROM SCH_SGIC.SGIC_USUARIO U JOIN (SELECT DISTINCT C.CPF_FUNC,
+U2.ID_USUARIO
+FROM SCH_SGIC.SGIC_USUARIO U2 JOIN (SELECT X.CPF AS CPF_FUNC,
+                                X2.CPF AS CPF_CHEFE
+                            FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
+            JOIN SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X2
+            ON X.MATRICULA_CHEFIA = X2.MATRICULA) C
+ON U2.CPF = C.CPF_CHEFE) UC
+ON U.CPF = UC.CPF_FUNC;', 'SELECT', '2026-03-25 15:24:39.196836-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (583, 2, '1', 1, 'DROP TABLE IF EXISTS SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES;', 'DROP', '2026-03-25 15:24:24.590731-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (584, 2, '2', 2, 'CREATE TABLE IF NOT EXISTS SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES
 (
@@ -3231,43 +3398,6 @@ FROM SCH_SGIC.SGIC_USUARIO U2 JOIN (SELECT X.CPF AS CPF_FUNC,
             ON X.MATRICULA_CHEFIA = X2.MATRICULA) C
 ON U2.CPF = C.CPF_CHEFE) UC
 ON U.CPF = UC.CPF_FUNC;', 'SELECT', '2026-03-25 15:24:24.606969-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (608, 2, '26', 26, 'UPDATE SCH_SGIC.SGIC_USUARIO U set
-    DATA_ALTERACAO = CURRENT_DATE,
-  ID_CHEFE_IMEDIATO = UC.ID_USUARIO,
-  MATRICULA_CHEFIA_IMEDIATA = LPAD(TRIM(UC.MATRICULA),11,''0'')
- FROM (SELECT DISTINCT C.CPF_FUNC,
-                       U2.ID_USUARIO,
-                       C.MATRICULA
-         FROM SCH_SGIC.SGIC_USUARIO U2 JOIN (SELECT X.CPF AS CPF_FUNC,
-                                              X2.CPF AS CPF_CHEFE,
-                                              X2.MATRICULA
-                                         FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
-                 JOIN SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X2
-                   ON X.MATRICULA_CHEFIA = X2.MATRICULA) C
-     ON U2.CPF = C.CPF_CHEFE) UC
-WHERE U.CPF = UC.CPF_FUNC;', 'UPDATE', '2026-03-25 15:24:24.607667-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (609, 2, '27', 27, '------------------------
---ATUALIZAÇÃO DO USUÁRIO
-------------------------
-UPDATE SCH_SGIC.SGIC_USUARIO U
-   SET DATA_ALTERACAO = CURRENT_DATE,
-       NOME = UPPER(X.NOME)
-  FROM SCH_SGIC.AUX_USUARIO_OUTRAS_ENTIDADES X
-WHERE U.CPF = X.CPF;', 'UPDATE', '2026-03-25 15:24:24.608093-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (610, 2, '28', 28, '----------------------------------------------
--- Consulta inconsistência na coluna matricula
-----------------------------------------------
-select * -- count(*)
-from sch_sgic.sgic_usuario_outras_entidades
-where length(matricula) < 11
-or matricula ~ ''[^0-9]''; -- caracter não numérico', 'SELECT', '2026-03-25 15:24:24.608519-03');
-INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (611, 2, '29', 29, '-----------------------------------------------------
--- Remove caractres não numéricos na coluna matricula
------------------------------------------------------
-UPDATE SCH_SGIC.SGIC_USUARIO_OUTRAS_ENTIDADES
- SET MATRICULA =  REGEXP_REPLACE(MATRICULA, ''[^0-9]'', '''', ''gi'')
-WHERE LENGTH(MATRICULA) < 11
-OR MATRICULA ~ ''[^0-9]'';', 'UPDATE', '2026-03-25 15:24:24.609031-03');
 INSERT INTO public.tb_blocos_rotina OVERRIDING SYSTEM VALUE VALUES (612, 2, '30', 30, '-------------------------------------------------
 -- Exclusão de registros com a matrícula repetida
 -------------------------------------------------
@@ -3432,6 +3562,7 @@ INSERT INTO public.tb_empresas VALUES (1, 'Secretariá de administração', '', 
 -- Data for Name: tb_logs_execucao; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.tb_logs_execucao OVERRIDING SYSTEM VALUE VALUES (22, 4, '2026-03-26 13:17:03.750269-03', '2026-03-26 13:17:03.750269-03', 'sucesso', NULL, '{"blocos": [{"sql": "-- CRIACAO DE TABELA DE LOG DE CARGA SGIC. CRIAR APENAS SE NÃO EXISTIR.\nCREATE TABLE IF NOT EXISTS sch_sgic.log_carga_sgic\n(\n  id serial4 primary key,\n  numero_script CHAR(3),\n  momento_execucao TIMESTAMP,\n  descricao CHARACTER VARYING (100)\n)\nWITH (\n  OIDS=FALSE\n);", "erro": null, "tipo": "CREATE", "bloco": "1", "ordem": 1, "status": "sucesso", "id_bloco": 558, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 142, "arquivo_csv": null}, {"sql": "ALTER TABLE sch_sgic.log_carga_sgic OWNER TO saduseradm;", "erro": null, "tipo": "ALTER", "bloco": "2", "ordem": 2, "status": "sucesso", "id_bloco": 559, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 21, "arquivo_csv": null}, {"sql": "GRANT ALL ON TABLE sch_sgic.log_carga_sgic TO saduseradm;", "erro": null, "tipo": "GRANT", "bloco": "3", "ordem": 3, "status": "sucesso", "id_bloco": 560, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 26, "arquivo_csv": null}, {"sql": "GRANT ALL ON TABLE sch_sgic.log_carga_sgic TO sadsisweb;", "erro": null, "tipo": "SELECT", "bloco": "4", "ordem": 4, "status": "sucesso", "id_bloco": 561, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 21, "arquivo_csv": null}, {"sql": "GRANT SELECT ON TABLE sch_sgic.log_carga_sgic TO saduserr;", "erro": null, "tipo": "GRANT", "bloco": "5", "ordem": 5, "status": "sucesso", "id_bloco": 562, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 22, "arquivo_csv": null}, {"sql": "GRANT ALL ON ALL TABLES IN SCHEMA sch_sad TO saduseradm;", "erro": null, "tipo": "GRANT", "bloco": "6", "ordem": 6, "status": "sucesso", "id_bloco": 563, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 468, "arquivo_csv": null}, {"sql": "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA sch_sad TO sadsisweb;", "erro": null, "tipo": "GRANT", "bloco": "7", "ordem": 7, "status": "sucesso", "id_bloco": 564, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 188, "arquivo_csv": null}, {"sql": "GRANT ALL ON ALL SEQUENCES IN SCHEMA sch_sad TO sadsisweb;", "erro": null, "tipo": "GRANT", "bloco": "8", "ordem": 8, "status": "sucesso", "id_bloco": 565, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 211, "arquivo_csv": null}, {"sql": "SELECT \n\tcount(0)\nFROM \n\tsch_sgic.sgic_usuario u\nWHERE \n\tu.ind_ativo = TRUE\n\tAND EXISTS (\n    SELECT 1\n    FROM sch_sad.imp_servidor s\n    WHERE s.cpf = u.cpf\n     AND s.ind_ativo = ''0''\n  )\n\tAND NOT EXISTS (\n    SELECT 1\n    FROM sch_sgic.sgic_usuario_outras_entidades uo\n    WHERE u.id_usuario = uo.id_usuario\n );", "erro": null, "tipo": "SELECT", "bloco": "9", "ordem": 9, "status": "sucesso", "id_bloco": 566, "registros": 1, "resultado": "Arquivo gerado: C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_9_1774541746.csv (Linhas: 1)", "duracao_ms": 1477, "arquivo_csv": "C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_9_1774541746.csv"}, {"sql": "UPDATE \n\tsch_sgic.sgic_usuario u\nSET \n\tind_ativo = FALSE\n\t,data_alteracao = current_date\nWHERE \n\tu.ind_ativo = TRUE\n\tAND EXISTS (\n    SELECT 1\n    FROM sch_sad.imp_servidor s\n    WHERE s.cpf = u.cpf\n    AND s.ind_ativo = ''0''\n )\n\tAND NOT EXISTS (\n    \tSELECT 1\n      FROM sch_sgic.sgic_usuario_outras_entidades uo\n      WHERE u.id_usuario = uo.id_usuario\n );", "erro": null, "tipo": "UPDATE", "bloco": "10", "ordem": 10, "status": "sucesso", "id_bloco": 567, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 929, "arquivo_csv": null}, {"sql": "INSERT INTO sch_sgic.sgic_usuario(\n            data_inclusao,\n            bloqueado,\n            cargo_efetivo_instrutor,\n            categoria_orgao_origem,\n            cpf,\n            curriculo_instrutor,\n            data_validade,\n            email,\n            ind_ativo,\n            nome,\n            placa_carro_instrutor,\n            recebe_notif_email,\n            rg_instrutor,\n            senha,\n            telefone,\n            tele_residencial_instrutor,\n            tipo_usuario_instrutor)\nSELECT DISTINCT current_date, -- data_inclusao\n       FALSE, --bloqueado\n       NULL, --cargo_efetivo\n       NULL, --categoria_orgao_origem\n       cpf,\n       NULL, --curriculo\n       CAST(''2060-01-01 00:00:00'' as timestamp), --data_validade,\n       NULL,--v.email, --email\n       CASE WHEN s.ind_ativo = ''0'' THEN FALSE ELSE TRUE END, --ind_ativo,\n       nome, --nome\n       NULL, --placa_carro\n       CAST(TRUE as boolean), --recebe_notif_email\n       NULL, --rg_instrutor\n       ''CAMPO SENHA PARA USUARIOS DE OUTRAS ENTIDADES'', --senha\n       NULL,--ddd_telefone || telefone, --telefone\n       NULL, --tele_residencial\n       NULL --tipo_usuario\nFROM sch_sad.imp_servidor s JOIN sch_sad.imp_vinculo v\nON s.codigo = v.codigo_sad_servidor\nWHERE not exists (SELECT cpf\n                    FROM sch_sgic.sgic_usuario u\n                    WHERE u.cpf = s.cpf)\nAND s.ind_ativo = ''1''\nAND v.ind_ativo = ''1''\nAND v.codigo_srh_categoria_funcional IN (''AGP'',''CCB'',''CIV'',''CLT'',''COM'',''CTD'',''DES'',''ELE'',''EST'',\n''EXQ'',''EXM'',''FRQ'',''GAP'',''MCB'',''MLT'',''REV'',''VOG'');", "erro": null, "tipo": "INSERT", "bloco": "11", "ordem": 11, "status": "sucesso", "id_bloco": 568, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 1993, "arquivo_csv": null}, {"sql": "SELECT \n\tcount(*)\nFROM \n\tsch_sad.imp_servidor s \n  JOIN sch_sad.imp_vinculo v \tON s.codigo = v.codigo_sad_servidor\n\tJOIN sch_sgic.sgic_usuario u ON s.cpf = u.cpf\nWHERE\n\ts.ind_ativo = ''1''\n\tAND v.ind_ativo = ''1''\n\tAND v.codigo_srh_categoria_funcional in (''AGP'',''CCB'',''CIV'',''CLT'',''COM'',''CTD'',''DES'',''ELE'',''EST'',''GAP'',''MCB'',''MLT'',''REV'',''VOG'')\n\tAND u.nome <> s.nome\n;", "erro": null, "tipo": "SELECT", "bloco": "12", "ordem": 12, "status": "sucesso", "id_bloco": 569, "registros": 1, "resultado": "Arquivo gerado: C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_12_1774541751.csv (Linhas: 1)", "duracao_ms": 1324, "arquivo_csv": "C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_12_1774541751.csv"}, {"sql": "UPDATE \n\tsch_sgic.sgic_usuario u\nSET \n\tnome = s.nome\nFROM\n\tsch_sad.imp_servidor s JOIN sch_sad.imp_vinculo v ON s.codigo = v.codigo_sad_servidor\nWHERE\n\ts.cpf = u.cpf\n\tAND s.ind_ativo = ''1''\n\tAND v.ind_ativo = ''1''\n\tAND v.codigo_srh_categoria_funcional in (''AGP'',''CCB'',''CIV'',''CLT'',''COM'',''CTD'',''DES'',''ELE'',''EST'',''GAP'',''MCB'',''MLT'',''REV'',''VOG'')\n\tAND u.nome <> s.nome\n;", "erro": null, "tipo": "UPDATE", "bloco": "13", "ordem": 13, "status": "sucesso", "id_bloco": 570, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 1892, "arquivo_csv": null}, {"sql": "TRUNCATE TABLE SCH_SAD.SAD_INSTITUICAO CASCADE;", "erro": null, "tipo": "TRUNCATE", "bloco": "14", "ordem": 14, "status": "sucesso", "id_bloco": 571, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 164, "arquivo_csv": null}, {"sql": "TRUNCATE TABLE SCH_SAD.SAD_VINCULO CASCADE;", "erro": null, "tipo": "TRUNCATE", "bloco": "15", "ordem": 15, "status": "sucesso", "id_bloco": 572, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 237, "arquivo_csv": null}, {"sql": "TRUNCATE TABLE SCH_SAD.SAD_SERVIDOR CASCADE;", "erro": null, "tipo": "TRUNCATE", "bloco": "16", "ordem": 16, "status": "sucesso", "id_bloco": 657, "registros": 0, "resultado": "Linhas afetadas: 0", "duracao_ms": 250, "arquivo_csv": null}, {"sql": "INSERT INTO SCH_SAD.SAD_INSTITUICAO SELECT * FROM SCH_SAD.IMP_INSTITUICAO;", "erro": null, "tipo": "INSERT", "bloco": "17", "ordem": 17, "status": "sucesso", "id_bloco": 573, "registros": 185, "resultado": "Linhas afetadas: 185", "duracao_ms": 145, "arquivo_csv": null}, {"sql": "INSERT INTO SCH_SAD.SAD_SERVIDOR SELECT * FROM SCH_SAD.IMP_SERVIDOR;", "erro": null, "tipo": "INSERT", "bloco": "18", "ordem": 18, "status": "sucesso", "id_bloco": 574, "registros": 328244, "resultado": "Linhas afetadas: 328244", "duracao_ms": 6303, "arquivo_csv": null}, {"sql": "INSERT INTO SCH_SAD.SAD_VINCULO\nSELECT codigo, ind_ativo, matricula, codigo_sad_instituicao, nome_sad_instituicao,\n  data_efetivo_exercicio, ind_lider, ind_vinculo_exercicio, codigo_srh_cargo,\n  nome_sad_cargo, codigo_srh_cargo_origem, nome_cargo_origem, matricula_origem,\n  codigo_instituicao_origem, codigo_srh_funcao, nome_sad_funcao, codigo_srh_cargo_comissionado,\n  nome_cargo_comissionado, codigo_srh_funcao_gratificada, nome_funcao_gratificada, codigo_instituicao_chefia_imediata,\n  matricula_chefe_sad_servidor, codigo_srh_estrut_orgn, nome_sad_estrut_orgn, codigo_srh_categoria_funcional,\n  descricao_sad_categoria_funcional, codigo_srh_situacao_funcional, descricao_sad_situacao_funcional, codigo_srh_tipo_vinculo,\n  descricao_sad_tipo_vinculo, email, codigo_srh_afastamento, descricao_afastamento, codigo_srh_grupo_ocupacional, descricao_sad_grupo_ocupacional,\n  data_hora_incl, data_hora_altr, usuario_incl, usuario_altr, codigo_sad_servidor, tab_sal_cargo, tab_sal_funcao,\n  codigo_srh_grupo_ocupacional_origem, codigo_sad_empresa_estab, codigo_srh_empresa, codigo_srh_estabelecimento,\n  ind_atualizacao_srh, codigo_empresa_estab_origem, emp_origem, ind_busca_origem, ind_preenchimento,\n  matricula_origem_sadrh, matricula_chefe_sad_servidor_sadrh, codigo_srh_empresa_sadrh, codigo_srh_estabelecimento_sadrh,\n  codigo_srh_categoria_funcional_sadrh, descricao_sad_categoria_funcional_sadrh, codigo_srh_tipo_vinculo_sadrh,\n  descricao_sad_tipo_vinculo_sadrh, codigo_sad_servidor_sadrh, matricula_sadrh\nFROM sch_sad.imp_vinculo;", "erro": null, "tipo": "INSERT", "bloco": "19", "ordem": 19, "status": "sucesso", "id_bloco": 575, "registros": 605951, "resultado": "Linhas afetadas: 605951", "duracao_ms": 39568, "arquivo_csv": null}, {"sql": "SELECT SETVAL(''sch_sad.sad_servidor_codigo_seq'', MAX(CODIGO)) FROM sch_sad.sad_servidor;", "erro": null, "tipo": "SELECT", "bloco": "20", "ordem": 20, "status": "sucesso", "id_bloco": 576, "registros": 1, "resultado": "Arquivo gerado: C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_20_1774541800.csv (Linhas: 1)", "duracao_ms": 74, "arquivo_csv": "C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_20_1774541800.csv"}, {"sql": "SELECT SETVAL(''sch_sad.sad_vinculo_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_vinculo;", "erro": null, "tipo": "SELECT", "bloco": "21", "ordem": 21, "status": "sucesso", "id_bloco": 577, "registros": 1, "resultado": "Arquivo gerado: C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_21_1774541800.csv (Linhas: 1)", "duracao_ms": 388, "arquivo_csv": "C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_21_1774541800.csv"}, {"sql": "SELECT SETVAL(''sch_sad.sad_instituicao_codigo_seq'' , MAX(CODIGO)) FROM sch_sad.sad_instituicao;", "erro": null, "tipo": "SELECT", "bloco": "22", "ordem": 22, "status": "sucesso", "id_bloco": 578, "registros": 1, "resultado": "Arquivo gerado: C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_22_1774541801.csv (Linhas: 1)", "duracao_ms": 45, "arquivo_csv": "C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_22_1774541801.csv"}, {"sql": "select \n\tcount(u.id_usuario)\nfrom\n\tsch_sad.sad_servidor s\n\tjoin sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor\n\tjoin sch_sgic.sgic_usuario u on s.cpf = u.cpf\n\tjoin sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true\nwhere \n\ts.ind_ativo = ''1'';", "erro": null, "tipo": "SELECT", "bloco": "23", "ordem": 23, "status": "sucesso", "id_bloco": 579, "registros": 1, "resultado": "Arquivo gerado: C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_23_1774541803.csv (Linhas: 1)", "duracao_ms": 2159, "arquivo_csv": "C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_23_1774541803.csv"}, {"sql": "delete from sch_sgic.sgic_usuario_escola\nwhere id_usuario in (\n  select u.id_usuario\n  from sch_sad.sad_servidor s\n  join sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor\n  join sch_sgic.sgic_usuario u on s.cpf = u.cpf\n  join sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true\n  where s.ind_ativo = ''1''\n);", "erro": null, "tipo": "SELECT", "bloco": "24", "ordem": 24, "status": "sucesso", "id_bloco": 580, "registros": 533652, "resultado": "Linhas afetadas: 533652", "duracao_ms": 4503, "arquivo_csv": null}, {"sql": "insert into sch_sgic.sgic_usuario_escola (id_usuario, ind_ativo, matricula, codigo_instituicao, id_escola, id_outras_entidades)\nselect distinct u.id_usuario\n      , CASE WHEN v.ind_ativo = ''1'' THEN true else false end ind_ativo\n      , LPAD(v.matricula, 11, ''0'')\n      , v.codigo_sad_instituicao\n      , e.id_escola\n      , 0 id_outras_entidades\nfrom \n\tsch_sad.sad_servidor s\n\tjoin sch_sad.sad_vinculo v on s.codigo = v.codigo_sad_servidor\n\tjoin sch_sgic.sgic_usuario u on s.cpf = u.cpf\n\tjoin sch_sgic.sgic_escola e on e.ind_atende_todas_instituicoes = true\nwhere\n\ts.ind_ativo = ''1'';", "erro": null, "tipo": "INSERT", "bloco": "25", "ordem": 25, "status": "sucesso", "id_bloco": 581, "registros": 533652, "resultado": "Linhas afetadas: 533652", "duracao_ms": 14892, "arquivo_csv": null}, {"sql": "SELECT sch_sad.fn_excluir_tab_imp();", "erro": null, "tipo": "SELECT", "bloco": "26", "ordem": 26, "status": "sucesso", "id_bloco": 582, "registros": 1, "resultado": "Arquivo gerado: C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_26_1774541823.csv (Linhas: 1)", "duracao_ms": 559, "arquivo_csv": "C:\\xampp\\htdocs\\DMC-DATALOAD\\storage\\logs\\execucao_4_26_1774541823.csv"}], "opcoes": {"interrompido": false, "parar_em_erro": true, "iniciar_de_bloco": null, "rollback_em_erro": false, "rollback_realizado": false, "blocos_selecionados": null}}', NULL, 79916, 26, 26, 0, NULL, NULL, 2001691);
 
 
 --
@@ -3466,6 +3597,7 @@ INSERT INTO public.tb_empresas VALUES (1, 'Secretariá de administração', '', 
 
 INSERT INTO public.tb_password_resets OVERRIDING SYSTEM VALUE VALUES (4, 3, 'f9f23c6e1630bf43554a6081a3f7f22c07ec00fe5b26ca373967a5eaa6919315', '333A8E', '2026-03-24 09:25:07.600662-03', '2026-03-24 09:55:07.600662-03', true);
 INSERT INTO public.tb_password_resets OVERRIDING SYSTEM VALUE VALUES (6, 32, '077b93c2991925bc04411ca74c29188ad0ab56690e0e04c519bca0b6608d2b2c', '31A81F', '2026-03-24 10:24:24.031253-03', '2026-03-24 10:54:24.031253-03', true);
+INSERT INTO public.tb_password_resets OVERRIDING SYSTEM VALUE VALUES (1, 112, 'd9a580d4da2e6e40ecf0fd46f843585ca15ee843178287a7562ef6e897d3fd61', 'A53D30', '2026-03-26 12:55:48.46156-03', '2026-03-26 13:25:48.46156-03', true);
 
 
 --
@@ -3489,6 +3621,7 @@ INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (8, 'SGP | H
 -- Data for Name: tb_pipeline_execucoes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.tb_pipeline_execucoes VALUES (4, 36, 'success', '2026-03-26 13:15:43.829673-03', '2026-03-26 13:17:06.568677-03', 82736, 6, 6, 5, 0, '{"1": {"started": true, "timestamp": "2026-03-26T17:15:43+01:00"}, "2": {"status": "sucesso", "sucesso": true, "mensagem": "", "rotina_id": 4, "duracao_ms": 79916, "blocos_falha": 0, "blocos_sucesso": 26, "registros_total": 2001691, "blocos_executados": 26}, "5": {"to": "renan.batista@sad.pe.gov.br", "sent": true, "subject": "CARGA | MENSAL: 3 - Sucesso", "attachments": 0}, "8": {"left": true, "right": true, "condition": true}, "9": {"finished": true}}', '[{"type": "trigger", "label": "Trigger", "status": "success", "node_id": 1, "timestamp": "2026-03-26T17:15:43+01:00", "duration_ms": 0, "result_preview": "2 itens"}, {"type": "rotina", "label": "Rotina", "status": "success", "node_id": "2", "timestamp": "2026-03-26T17:17:03+01:00", "duration_ms": 79926, "result_preview": "9 itens"}, {"type": "condition", "label": "Condition", "status": "success", "node_id": "8", "timestamp": "2026-03-26T17:17:03+01:00", "duration_ms": 0, "result_preview": "3 itens"}, {"type": "email", "label": "Email", "status": "success", "node_id": "5", "timestamp": "2026-03-26T17:17:06+01:00", "duration_ms": 2810, "result_preview": "4 itens"}, {"type": "email", "label": "Email", "status": "skipped", "message": "Pulado por condição", "node_id": "6", "timestamp": "2026-03-26T17:17:06+01:00"}, {"type": "end", "label": "End", "status": "success", "node_id": "9", "timestamp": "2026-03-26T17:17:06+01:00", "duration_ms": 0, "result_preview": "1 itens"}]', NULL, 112);
 
 
 --
@@ -3707,6 +3840,216 @@ INSERT INTO public.tb_pipelines VALUES (1, 'CARGA | MENSAL: 3 | HOMOLOGAÇÃO', 
     }
   }
 }', '{}', '', 'manual', '{"trigger_type": "manual"}', 10, '[]', 1, '2026-03-25 10:42:11.627803-03', '2026-03-25 15:26:18.295308-03');
+INSERT INTO public.tb_pipelines VALUES (36, 'CARGA | MENSAL: 3 | PRODUÇÃO', '', 'nocode', false, '{"drawflow": {"Home": {"data": {"1": {"id": 1, "data": {"type": "trigger", "label": "Trigger"}, "html": "<div class=\"df-node-container\" data-type=\"trigger\"><div class=\"df-node-header\" style=\"background: #10b98111;\"><div class=\"df-node-icon\" style=\"background:#10b981\"><i class=\"bi bi-play-circle\"></i></div><div><div class=\"df-node-title\">Trigger</div><div class=\"df-node-subtitle\">Manual</div></div></div></div>", "name": "trigger", "class": "trigger", "pos_x": 68, "pos_y": 41, "inputs": {}, "outputs": {"output_1": {"connections": [{"node": "2", "output": "input_1"}]}}, "typenode": false}, "2": {"id": 2, "data": {"type": "rotina", "label": "Rotina", "rotina_id": "4", "stop_on_error": "false", "output_variable": "resultado"}, "html": "<div class=\"df-node-container\" data-type=\"rotina\"><div class=\"df-node-header\" style=\"background: #3b82f611;\"><div class=\"df-node-icon\" style=\"background:#3b82f6\"><i class=\"bi bi-gear-wide-connected\"></i></div><div><div class=\"df-node-title\">Rotina</div><div class=\"df-node-subtitle\">Selecionar rotina</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Selecionar rotina</span></div></div>", "name": "rotina", "class": "rotina", "pos_x": 218, "pos_y": 202, "inputs": {"input_1": {"connections": [{"node": "1", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "8", "output": "input_1"}]}}, "typenode": false}, "5": {"id": 5, "data": {"type": "email", "label": "Email", "email_to": "renan.batista@sad.pe.gov.br", "email_subject": "CARGA | MENSAL: 3 - Sucesso"}, "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>", "name": "email", "class": "email", "pos_x": 718, "pos_y": 331, "inputs": {"input_1": {"connections": [{"node": "8", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "9", "output": "input_1"}]}}, "typenode": false}, "6": {"id": 6, "data": {"type": "email", "label": "Email", "email_to": "renan.batista@sad.pe.gov.br", "email_subject": "CARGA | MENSAL: 3 - Falha"}, "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>", "name": "email", "class": "email", "pos_x": 720, "pos_y": 512, "inputs": {"input_1": {"connections": [{"node": "8", "input": "output_2"}]}}, "outputs": {"output_1": {"connections": [{"node": "9", "output": "input_1"}]}}, "typenode": false}, "8": {"id": 8, "data": {"type": "condition", "label": "Condition", "operator": "==", "left_operand": "{{resultado.sucesso}}", "right_operand": "true"}, "html": "<div class=\"df-node-container\" data-type=\"condition\"><div class=\"df-node-header\" style=\"background: #eab30811;\"><div class=\"df-node-icon\" style=\"background:#eab308\"><i class=\"bi bi-signpost-split\"></i></div><div><div class=\"df-node-title\">Condition</div><div class=\"df-node-subtitle\">Configurar condição</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Configurar condição</span></div></div>", "name": "condition", "class": "condition", "pos_x": 418, "pos_y": 396, "inputs": {"input_1": {"connections": [{"node": "2", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "5", "output": "input_1"}]}, "output_2": {"connections": [{"node": "6", "output": "input_1"}]}}, "typenode": false}, "9": {"id": 9, "data": {"type": "end", "label": "End"}, "html": "<div class=\"df-node-container\" data-type=\"end\"><div class=\"df-node-header\" style=\"background: #dc262611;\"><div class=\"df-node-icon\" style=\"background:#dc2626\"><i class=\"bi bi-stop-circle\"></i></div><div><div class=\"df-node-title\">End</div></div></div></div>", "name": "end", "class": "end", "pos_x": 999, "pos_y": 414, "inputs": {"input_1": {"connections": [{"node": "5", "input": "output_1"}, {"node": "6", "input": "output_1"}]}}, "outputs": {}, "typenode": false}}}}}', '{
+  "drawflow": {
+    "Home": {
+      "data": {
+        "1": {
+          "id": 1,
+          "data": {
+            "type": "trigger",
+            "label": "Trigger"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"trigger\"><div class=\"df-node-header\" style=\"background: #10b98111;\"><div class=\"df-node-icon\" style=\"background:#10b981\"><i class=\"bi bi-play-circle\"></i></div><div><div class=\"df-node-title\">Trigger</div><div class=\"df-node-subtitle\">Manual</div></div></div></div>",
+          "name": "trigger",
+          "class": "trigger",
+          "pos_x": 68,
+          "pos_y": 41,
+          "inputs": {},
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "2",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "2": {
+          "id": 2,
+          "data": {
+            "type": "rotina",
+            "label": "Rotina",
+            "rotina_id": "4",
+            "stop_on_error": "false",
+            "output_variable": "resultado"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"rotina\"><div class=\"df-node-header\" style=\"background: #3b82f611;\"><div class=\"df-node-icon\" style=\"background:#3b82f6\"><i class=\"bi bi-gear-wide-connected\"></i></div><div><div class=\"df-node-title\">Rotina</div><div class=\"df-node-subtitle\">Selecionar rotina</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Selecionar rotina</span></div></div>",
+          "name": "rotina",
+          "class": "rotina",
+          "pos_x": 218,
+          "pos_y": 202,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "1",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "8",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "5": {
+          "id": 5,
+          "data": {
+            "type": "email",
+            "label": "Email",
+            "email_to": "renan.batista@sad.pe.gov.br",
+            "email_subject": "CARGA | MENSAL: 3 - Sucesso"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>",
+          "name": "email",
+          "class": "email",
+          "pos_x": 718,
+          "pos_y": 331,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "8",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "9",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "6": {
+          "id": 6,
+          "data": {
+            "type": "email",
+            "label": "Email",
+            "email_to": "renan.batista@sad.pe.gov.br",
+            "email_subject": "CARGA | MENSAL: 3 - Falha"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>",
+          "name": "email",
+          "class": "email",
+          "pos_x": 720,
+          "pos_y": 512,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "8",
+                  "input": "output_2"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "9",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "8": {
+          "id": 8,
+          "data": {
+            "type": "condition",
+            "label": "Condition",
+            "operator": "==",
+            "left_operand": "{{resultado.sucesso}}",
+            "right_operand": "true"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"condition\"><div class=\"df-node-header\" style=\"background: #eab30811;\"><div class=\"df-node-icon\" style=\"background:#eab308\"><i class=\"bi bi-signpost-split\"></i></div><div><div class=\"df-node-title\">Condition</div><div class=\"df-node-subtitle\">Configurar condição</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Configurar condição</span></div></div>",
+          "name": "condition",
+          "class": "condition",
+          "pos_x": 418,
+          "pos_y": 396,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "2",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "5",
+                  "output": "input_1"
+                }
+              ]
+            },
+            "output_2": {
+              "connections": [
+                {
+                  "node": "6",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "9": {
+          "id": 9,
+          "data": {
+            "type": "end",
+            "label": "End"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"end\"><div class=\"df-node-header\" style=\"background: #dc262611;\"><div class=\"df-node-icon\" style=\"background:#dc2626\"><i class=\"bi bi-stop-circle\"></i></div><div><div class=\"df-node-title\">End</div></div></div></div>",
+          "name": "end",
+          "class": "end",
+          "pos_x": 999,
+          "pos_y": 414,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "5",
+                  "input": "output_1"
+                },
+                {
+                  "node": "6",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {},
+          "typenode": false
+        }
+      }
+    }
+  }
+}', '{}', '', 'manual', '{"trigger_type": "manual"}', 2, '[]', 1, '2026-03-26 11:12:40.109644-03', '2026-03-26 11:13:10.342643-03');
 INSERT INTO public.tb_pipelines VALUES (34, 'CARGA | MENSAL: 4 | HOMOLOGAÇÃO', '', 'nocode', false, '{"drawflow": {"Home": {"data": {"1": {"id": 1, "data": {"type": "trigger", "label": "Trigger"}, "html": "<div class=\"df-node-container\" data-type=\"trigger\"><div class=\"df-node-header\" style=\"background: #10b98111;\"><div class=\"df-node-icon\" style=\"background:#10b981\"><i class=\"bi bi-play-circle\"></i></div><div><div class=\"df-node-title\">Trigger</div><div class=\"df-node-subtitle\">Manual</div></div></div></div>", "name": "trigger", "class": "trigger", "pos_x": 68, "pos_y": 41, "inputs": {}, "outputs": {"output_1": {"connections": [{"node": "2", "output": "input_1"}]}}, "typenode": false}, "2": {"id": 2, "data": {"type": "rotina", "label": "Rotina", "rotina_id": "2", "stop_on_error": "false", "output_variable": "resultado"}, "html": "<div class=\"df-node-container\" data-type=\"rotina\"><div class=\"df-node-header\" style=\"background: #3b82f611;\"><div class=\"df-node-icon\" style=\"background:#3b82f6\"><i class=\"bi bi-gear-wide-connected\"></i></div><div><div class=\"df-node-title\">Rotina</div><div class=\"df-node-subtitle\">Selecionar rotina</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Selecionar rotina</span></div></div>", "name": "rotina", "class": "rotina", "pos_x": 218, "pos_y": 202, "inputs": {"input_1": {"connections": [{"node": "1", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "8", "output": "input_1"}]}}, "typenode": false}, "5": {"id": 5, "data": {"type": "email", "label": "Email", "email_to": "caio.barros@sad.pe.gov.br", "email_subject": "CARGA | MENSAL: 4 - Sucesso"}, "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>", "name": "email", "class": "email", "pos_x": 723, "pos_y": 323, "inputs": {"input_1": {"connections": [{"node": "8", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "9", "output": "input_1"}]}}, "typenode": false}, "6": {"id": 6, "data": {"type": "email", "label": "Email", "email_to": "caio.barros@sad.pe.gov.br", "email_subject": "CARGA | MENSAL: 4 - Falha"}, "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>", "name": "email", "class": "email", "pos_x": 720, "pos_y": 512, "inputs": {"input_1": {"connections": [{"node": "8", "input": "output_2"}]}}, "outputs": {"output_1": {"connections": [{"node": "9", "output": "input_1"}]}}, "typenode": false}, "8": {"id": 8, "data": {"type": "condition", "label": "Condition", "operator": "==", "left_operand": "{{resultado.sucesso}}", "right_operand": "true"}, "html": "<div class=\"df-node-container\" data-type=\"condition\"><div class=\"df-node-header\" style=\"background: #eab30811;\"><div class=\"df-node-icon\" style=\"background:#eab308\"><i class=\"bi bi-signpost-split\"></i></div><div><div class=\"df-node-title\">Condition</div><div class=\"df-node-subtitle\">Configurar condição</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Configurar condição</span></div></div>", "name": "condition", "class": "condition", "pos_x": 418, "pos_y": 396, "inputs": {"input_1": {"connections": [{"node": "2", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "5", "output": "input_1"}]}, "output_2": {"connections": [{"node": "6", "output": "input_1"}]}}, "typenode": false}, "9": {"id": 9, "data": {"type": "end", "label": "End"}, "html": "<div class=\"df-node-container\" data-type=\"end\"><div class=\"df-node-header\" style=\"background: #dc262611;\"><div class=\"df-node-icon\" style=\"background:#dc2626\"><i class=\"bi bi-stop-circle\"></i></div><div><div class=\"df-node-title\">End</div></div></div></div>", "name": "end", "class": "end", "pos_x": 999, "pos_y": 414, "inputs": {"input_1": {"connections": [{"node": "5", "input": "output_1"}, {"node": "6", "input": "output_1"}]}}, "outputs": {}, "typenode": false}}}}}', '{
   "drawflow": {
     "Home": {
@@ -3917,6 +4260,216 @@ INSERT INTO public.tb_pipelines VALUES (34, 'CARGA | MENSAL: 4 | HOMOLOGAÇÃO',
     }
   }
 }', '{}', '', 'manual', '{"trigger_type": "manual"}', 4, '[]', 1, '2026-03-25 14:40:37.072082-03', '2026-03-25 15:26:05.099037-03');
+INSERT INTO public.tb_pipelines VALUES (35, 'CARGA | MENSAL: 4 | PRODUÇÃO', '', 'nocode', false, '{"drawflow": {"Home": {"data": {"1": {"id": 1, "data": {"type": "trigger", "label": "Trigger"}, "html": "<div class=\"df-node-container\" data-type=\"trigger\"><div class=\"df-node-header\" style=\"background: #10b98111;\"><div class=\"df-node-icon\" style=\"background:#10b981\"><i class=\"bi bi-play-circle\"></i></div><div><div class=\"df-node-title\">Trigger</div><div class=\"df-node-subtitle\">Manual</div></div></div></div>", "name": "trigger", "class": "trigger", "pos_x": 68, "pos_y": 41, "inputs": {}, "outputs": {"output_1": {"connections": [{"node": "2", "output": "input_1"}]}}, "typenode": false}, "2": {"id": 2, "data": {"type": "rotina", "label": "Rotina", "rotina_id": "5", "stop_on_error": "false", "output_variable": "resultado"}, "html": "<div class=\"df-node-container\" data-type=\"rotina\"><div class=\"df-node-header\" style=\"background: #3b82f611;\"><div class=\"df-node-icon\" style=\"background:#3b82f6\"><i class=\"bi bi-gear-wide-connected\"></i></div><div><div class=\"df-node-title\">Rotina</div><div class=\"df-node-subtitle\">Selecionar rotina</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Selecionar rotina</span></div></div>", "name": "rotina", "class": "rotina", "pos_x": 218, "pos_y": 202, "inputs": {"input_1": {"connections": [{"node": "1", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "8", "output": "input_1"}]}}, "typenode": false}, "5": {"id": 5, "data": {"type": "email", "label": "Email", "email_to": "renan.batista@sad.pe.gov.br", "email_subject": "CARGA | MENSAL: 4 - Sucesso"}, "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>", "name": "email", "class": "email", "pos_x": 723, "pos_y": 323, "inputs": {"input_1": {"connections": [{"node": "8", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "9", "output": "input_1"}]}}, "typenode": false}, "6": {"id": 6, "data": {"type": "email", "label": "Email", "email_to": "renan.batista@sad.pe.gov.br", "email_subject": "CARGA | MENSAL: 4 - Falha"}, "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>", "name": "email", "class": "email", "pos_x": 720, "pos_y": 512, "inputs": {"input_1": {"connections": [{"node": "8", "input": "output_2"}]}}, "outputs": {"output_1": {"connections": [{"node": "9", "output": "input_1"}]}}, "typenode": false}, "8": {"id": 8, "data": {"type": "condition", "label": "Condition", "operator": "==", "left_operand": "{{resultado.sucesso}}", "right_operand": "true"}, "html": "<div class=\"df-node-container\" data-type=\"condition\"><div class=\"df-node-header\" style=\"background: #eab30811;\"><div class=\"df-node-icon\" style=\"background:#eab308\"><i class=\"bi bi-signpost-split\"></i></div><div><div class=\"df-node-title\">Condition</div><div class=\"df-node-subtitle\">Configurar condição</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Configurar condição</span></div></div>", "name": "condition", "class": "condition", "pos_x": 418, "pos_y": 396, "inputs": {"input_1": {"connections": [{"node": "2", "input": "output_1"}]}}, "outputs": {"output_1": {"connections": [{"node": "5", "output": "input_1"}]}, "output_2": {"connections": [{"node": "6", "output": "input_1"}]}}, "typenode": false}, "9": {"id": 9, "data": {"type": "end", "label": "End"}, "html": "<div class=\"df-node-container\" data-type=\"end\"><div class=\"df-node-header\" style=\"background: #dc262611;\"><div class=\"df-node-icon\" style=\"background:#dc2626\"><i class=\"bi bi-stop-circle\"></i></div><div><div class=\"df-node-title\">End</div></div></div></div>", "name": "end", "class": "end", "pos_x": 999, "pos_y": 414, "inputs": {"input_1": {"connections": [{"node": "5", "input": "output_1"}, {"node": "6", "input": "output_1"}]}}, "outputs": {}, "typenode": false}}}}}', '{
+  "drawflow": {
+    "Home": {
+      "data": {
+        "1": {
+          "id": 1,
+          "data": {
+            "type": "trigger",
+            "label": "Trigger"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"trigger\"><div class=\"df-node-header\" style=\"background: #10b98111;\"><div class=\"df-node-icon\" style=\"background:#10b981\"><i class=\"bi bi-play-circle\"></i></div><div><div class=\"df-node-title\">Trigger</div><div class=\"df-node-subtitle\">Manual</div></div></div></div>",
+          "name": "trigger",
+          "class": "trigger",
+          "pos_x": 68,
+          "pos_y": 41,
+          "inputs": {},
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "2",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "2": {
+          "id": 2,
+          "data": {
+            "type": "rotina",
+            "label": "Rotina",
+            "rotina_id": "5",
+            "stop_on_error": "false",
+            "output_variable": "resultado"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"rotina\"><div class=\"df-node-header\" style=\"background: #3b82f611;\"><div class=\"df-node-icon\" style=\"background:#3b82f6\"><i class=\"bi bi-gear-wide-connected\"></i></div><div><div class=\"df-node-title\">Rotina</div><div class=\"df-node-subtitle\">Selecionar rotina</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Selecionar rotina</span></div></div>",
+          "name": "rotina",
+          "class": "rotina",
+          "pos_x": 218,
+          "pos_y": 202,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "1",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "8",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "5": {
+          "id": 5,
+          "data": {
+            "type": "email",
+            "label": "Email",
+            "email_to": "renan.batista@sad.pe.gov.br",
+            "email_subject": "CARGA | MENSAL: 4 - Sucesso"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>",
+          "name": "email",
+          "class": "email",
+          "pos_x": 723,
+          "pos_y": 323,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "8",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "9",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "6": {
+          "id": 6,
+          "data": {
+            "type": "email",
+            "label": "Email",
+            "email_to": "renan.batista@sad.pe.gov.br",
+            "email_subject": "CARGA | MENSAL: 4 - Falha"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"email\"><div class=\"df-node-header\" style=\"background: #ec489911;\"><div class=\"df-node-icon\" style=\"background:#ec4899\"><i class=\"bi bi-envelope\"></i></div><div><div class=\"df-node-title\">Email</div><div class=\"df-node-subtitle\">Configurar</div></div></div></div>",
+          "name": "email",
+          "class": "email",
+          "pos_x": 720,
+          "pos_y": 512,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "8",
+                  "input": "output_2"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "9",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "8": {
+          "id": 8,
+          "data": {
+            "type": "condition",
+            "label": "Condition",
+            "operator": "==",
+            "left_operand": "{{resultado.sucesso}}",
+            "right_operand": "true"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"condition\"><div class=\"df-node-header\" style=\"background: #eab30811;\"><div class=\"df-node-icon\" style=\"background:#eab308\"><i class=\"bi bi-signpost-split\"></i></div><div><div class=\"df-node-title\">Condition</div><div class=\"df-node-subtitle\">Configurar condição</div></div></div><div class=\"df-node-body\"><span class=\"text-muted fst-italic\">Configurar condição</span></div></div>",
+          "name": "condition",
+          "class": "condition",
+          "pos_x": 418,
+          "pos_y": 396,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "2",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "output_1": {
+              "connections": [
+                {
+                  "node": "5",
+                  "output": "input_1"
+                }
+              ]
+            },
+            "output_2": {
+              "connections": [
+                {
+                  "node": "6",
+                  "output": "input_1"
+                }
+              ]
+            }
+          },
+          "typenode": false
+        },
+        "9": {
+          "id": 9,
+          "data": {
+            "type": "end",
+            "label": "End"
+          },
+          "html": "<div class=\"df-node-container\" data-type=\"end\"><div class=\"df-node-header\" style=\"background: #dc262611;\"><div class=\"df-node-icon\" style=\"background:#dc2626\"><i class=\"bi bi-stop-circle\"></i></div><div><div class=\"df-node-title\">End</div></div></div></div>",
+          "name": "end",
+          "class": "end",
+          "pos_x": 999,
+          "pos_y": 414,
+          "inputs": {
+            "input_1": {
+              "connections": [
+                {
+                  "node": "5",
+                  "input": "output_1"
+                },
+                {
+                  "node": "6",
+                  "input": "output_1"
+                }
+              ]
+            }
+          },
+          "outputs": {},
+          "typenode": false
+        }
+      }
+    }
+  }
+}', '{}', '', 'manual', '{"trigger_type": "manual"}', 2, '[]', 1, '2026-03-26 11:11:16.724199-03', '2026-03-26 11:12:18.307992-03');
 
 
 --
@@ -3948,7 +4501,7 @@ INSERT INTO public.tb_projetos VALUES (4, 'SGD | PRODUÇÃO', '', 1, true, 1, '2
 -- Data for Name: tb_rate_limits; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_rate_limits VALUES (16, 'exec_pipeline:2oog83f19lo49upk15lv6888q1', 1, '2026-03-25 15:16:21.887391', '2026-03-25 15:16:21.887391');
+INSERT INTO public.tb_rate_limits VALUES (32, 'exec_pipeline:8vor5jsdfuklcojmhvd4s7aeff', 1, '2026-03-26 13:15:43.822358', '2026-03-26 13:15:43.822358');
 
 
 --
@@ -3971,6 +4524,9 @@ INSERT INTO public.tb_recurso_empresas VALUES (43, 'conexao', 5, 1, '2026-03-25 
 INSERT INTO public.tb_recurso_empresas VALUES (44, 'conexao', 6, 1, '2026-03-25 15:34:44.052817-03');
 INSERT INTO public.tb_recurso_empresas VALUES (45, 'conexao', 7, 1, '2026-03-25 15:35:55.794306-03');
 INSERT INTO public.tb_recurso_empresas VALUES (46, 'conexao', 8, 1, '2026-03-25 15:38:38.793668-03');
+INSERT INTO public.tb_recurso_empresas VALUES (47, 'pipeline', 35, 1, '2026-03-26 11:12:18.311167-03');
+INSERT INTO public.tb_recurso_empresas VALUES (48, 'pipeline', 36, 1, '2026-03-26 11:13:10.346176-03');
+INSERT INTO public.tb_recurso_empresas VALUES (50, 'rotina', 6, 1, '2026-03-26 16:48:49.887032-03');
 
 
 --
@@ -3993,6 +4549,9 @@ INSERT INTO public.tb_recurso_projetos VALUES (47, 'conexao', 5, 3, '2026-03-25 
 INSERT INTO public.tb_recurso_projetos VALUES (48, 'conexao', 6, 4, '2026-03-25 15:34:44.056727-03');
 INSERT INTO public.tb_recurso_projetos VALUES (49, 'conexao', 7, 124, '2026-03-25 15:35:55.798075-03');
 INSERT INTO public.tb_recurso_projetos VALUES (50, 'conexao', 8, 122, '2026-03-25 15:38:38.796663-03');
+INSERT INTO public.tb_recurso_projetos VALUES (51, 'pipeline', 35, 2, '2026-03-26 11:12:18.313766-03');
+INSERT INTO public.tb_recurso_projetos VALUES (52, 'pipeline', 36, 2, '2026-03-26 11:13:10.348357-03');
+INSERT INTO public.tb_recurso_projetos VALUES (54, 'rotina', 6, 3, '2026-03-26 16:48:49.890514-03');
 
 
 --
@@ -4001,10 +4560,11 @@ INSERT INTO public.tb_recurso_projetos VALUES (50, 'conexao', 8, 122, '2026-03-2
 -- Data for Name: tb_rotinas; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (1, 'CARGA | MENSAL: 3 | HOMOLOGAÇÃO', 'Atualização de bases de homologação SGD para SGIC', 2, 1, false, '2026-03-25 15:16:27.787504-03', NULL, NULL, '2026-03-25 10:03:34.637042-03', NULL, false, NULL, 0, 3, '2026-03-25 15:16:27.787504-03', NULL, NULL, NULL, false, 300, true, true, false);
-INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (4, 'CARGA | MENSAL: 3 | PRODUÇÃO', 'Atualização de bases de homologação SGD para SGIC', 4, 1, false, NULL, NULL, NULL, '2026-03-25 15:06:23.952566-03', NULL, false, NULL, 0, 3, NULL, NULL, NULL, NULL, false, 300, true, true, false);
 INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (2, 'CARGA | MENSAL: 4 | HOMOLOGAÇÃO', 'Atualização da base SGIC (OUTRAS ENTIDADES)', 2, 1, false, NULL, NULL, NULL, '2026-03-25 14:37:31.212867-03', NULL, false, NULL, 0, 3, NULL, NULL, NULL, NULL, false, 300, true, true, false);
 INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (5, 'CARGA | MENSAL: 4 | PRODUÇÃO', 'Atualização da base SGIC (OUTRAS ENTIDADES)', 4, 1, false, NULL, NULL, NULL, '2026-03-25 15:06:44.390066-03', NULL, false, NULL, 0, 3, NULL, NULL, NULL, NULL, false, 300, true, true, false);
+INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (1, 'CARGA | MENSAL: 3 | HOMOLOGAÇÃO', 'Atualização de bases de homologação SGD para SGIC', 2, 1, false, '2026-03-26 12:10:24.017997-03', NULL, NULL, '2026-03-25 10:03:34.637042-03', NULL, false, NULL, 0, 3, '2026-03-26 12:10:24.017997-03', NULL, NULL, NULL, false, 300, true, true, false);
+INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (4, 'CARGA | MENSAL: 3 | PRODUÇÃO', 'Atualização de bases de homologação SGD para SGIC', 4, 1, false, '2026-03-26 13:17:03.75648-03', NULL, NULL, '2026-03-25 15:06:23.952566-03', NULL, false, NULL, 0, 3, '2026-03-26 13:17:03.75648-03', NULL, NULL, NULL, false, 300, true, true, false);
+INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (6, 'CARGA | MENSAL: 2 | HOMOLOGAÇÃO', 'Atualização de bases de homologação SGP para SGD', 5, 1, false, NULL, NULL, NULL, '2026-03-26 16:45:33.75167-03', NULL, false, NULL, 0, 3, NULL, NULL, NULL, NULL, false, 300, true, true, false);
 
 
 --
@@ -4016,6 +4576,7 @@ INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (5, 'CARGA | MENSAL
 INSERT INTO public.tb_usuario_empresas VALUES (6, 111, 1, '2026-03-25 15:39:25.229243-03');
 INSERT INTO public.tb_usuario_empresas VALUES (7, 3, 1, '2026-03-25 15:39:52.781611-03');
 INSERT INTO public.tb_usuario_empresas VALUES (8, 32, 1, '2026-03-25 15:39:58.117926-03');
+INSERT INTO public.tb_usuario_empresas VALUES (11, 112, 1, '2026-03-26 13:37:12.965956-03');
 
 
 --
@@ -4037,6 +4598,10 @@ INSERT INTO public.tb_usuario_projetos VALUES (22, 3, 124, '2026-03-25 15:39:52.
 INSERT INTO public.tb_usuario_projetos VALUES (23, 32, 122, '2026-03-25 15:39:58.117926-03');
 INSERT INTO public.tb_usuario_projetos VALUES (24, 32, 123, '2026-03-25 15:39:58.117926-03');
 INSERT INTO public.tb_usuario_projetos VALUES (25, 32, 124, '2026-03-25 15:39:58.117926-03');
+INSERT INTO public.tb_usuario_projetos VALUES (31, 112, 1, '2026-03-26 13:37:12.965956-03');
+INSERT INTO public.tb_usuario_projetos VALUES (32, 112, 122, '2026-03-26 13:37:12.965956-03');
+INSERT INTO public.tb_usuario_projetos VALUES (33, 112, 123, '2026-03-26 13:37:12.965956-03');
+INSERT INTO public.tb_usuario_projetos VALUES (34, 112, 124, '2026-03-26 13:37:12.965956-03');
 
 
 --
@@ -4045,10 +4610,11 @@ INSERT INTO public.tb_usuario_projetos VALUES (25, 32, 124, '2026-03-25 15:39:58
 -- Data for Name: tb_usuarios; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (1, 'admin', '$2y$10$iMx/U2lqUH9kmTNL142SouQB.jvBrxTx.obLq3woEf0R5BVEFV23G', false, 'super_admin', '2026-02-02 11:08:48.320843-03', false, NULL, NULL, NULL, NULL);
 INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (111, 'caio', '$2y$10$kZiLCSFqL7aChIonZMQgsOmqzDbYYYLV/oo36teOkWnFDkcGXpqA2', false, 'desenvolvedor', '2026-03-25 15:25:19.641798-03', false, 'Caio Vinícius', 'caio.barros@sad.pe.gov.br', '121.018.404-48', NULL);
 INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (3, 'leonardo', '$2y$10$56fEHuaY.2mxdTMFDieZbeRByXFPCshQ0m/23EA/xBhKNb2BHZYWO', false, 'desenvolvedor', '2026-02-03 09:27:27.440711-03', false, 'Leonardo Matias', 'leonardo.matias@sad.pe.gov.br', NULL, NULL);
 INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (32, 'lucas', '$2y$10$iQ0L5d7xtSLMEYpVvo.9p.lN7dHqXgtDbXrcKpdUgKP/NWdfpBOpW', false, 'desenvolvedor', '2026-03-20 10:28:09.786803-03', false, 'Sobral', 'lucas.sobral@sad.pe.gov.br', NULL, NULL);
+INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (1, 'admin', '$2y$10$iMx/U2lqUH9kmTNL142SouQB.jvBrxTx.obLq3woEf0R5BVEFV23G', false, 'super_admin', '2026-02-02 11:08:48.320843-03', false, NULL, NULL, NULL, NULL);
+INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (112, 'renan', '$2y$10$iPn7L9Osswt5pBsnF3Rk/OLit1E5XlJl4.Z0CbH2ObNz/ptAw2I/a', false, 'desenvolvedor', '2026-03-26 11:10:20.83579-03', false, 'Renan prostituto da silva', 'renan.batista@sad.pe.gov.br', NULL, NULL);
 
 
 --
@@ -4166,7 +4732,7 @@ SELECT pg_catalog.setval('public.tb_arquivos_id_seq', 1, false);
 -- Name: tb_auditoria_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_auditoria_id_seq', 81, true);
+SELECT pg_catalog.setval('public.tb_auditoria_id_seq', 94, true);
 
 
 --
@@ -4193,7 +4759,7 @@ SELECT pg_catalog.setval('public.tb_backups_id_seq', 1, false);
 -- Name: tb_blocos_rotina_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_blocos_rotina_id_seq', 654, true);
+SELECT pg_catalog.setval('public.tb_blocos_rotina_id_seq', 709, true);
 
 
 --
@@ -4247,7 +4813,7 @@ SELECT pg_catalog.setval('public.tb_fila_execucao_id_seq', 1, false);
 -- Name: tb_logs_execucao_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_logs_execucao_id_seq', 14, true);
+SELECT pg_catalog.setval('public.tb_logs_execucao_id_seq', 22, true);
 
 
 --
@@ -4274,7 +4840,7 @@ SELECT pg_catalog.setval('public.tb_metricas_sistema_id_seq', 1, false);
 -- Name: tb_notificacoes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_notificacoes_id_seq', 8, true);
+SELECT pg_catalog.setval('public.tb_notificacoes_id_seq', 19, true);
 
 
 --
@@ -4283,7 +4849,7 @@ SELECT pg_catalog.setval('public.tb_notificacoes_id_seq', 8, true);
 -- Name: tb_password_resets_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_password_resets_id_seq', 1, false);
+SELECT pg_catalog.setval('public.tb_password_resets_id_seq', 1, true);
 
 
 --
@@ -4301,7 +4867,7 @@ SELECT pg_catalog.setval('public.tb_perfis_conexao_id_seq', 8, true);
 -- Name: tb_pipeline_execucoes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_pipeline_execucoes_id_seq', 2, true);
+SELECT pg_catalog.setval('public.tb_pipeline_execucoes_id_seq', 4, true);
 
 
 --
@@ -4310,7 +4876,7 @@ SELECT pg_catalog.setval('public.tb_pipeline_execucoes_id_seq', 2, true);
 -- Name: tb_pipelines_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_pipelines_id_seq', 34, true);
+SELECT pg_catalog.setval('public.tb_pipelines_id_seq', 36, true);
 
 
 --
@@ -4337,7 +4903,7 @@ SELECT pg_catalog.setval('public.tb_projetos_id_seq', 4, true);
 -- Name: tb_rate_limits_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_rate_limits_id_seq', 20, true);
+SELECT pg_catalog.setval('public.tb_rate_limits_id_seq', 32, true);
 
 
 --
@@ -4346,7 +4912,7 @@ SELECT pg_catalog.setval('public.tb_rate_limits_id_seq', 20, true);
 -- Name: tb_recurso_empresas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_recurso_empresas_id_seq', 46, true);
+SELECT pg_catalog.setval('public.tb_recurso_empresas_id_seq', 50, true);
 
 
 --
@@ -4355,7 +4921,7 @@ SELECT pg_catalog.setval('public.tb_recurso_empresas_id_seq', 46, true);
 -- Name: tb_recurso_projetos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_recurso_projetos_id_seq', 50, true);
+SELECT pg_catalog.setval('public.tb_recurso_projetos_id_seq', 54, true);
 
 
 --
@@ -4364,7 +4930,7 @@ SELECT pg_catalog.setval('public.tb_recurso_projetos_id_seq', 50, true);
 -- Name: tb_rotinas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_rotinas_id_seq', 5, true);
+SELECT pg_catalog.setval('public.tb_rotinas_id_seq', 6, true);
 
 
 --
@@ -4373,7 +4939,7 @@ SELECT pg_catalog.setval('public.tb_rotinas_id_seq', 5, true);
 -- Name: tb_usuario_empresas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_usuario_empresas_id_seq', 8, true);
+SELECT pg_catalog.setval('public.tb_usuario_empresas_id_seq', 11, true);
 
 
 --
@@ -4382,7 +4948,7 @@ SELECT pg_catalog.setval('public.tb_usuario_empresas_id_seq', 8, true);
 -- Name: tb_usuario_projetos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_usuario_projetos_id_seq', 25, true);
+SELECT pg_catalog.setval('public.tb_usuario_projetos_id_seq', 34, true);
 
 
 --
@@ -4391,7 +4957,7 @@ SELECT pg_catalog.setval('public.tb_usuario_projetos_id_seq', 25, true);
 -- Name: tb_usuarios_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_usuarios_id_seq', 111, true);
+SELECT pg_catalog.setval('public.tb_usuarios_id_seq', 112, true);
 
 
 --
@@ -5820,7 +6386,7 @@ ALTER TABLE ONLY public.tb_workflow_nodes
     ADD CONSTRAINT tb_workflow_nodes_id_workflow_fkey FOREIGN KEY (id_workflow) REFERENCES public.tb_workflows(id) ON DELETE CASCADE;
 
 
--- Completed on 2026-03-25 17:34:18
+-- Completed on 2026-03-26 16:58:40
 
 --
 -- PostgreSQL database dump complete
