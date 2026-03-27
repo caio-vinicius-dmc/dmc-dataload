@@ -1,4 +1,4 @@
-BEGIN;
+--BEGIN;
 
 -- ============================================================
 -- 1. LOGS, AUDITORIA E HISTÓRICO
@@ -23,6 +23,9 @@ TRUNCATE TABLE tb_workflows                CASCADE;
 -- ============================================================
 TRUNCATE TABLE tb_pipeline_execucoes       CASCADE;
 TRUNCATE TABLE tb_pipelines                CASCADE;
+
+select * from tb_pipelines;
+
 
 -- ============================================================
 -- 4. ROTINAS (blocos e filas antes das rotinas)
@@ -142,7 +145,7 @@ SET    nivel_acesso = 'super_admin',
        ativo        = true
 WHERE  id = 1;
 
-COMMIT;
+--COMMIT;
 
 -- ============================================================
 -- VERIFICAÇÃO PÓS-RESET

@@ -5,7 +5,7 @@
 -- Dumped from database version 17.5
 -- Dumped by pg_dump version 17.5
 
--- Started on 2026-03-26 16:58:40
+-- Started on 2026-03-27 16:58:28
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -2298,6 +2298,43 @@ INSERT INTO public.tb_auditoria VALUES (91, 'executar_sql', 'sql_editor', 2, 'SG
 INSERT INTO public.tb_auditoria VALUES (92, 'executar_sql', 'sql_editor', 2, 'SGIC - HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '{"sql": "SELECT CPF,\n       NOME\n  FROM SCH_SGIC.SGIC_USUARIO U\n\nLIMIT 100 OFFSET 0", "tipo": "SELECT", "linhas": 100}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 13:40:27.544734-03');
 INSERT INTO public.tb_auditoria VALUES (93, 'criar', 'rotina', 6, 'CARGA | MENSAL: 2 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 16:45:33.779116-03');
 INSERT INTO public.tb_auditoria VALUES (94, 'editar', 'rotina', 6, 'CARGA | MENSAL: 2 | HOMOLOGAÇÃO', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-26 16:48:49.892852-03');
+INSERT INTO public.tb_auditoria VALUES (95, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 08:46:38.492687-03');
+INSERT INTO public.tb_auditoria VALUES (96, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 09:09:41.576007-03');
+INSERT INTO public.tb_auditoria VALUES (97, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 09:44:26.119033-03');
+INSERT INTO public.tb_auditoria VALUES (98, 'login', 'sessao', 3, 'leonardo', 3, 'leonardo', 'desenvolvedor', '[]', '[]', '10.1.110.27', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0', '2026-03-27 10:21:04.079758-03');
+INSERT INTO public.tb_auditoria VALUES (99, 'editar', 'usuario', 3, 'leonardo', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:21:43.235204-03');
+INSERT INTO public.tb_auditoria VALUES (100, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 10:38:14.742302-03');
+INSERT INTO public.tb_auditoria VALUES (101, 'login', 'sessao', 32, 'lucas', 32, 'lucas', 'desenvolvedor', '[]', '[]', '10.1.110.9', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0', '2026-03-27 10:50:22.305648-03');
+INSERT INTO public.tb_auditoria VALUES (102, 'editar', 'conexao', 8, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:57:52.001648-03');
+INSERT INTO public.tb_auditoria VALUES (103, 'editar', 'conexao', 7, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:58:07.157725-03');
+INSERT INTO public.tb_auditoria VALUES (104, 'editar', 'usuario', 112, 'renan', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:58:43.103972-03');
+INSERT INTO public.tb_auditoria VALUES (105, 'editar', 'usuario', 3, 'leonardo', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:58:58.827238-03');
+INSERT INTO public.tb_auditoria VALUES (106, 'editar', 'usuario', 112, 'renan', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:59:07.891959-03');
+INSERT INTO public.tb_auditoria VALUES (107, 'editar', 'usuario', 32, 'lucas', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:59:33.681912-03');
+INSERT INTO public.tb_auditoria VALUES (108, 'editar', 'usuario', 111, 'caio', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:59:45.221519-03');
+INSERT INTO public.tb_auditoria VALUES (109, 'editar', 'usuario', 3, 'leonardo', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 10:59:59.759502-03');
+INSERT INTO public.tb_auditoria VALUES (110, 'editar', 'usuario', 112, 'renan', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 11:00:06.603982-03');
+INSERT INTO public.tb_auditoria VALUES (111, 'editar', 'usuario', 32, 'lucas', 1, 'admin', 'super_admin', '[]', '{"nivel_acesso": "desenvolvedor"}', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 11:00:42.199578-03');
+INSERT INTO public.tb_auditoria VALUES (112, 'editar', 'conexao', 1, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 11:01:27.732269-03');
+INSERT INTO public.tb_auditoria VALUES (113, 'login', 'sessao', 112, 'renan', 112, 'renan', 'desenvolvedor', '[]', '[]', '10.1.1.68', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 13:06:00.531042-03');
+INSERT INTO public.tb_auditoria VALUES (114, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 13:21:54.21203-03');
+INSERT INTO public.tb_auditoria VALUES (115, 'criar', 'conexao', 0, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 13:45:49.967576-03');
+INSERT INTO public.tb_auditoria VALUES (116, 'criar', 'conexao', 0, '', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 13:46:21.734293-03');
+INSERT INTO public.tb_auditoria VALUES (117, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 13:52:34.870461-03');
+INSERT INTO public.tb_auditoria VALUES (118, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:04:23.401543-03');
+INSERT INTO public.tb_auditoria VALUES (119, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:05:37.308515-03');
+INSERT INTO public.tb_auditoria VALUES (120, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:14:30.191505-03');
+INSERT INTO public.tb_auditoria VALUES (121, 'login', 'sessao', 112, 'renan', 112, 'renan', 'desenvolvedor', '[]', '[]', '10.1.1.68', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-27 14:22:48.484355-03');
+INSERT INTO public.tb_auditoria VALUES (122, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:33:00.768847-03');
+INSERT INTO public.tb_auditoria VALUES (123, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:39:56.612294-03');
+INSERT INTO public.tb_auditoria VALUES (124, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:48:50.252058-03');
+INSERT INTO public.tb_auditoria VALUES (125, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:55:23.203752-03');
+INSERT INTO public.tb_auditoria VALUES (126, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 14:58:52.161097-03');
+INSERT INTO public.tb_auditoria VALUES (127, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 15:04:48.453466-03');
+INSERT INTO public.tb_auditoria VALUES (128, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 15:07:17.933968-03');
+INSERT INTO public.tb_auditoria VALUES (129, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 15:13:11.515542-03');
+INSERT INTO public.tb_auditoria VALUES (130, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 16:05:06.533564-03');
+INSERT INTO public.tb_auditoria VALUES (131, 'login', 'sessao', 1, 'admin', 1, 'admin', 'super_admin', '[]', '[]', '::1', 'curl/8.14.1', '2026-03-27 16:12:31.859772-03');
 
 
 --
@@ -3606,13 +3643,13 @@ INSERT INTO public.tb_password_resets OVERRIDING SYSTEM VALUE VALUES (1, 112, 'd
 -- Data for Name: tb_perfis_conexao; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (1, 'SQLLITE-TESTE', 'sqlite', '', NULL, 'C:\Users\caio.barros\Downloads\data.sqllite', NULL, 'vHGgo6U0iHePIoLt+HbRRg==:ptjnsvDkUuWHql9xcNMllA==', '{"sqlite_path": "C:\\Users\\caio.barros\\Downloads\\data.sqllite"}', '2026-03-25 09:42:00.686617-03', NULL);
 INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (2, 'SGIC - HOMOLOGAÇÃO', 'postgres', '200.238.107.57', 5432, 'sadsiswebhom_new', 'saduseradm', 'Kx7BkB7MSMJBr5sIJC0Wnw==:eUwLAsesoaxezShEaIvEzw==', '[]', '2026-03-25 09:49:32.488806-03', NULL);
 INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (4, 'SGIC - PRODUÇÃO', 'postgres', '10.238.107.168', 5432, 'sadsiswebpro', 'saduseradm', '9BrcrMHZBARoju/nNYejGA==:srdSdTvriJoHg9EQdTfyjYJ+YFNTnTvy350d6iZCBGM=', '[]', '2026-03-25 14:56:39.357073-03', NULL);
 INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (5, 'SGD - HOMOLOGAÇÃO', 'postgres', '200.238.107.125', 5432, 'sadsiswebhom', 'saduseradm', 'wBxhqdwUEYXUeHFjhTKwrA==:5C398thgZynGWlN0/7kxxQ==', '[]', '2026-03-25 15:32:36.339722-03', NULL);
 INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (6, 'SGD - PRODUÇÃO', 'postgres', '200.238.107.93', 5432, 'sadsiswebpro', 'saduseradm', 'FGruHfCJo5psA5ugoO8WZA==:RrZohI6RD6VqE/IQ9TblTwGVgt2Su5np9YTYAsSeFtI=', '[]', '2026-03-25 15:34:44.046293-03', NULL);
-INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (7, 'SGP | TREINAMENTO - C_ERGON', 'oracle', '10.238.75.224', 1521, NULL, 'c_ergon', 'ryIPxA5yUt/PighbvsVffQ==:HMxKA7N7wwJe5Puw150C2w==', '{"sid": "SADRHPRO", "tipo_conexao_oracle": "sid"}', '2026-03-25 15:35:55.758825-03', NULL);
-INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 'oracle', '10.238.205.116', 1521, NULL, 'c_ergon', 'YaxPzAfaaciJ0zZy1IQv3A==:XJQ2OGVHi/lWZjXo2oQseA==', '{"sid": "SADRHPRO", "tipo_conexao_oracle": "sid"}', '2026-03-25 15:38:38.757406-03', NULL);
+INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (8, 'SGP | HOMOLOGAÇÃO - C_ERGON', 'oracle', '10.238.205.116', 1521, NULL, 'c_ergon', 'vjilBU+zZngA+4f6JipWoQ==:DPYQMx8erwndFv8slBzEcQ==', '{"sid": "SADRHPRO", "tipo_conexao_oracle": "sid"}', '2026-03-25 15:38:38.757406-03', NULL);
+INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (7, 'SGP | TREINAMENTO - C_ERGON', 'oracle', '10.238.75.224', 1521, NULL, 'c_ergon', 'e+rF11siac6CNUSMscg3bA==:+ebNiMN42xxXYJVwJnOyKA==', '{"sid": "SADRHPRO", "tipo_conexao_oracle": "sid"}', '2026-03-25 15:35:55.758825-03', NULL);
+INSERT INTO public.tb_perfis_conexao OVERRIDING SYSTEM VALUE VALUES (1, 'SQLLITE-TESTE', 'sqlite', '', NULL, 'C:\Users\caio.barros\Downloads\data.sqllite', NULL, '/4ZSWElXUY08+L8e2NTCzg==:JIL6+qACrEumnJO4PI/RHQ==', '{"sqlite_path": "C:\\Users\\caio.barros\\Downloads\\data.sqllite"}', '2026-03-25 09:42:00.686617-03', NULL);
 
 
 --
@@ -4486,13 +4523,16 @@ INSERT INTO public.tb_pipelines VALUES (35, 'CARGA | MENSAL: 4 | PRODUÇÃO', ''
 -- Data for Name: tb_projetos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_projetos VALUES (122, 'SUTIN - HOMOLOGAÇÃO', '', 1, true, 1, '2026-03-20 14:30:44.907474-03', '2026-03-20 14:30:44.907474-03');
-INSERT INTO public.tb_projetos VALUES (123, 'SUTIN - PRODUÇÃO', '', 1, true, 1, '2026-03-20 14:30:55.55537-03', '2026-03-20 14:30:55.55537-03');
-INSERT INTO public.tb_projetos VALUES (124, 'SUTIN - TREINAMENTO', '', 1, true, 1, '2026-03-20 14:31:04.697582-03', '2026-03-20 14:31:04.697582-03');
-INSERT INTO public.tb_projetos VALUES (1, 'SGIC - HOMOLOGAÇÃO', '', 1, true, 1, '2026-03-25 15:22:45.405999-03', '2026-03-25 15:22:45.405999-03');
-INSERT INTO public.tb_projetos VALUES (2, 'SGIC - PRODUÇÃO', '', 1, true, 1, '2026-03-25 15:22:53.355742-03', '2026-03-25 15:22:53.355742-03');
-INSERT INTO public.tb_projetos VALUES (3, 'SGD - HOMOLOGAÇÃO', '', 1, true, 1, '2026-03-25 15:32:52.553874-03', '2026-03-25 15:32:52.553874-03');
-INSERT INTO public.tb_projetos VALUES (4, 'SGD | PRODUÇÃO', '', 1, true, 1, '2026-03-25 15:33:02.455666-03', '2026-03-25 15:33:02.455666-03');
+INSERT INTO public.tb_projetos VALUES (3, 'SAD-PE | SGD - HOMOLOGAÇÃO', '', 1, true, 1, '2026-03-25 15:32:52.553874-03', '2026-03-27 10:55:21.674216-03');
+INSERT INTO public.tb_projetos VALUES (4, 'SAD-PE | SGD - PRODUÇÃO', '', 1, true, 1, '2026-03-25 15:33:02.455666-03', '2026-03-27 10:55:33.860646-03');
+INSERT INTO public.tb_projetos VALUES (1, 'SAD-PE | SGIC - HOMOLOGAÇÃO', '', 1, true, 1, '2026-03-25 15:22:45.405999-03', '2026-03-27 10:55:43.645484-03');
+INSERT INTO public.tb_projetos VALUES (2, 'SAD-PE | SGIC - PRODUÇÃO', '', 1, true, 1, '2026-03-25 15:22:53.355742-03', '2026-03-27 10:55:50.40193-03');
+INSERT INTO public.tb_projetos VALUES (123, 'SAD-PE | SGP - PRODUÇÃO', '', 1, true, 1, '2026-03-20 14:30:55.55537-03', '2026-03-27 10:56:16.774854-03');
+INSERT INTO public.tb_projetos VALUES (122, 'SAD-PE | HOMOLOGAÇÃO', '', 1, true, 1, '2026-03-20 14:30:44.907474-03', '2026-03-27 10:56:28.088041-03');
+INSERT INTO public.tb_projetos VALUES (124, 'SAD-PE | TREINAMENTO', '', 1, true, 1, '2026-03-20 14:31:04.697582-03', '2026-03-27 10:56:36.245346-03');
+INSERT INTO public.tb_projetos VALUES (5, 'SAD-PE | SGP - HOMOLOGAÇÃO', '', 1, true, 1, '2026-03-27 10:57:27.565051-03', '2026-03-27 10:57:27.565051-03');
+INSERT INTO public.tb_projetos VALUES (6, 'SAD-PE | SGP - TREINAMENTO', '', 1, true, 1, '2026-03-27 10:57:36.466397-03', '2026-03-27 10:57:36.466397-03');
+INSERT INTO public.tb_projetos VALUES (7, 'SAD-PE | SUTIN - LUCAS', '', 1, true, 1, '2026-03-27 11:00:31.403395-03', '2026-03-27 11:00:31.403395-03');
 
 
 --
@@ -4501,7 +4541,6 @@ INSERT INTO public.tb_projetos VALUES (4, 'SGD | PRODUÇÃO', '', 1, true, 1, '2
 -- Data for Name: tb_rate_limits; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_rate_limits VALUES (32, 'exec_pipeline:8vor5jsdfuklcojmhvd4s7aeff', 1, '2026-03-26 13:15:43.822358', '2026-03-26 13:15:43.822358');
 
 
 --
@@ -4510,7 +4549,6 @@ INSERT INTO public.tb_rate_limits VALUES (32, 'exec_pipeline:8vor5jsdfuklcojmhvd
 -- Data for Name: tb_recurso_empresas; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_recurso_empresas VALUES (1, 'conexao', 1, 1, '2026-03-25 09:42:00.690809-03');
 INSERT INTO public.tb_recurso_empresas VALUES (26, 'rotina', 3, 1, '2026-03-25 15:04:30.449593-03');
 INSERT INTO public.tb_recurso_empresas VALUES (34, 'conexao', 2, 1, '2026-03-25 15:23:19.816157-03');
 INSERT INTO public.tb_recurso_empresas VALUES (35, 'conexao', 4, 1, '2026-03-25 15:23:37.934091-03');
@@ -4522,11 +4560,12 @@ INSERT INTO public.tb_recurso_empresas VALUES (40, 'pipeline', 34, 1, '2026-03-2
 INSERT INTO public.tb_recurso_empresas VALUES (41, 'pipeline', 1, 1, '2026-03-25 15:26:18.299991-03');
 INSERT INTO public.tb_recurso_empresas VALUES (43, 'conexao', 5, 1, '2026-03-25 15:33:31.403222-03');
 INSERT INTO public.tb_recurso_empresas VALUES (44, 'conexao', 6, 1, '2026-03-25 15:34:44.052817-03');
-INSERT INTO public.tb_recurso_empresas VALUES (45, 'conexao', 7, 1, '2026-03-25 15:35:55.794306-03');
-INSERT INTO public.tb_recurso_empresas VALUES (46, 'conexao', 8, 1, '2026-03-25 15:38:38.793668-03');
 INSERT INTO public.tb_recurso_empresas VALUES (47, 'pipeline', 35, 1, '2026-03-26 11:12:18.311167-03');
 INSERT INTO public.tb_recurso_empresas VALUES (48, 'pipeline', 36, 1, '2026-03-26 11:13:10.346176-03');
 INSERT INTO public.tb_recurso_empresas VALUES (50, 'rotina', 6, 1, '2026-03-26 16:48:49.887032-03');
+INSERT INTO public.tb_recurso_empresas VALUES (51, 'conexao', 8, 1, '2026-03-27 10:57:51.997103-03');
+INSERT INTO public.tb_recurso_empresas VALUES (52, 'conexao', 7, 1, '2026-03-27 10:58:07.151088-03');
+INSERT INTO public.tb_recurso_empresas VALUES (53, 'conexao', 1, 1, '2026-03-27 11:01:27.727053-03');
 
 
 --
@@ -4535,7 +4574,6 @@ INSERT INTO public.tb_recurso_empresas VALUES (50, 'rotina', 6, 1, '2026-03-26 1
 -- Data for Name: tb_recurso_projetos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_recurso_projetos VALUES (1, 'conexao', 1, 123, '2026-03-25 09:42:00.694223-03');
 INSERT INTO public.tb_recurso_projetos VALUES (31, 'rotina', 3, 122, '2026-03-25 15:04:30.449593-03');
 INSERT INTO public.tb_recurso_projetos VALUES (39, 'conexao', 2, 1, '2026-03-25 15:23:19.820014-03');
 INSERT INTO public.tb_recurso_projetos VALUES (40, 'conexao', 4, 2, '2026-03-25 15:23:37.936837-03');
@@ -4547,11 +4585,12 @@ INSERT INTO public.tb_recurso_projetos VALUES (45, 'pipeline', 34, 1, '2026-03-2
 INSERT INTO public.tb_recurso_projetos VALUES (46, 'pipeline', 1, 1, '2026-03-25 15:26:18.304012-03');
 INSERT INTO public.tb_recurso_projetos VALUES (47, 'conexao', 5, 3, '2026-03-25 15:33:31.40618-03');
 INSERT INTO public.tb_recurso_projetos VALUES (48, 'conexao', 6, 4, '2026-03-25 15:34:44.056727-03');
-INSERT INTO public.tb_recurso_projetos VALUES (49, 'conexao', 7, 124, '2026-03-25 15:35:55.798075-03');
-INSERT INTO public.tb_recurso_projetos VALUES (50, 'conexao', 8, 122, '2026-03-25 15:38:38.796663-03');
 INSERT INTO public.tb_recurso_projetos VALUES (51, 'pipeline', 35, 2, '2026-03-26 11:12:18.313766-03');
 INSERT INTO public.tb_recurso_projetos VALUES (52, 'pipeline', 36, 2, '2026-03-26 11:13:10.348357-03');
 INSERT INTO public.tb_recurso_projetos VALUES (54, 'rotina', 6, 3, '2026-03-26 16:48:49.890514-03');
+INSERT INTO public.tb_recurso_projetos VALUES (55, 'conexao', 8, 5, '2026-03-27 10:57:51.999701-03');
+INSERT INTO public.tb_recurso_projetos VALUES (56, 'conexao', 7, 6, '2026-03-27 10:58:07.155461-03');
+INSERT INTO public.tb_recurso_projetos VALUES (57, 'conexao', 1, 7, '2026-03-27 11:01:27.730171-03');
 
 
 --
@@ -4573,10 +4612,10 @@ INSERT INTO public.tb_rotinas OVERRIDING SYSTEM VALUE VALUES (6, 'CARGA | MENSAL
 -- Data for Name: tb_usuario_empresas; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_usuario_empresas VALUES (6, 111, 1, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_empresas VALUES (7, 3, 1, '2026-03-25 15:39:52.781611-03');
-INSERT INTO public.tb_usuario_empresas VALUES (8, 32, 1, '2026-03-25 15:39:58.117926-03');
-INSERT INTO public.tb_usuario_empresas VALUES (11, 112, 1, '2026-03-26 13:37:12.965956-03');
+INSERT INTO public.tb_usuario_empresas VALUES (17, 111, 1, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_empresas VALUES (18, 3, 1, '2026-03-27 10:59:59.752768-03');
+INSERT INTO public.tb_usuario_empresas VALUES (19, 112, 1, '2026-03-27 11:00:06.597703-03');
+INSERT INTO public.tb_usuario_empresas VALUES (20, 32, 1, '2026-03-27 11:00:42.192268-03');
 
 
 --
@@ -4585,23 +4624,29 @@ INSERT INTO public.tb_usuario_empresas VALUES (11, 112, 1, '2026-03-26 13:37:12.
 -- Data for Name: tb_usuario_projetos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_usuario_projetos VALUES (13, 111, 3, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_projetos VALUES (14, 111, 4, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_projetos VALUES (15, 111, 1, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_projetos VALUES (16, 111, 2, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_projetos VALUES (17, 111, 122, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_projetos VALUES (18, 111, 123, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_projetos VALUES (19, 111, 124, '2026-03-25 15:39:25.229243-03');
-INSERT INTO public.tb_usuario_projetos VALUES (20, 3, 122, '2026-03-25 15:39:52.781611-03');
-INSERT INTO public.tb_usuario_projetos VALUES (21, 3, 123, '2026-03-25 15:39:52.781611-03');
-INSERT INTO public.tb_usuario_projetos VALUES (22, 3, 124, '2026-03-25 15:39:52.781611-03');
-INSERT INTO public.tb_usuario_projetos VALUES (23, 32, 122, '2026-03-25 15:39:58.117926-03');
-INSERT INTO public.tb_usuario_projetos VALUES (24, 32, 123, '2026-03-25 15:39:58.117926-03');
-INSERT INTO public.tb_usuario_projetos VALUES (25, 32, 124, '2026-03-25 15:39:58.117926-03');
-INSERT INTO public.tb_usuario_projetos VALUES (31, 112, 1, '2026-03-26 13:37:12.965956-03');
-INSERT INTO public.tb_usuario_projetos VALUES (32, 112, 122, '2026-03-26 13:37:12.965956-03');
-INSERT INTO public.tb_usuario_projetos VALUES (33, 112, 123, '2026-03-26 13:37:12.965956-03');
-INSERT INTO public.tb_usuario_projetos VALUES (34, 112, 124, '2026-03-26 13:37:12.965956-03');
+INSERT INTO public.tb_usuario_projetos VALUES (53, 111, 122, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (54, 111, 3, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (55, 111, 4, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (56, 111, 1, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (57, 111, 2, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (58, 111, 5, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (59, 111, 123, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (60, 111, 6, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (61, 111, 124, '2026-03-27 10:59:45.215151-03');
+INSERT INTO public.tb_usuario_projetos VALUES (62, 3, 122, '2026-03-27 10:59:59.752768-03');
+INSERT INTO public.tb_usuario_projetos VALUES (63, 3, 3, '2026-03-27 10:59:59.752768-03');
+INSERT INTO public.tb_usuario_projetos VALUES (64, 3, 1, '2026-03-27 10:59:59.752768-03');
+INSERT INTO public.tb_usuario_projetos VALUES (65, 3, 5, '2026-03-27 10:59:59.752768-03');
+INSERT INTO public.tb_usuario_projetos VALUES (66, 3, 6, '2026-03-27 10:59:59.752768-03');
+INSERT INTO public.tb_usuario_projetos VALUES (67, 112, 122, '2026-03-27 11:00:06.597703-03');
+INSERT INTO public.tb_usuario_projetos VALUES (68, 112, 1, '2026-03-27 11:00:06.597703-03');
+INSERT INTO public.tb_usuario_projetos VALUES (69, 112, 5, '2026-03-27 11:00:06.597703-03');
+INSERT INTO public.tb_usuario_projetos VALUES (70, 112, 6, '2026-03-27 11:00:06.597703-03');
+INSERT INTO public.tb_usuario_projetos VALUES (71, 32, 122, '2026-03-27 11:00:42.192268-03');
+INSERT INTO public.tb_usuario_projetos VALUES (72, 32, 5, '2026-03-27 11:00:42.192268-03');
+INSERT INTO public.tb_usuario_projetos VALUES (73, 32, 123, '2026-03-27 11:00:42.192268-03');
+INSERT INTO public.tb_usuario_projetos VALUES (74, 32, 6, '2026-03-27 11:00:42.192268-03');
+INSERT INTO public.tb_usuario_projetos VALUES (75, 32, 7, '2026-03-27 11:00:42.192268-03');
 
 
 --
@@ -4610,10 +4655,10 @@ INSERT INTO public.tb_usuario_projetos VALUES (34, 112, 124, '2026-03-26 13:37:1
 -- Data for Name: tb_usuarios; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (1, 'admin', '$2y$10$geM75sPZ4ivOpkAbKflNe.QWZyQq1xwWRAmnievjl/AtJxc9kD4/6', false, 'super_admin', '2026-02-02 11:08:48.320843-03', false, NULL, NULL, NULL, NULL);
 INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (111, 'caio', '$2y$10$kZiLCSFqL7aChIonZMQgsOmqzDbYYYLV/oo36teOkWnFDkcGXpqA2', false, 'desenvolvedor', '2026-03-25 15:25:19.641798-03', false, 'Caio Vinícius', 'caio.barros@sad.pe.gov.br', '121.018.404-48', NULL);
 INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (3, 'leonardo', '$2y$10$56fEHuaY.2mxdTMFDieZbeRByXFPCshQ0m/23EA/xBhKNb2BHZYWO', false, 'desenvolvedor', '2026-02-03 09:27:27.440711-03', false, 'Leonardo Matias', 'leonardo.matias@sad.pe.gov.br', NULL, NULL);
 INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (32, 'lucas', '$2y$10$iQ0L5d7xtSLMEYpVvo.9p.lN7dHqXgtDbXrcKpdUgKP/NWdfpBOpW', false, 'desenvolvedor', '2026-03-20 10:28:09.786803-03', false, 'Sobral', 'lucas.sobral@sad.pe.gov.br', NULL, NULL);
-INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (1, 'admin', '$2y$10$iMx/U2lqUH9kmTNL142SouQB.jvBrxTx.obLq3woEf0R5BVEFV23G', false, 'super_admin', '2026-02-02 11:08:48.320843-03', false, NULL, NULL, NULL, NULL);
 INSERT INTO public.tb_usuarios OVERRIDING SYSTEM VALUE VALUES (112, 'renan', '$2y$10$iPn7L9Osswt5pBsnF3Rk/OLit1E5XlJl4.Z0CbH2ObNz/ptAw2I/a', false, 'desenvolvedor', '2026-03-26 11:10:20.83579-03', false, 'Renan prostituto da silva', 'renan.batista@sad.pe.gov.br', NULL, NULL);
 
 
@@ -4732,7 +4777,7 @@ SELECT pg_catalog.setval('public.tb_arquivos_id_seq', 1, false);
 -- Name: tb_auditoria_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_auditoria_id_seq', 94, true);
+SELECT pg_catalog.setval('public.tb_auditoria_id_seq', 131, true);
 
 
 --
@@ -4894,7 +4939,7 @@ SELECT pg_catalog.setval('public.tb_politica_retencao_arquivos_id_seq', 1, false
 -- Name: tb_projetos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_projetos_id_seq', 4, true);
+SELECT pg_catalog.setval('public.tb_projetos_id_seq', 7, true);
 
 
 --
@@ -4903,7 +4948,7 @@ SELECT pg_catalog.setval('public.tb_projetos_id_seq', 4, true);
 -- Name: tb_rate_limits_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_rate_limits_id_seq', 32, true);
+SELECT pg_catalog.setval('public.tb_rate_limits_id_seq', 79, true);
 
 
 --
@@ -4912,7 +4957,7 @@ SELECT pg_catalog.setval('public.tb_rate_limits_id_seq', 32, true);
 -- Name: tb_recurso_empresas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_recurso_empresas_id_seq', 50, true);
+SELECT pg_catalog.setval('public.tb_recurso_empresas_id_seq', 53, true);
 
 
 --
@@ -4921,7 +4966,7 @@ SELECT pg_catalog.setval('public.tb_recurso_empresas_id_seq', 50, true);
 -- Name: tb_recurso_projetos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_recurso_projetos_id_seq', 54, true);
+SELECT pg_catalog.setval('public.tb_recurso_projetos_id_seq', 57, true);
 
 
 --
@@ -4939,7 +4984,7 @@ SELECT pg_catalog.setval('public.tb_rotinas_id_seq', 6, true);
 -- Name: tb_usuario_empresas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_usuario_empresas_id_seq', 11, true);
+SELECT pg_catalog.setval('public.tb_usuario_empresas_id_seq', 20, true);
 
 
 --
@@ -4948,7 +4993,7 @@ SELECT pg_catalog.setval('public.tb_usuario_empresas_id_seq', 11, true);
 -- Name: tb_usuario_projetos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tb_usuario_projetos_id_seq', 34, true);
+SELECT pg_catalog.setval('public.tb_usuario_projetos_id_seq', 75, true);
 
 
 --
@@ -6386,7 +6431,7 @@ ALTER TABLE ONLY public.tb_workflow_nodes
     ADD CONSTRAINT tb_workflow_nodes_id_workflow_fkey FOREIGN KEY (id_workflow) REFERENCES public.tb_workflows(id) ON DELETE CASCADE;
 
 
--- Completed on 2026-03-26 16:58:40
+-- Completed on 2026-03-27 16:58:28
 
 --
 -- PostgreSQL database dump complete

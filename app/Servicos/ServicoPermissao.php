@@ -28,6 +28,7 @@ class ServicoPermissao
         '/dashboard', '/',
         '/historico',
         '/diagrama',
+        '/monitoramento',
         '/scheduler',
         '/calendario',
         '/meu-perfil',

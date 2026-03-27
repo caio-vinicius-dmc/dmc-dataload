@@ -791,6 +791,12 @@ if ($path === '/diagrama') {
     exit;
 }
 
+// Monitoramento de Banco de Dados
+if ($path === '/monitoramento') {
+    include __DIR__ . '/../views/monitoramento.php';
+    exit;
+}
+
 // ========== NOVAS ROTAS API ==========
 
 // API Cron - Presets
@@ -1117,6 +1123,55 @@ if (preg_match('#^/diagrama/posicoes/(\d+)$#', $path, $m) && $method === 'POST')
     $c = new \App\Controllers\DiagramaController();
     header('Content-Type: application/json');
     echo json_encode($c->salvarPosicoes($id, $posicoes));
+    exit;
+}
+
+// ========== API MONITORAMENTO ==========
+
+if ($path === '/api/monitoramento/conexoes' && $method === 'GET') {
+    $c = new \App\Controllers\MonitoramentoController();
+    header('Content-Type: application/json');
+    echo json_encode($c->listarConexoes());
+    exit;
+}
+
+if (preg_match('#^/api/monitoramento/verificar/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controllers\MonitoramentoController();
+    header('Content-Type: application/json');
+    echo json_encode($c->verificarAcesso($id));
+    exit;
+}
+
+if (preg_match('#^/api/monitoramento/sessoes/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controllers\MonitoramentoController();
+    header('Content-Type: application/json');
+    echo json_encode($c->obterSessoes($id));
+    exit;
+}
+
+if (preg_match('#^/api/monitoramento/estatisticas/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controllers\MonitoramentoController();
+    header('Content-Type: application/json');
+    echo json_encode($c->obterEstatisticas($id));
+    exit;
+}
+
+if (preg_match('#^/api/monitoramento/metricas/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controllers\MonitoramentoController();
+    header('Content-Type: application/json');
+    echo json_encode($c->obterMetricas($id));
+    exit;
+}
+
+// Poller background contínuo para PG < 9.2 — captura queries rápidas
+if (preg_match('#^/api/monitoramento/captura-legado/(\d+)$#', $path, $m) && $method === 'GET') {
+    $id = intval($m[1]);
+    $c = new \App\Controllers\MonitoramentoController();
+    $c->capturaLegadoContinua($id);
     exit;
 }
 

@@ -2077,6 +2077,12 @@ $appFavicon = $_brandCfg['app_favicon'];
                             <span>Diagrama ER</span>
                         </a>
                     </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/monitoramento" class="menu-link <?= $currentPage === 'monitoramento' ? 'active' : '' ?>" data-tooltip="Monitoramento">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Monitoramento</span>
+                        </a>
+                    </div>
                 </div>
             </div>
             <?php elseif ($ehOperador): ?>
@@ -2091,6 +2097,12 @@ $appFavicon = $_brandCfg['app_favicon'];
                         <a href="<?= $base ?>/diagrama" class="menu-link <?= $currentPage === 'diagrama' ? 'active' : '' ?>" data-tooltip="Diagrama ER">
                             <i class="bi bi-diagram-3"></i>
                             <span>Diagrama ER</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a href="<?= $base ?>/monitoramento" class="menu-link <?= $currentPage === 'monitoramento' ? 'active' : '' ?>" data-tooltip="Monitoramento">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Monitoramento</span>
                         </a>
                     </div>
                 </div>
